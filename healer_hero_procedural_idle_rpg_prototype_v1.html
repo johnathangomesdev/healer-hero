@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <!-- "Adicionar à Tela de Início" no iPhone abre o jogo em tela cheia, sem a barra do Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Healer Hero" />
+  <meta name="theme-color" content="#06070c" />
   <title>Healer Hero — Procedural Idle RPG Prototype</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -82,19 +88,24 @@
       -webkit-user-select: none;
     }
 
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
     body {
       margin: 0;
       padding: 0;
       background-color: #06070c;
       color: #f8fafc;
       font-family: 'Inter', sans-serif;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
       touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
     }
+    input, textarea, select { -webkit-user-select: text; user-select: text; }
 
     .mono {
       font-family: 'JetBrains Mono', monospace;
@@ -109,11 +120,13 @@
     /* Viewport ocupa toda a janela do navegador (equivalente a Stretch "canvas_items" + Aspect "expand"):
        o mundo e a HUD são desenhados na resolução-base 640x360 e escalados por um fator uniforme;
        a sobra de proporção mostra mais cenário em vez de faixas pretas. */
+    /* position:fixed + inset:0 acompanha a área VISÍVEL no Safari do iPhone (que encolhe/cresce com a
+       barra do navegador). 100vh no iOS é a altura com a barra escondida e cortava a parte de baixo. */
     #game-viewport {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       background: #0a0c14;
       overflow: hidden;
     }
@@ -2554,6 +2567,9 @@
       _iconResizeTimer = setTimeout(() => { _lastSkillBarKey = ''; updateSkillBarIcons(); refreshAllUI(); }, 150);
     });
     document.addEventListener('fullscreenchange', () => setTimeout(resizeHiDPI, 50));
+    // iOS: a barra do Safari aparece/some e a rotação nem sempre disparam 'resize' na hora certa
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => resizeHiDPI());
+    window.addEventListener('orientationchange', () => setTimeout(() => window.dispatchEvent(new Event('resize')), 300));
     resizeHiDPI();
 
     function spawnParticles(x, y, color, count, dirX) {
@@ -7175,6 +7191,32 @@
     refreshMainMenuState();
     syncSettingsUI();
     syncDevUI();
+
+    // ---- Mobile: manter a tela acesa e não perder progresso ----
+    // Wake Lock: impede o celular de apagar/bloquear a tela enquanto o jogo está aberto
+    // (Safari iOS 16.4+, Chrome Android). Precisa de um toque do usuário e é liberado ao trocar de aba,
+    // por isso é pedido de novo a cada toque/volta para a página.
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+      if (wakeLock && !wakeLock.released) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      } catch (_e) { wakeLock = null; }
+    }
+    document.addEventListener('pointerdown', requestWakeLock, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') requestWakeLock(); });
+
+    // Autosave: salva a cada 30s em jogo e sempre que a página vai para segundo plano
+    // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
+    function autoSave() {
+      if (state.inMainMenu || SE.open) return;
+      try { saveGameProgress(); } catch (_e) {}
+    }
+    setInterval(autoSave, 30000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autoSave(); });
+    window.addEventListener('pagehide', autoSave);
 
     let lastTime = performance.now();
     function loop(now) {
