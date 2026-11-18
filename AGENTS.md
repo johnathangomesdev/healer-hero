@@ -53,6 +53,13 @@
 - `unlock()` pré-renderiza os buffers PSFX em jobs escalonados no primeiro gesto (~0.5 s total).
 - WAVs exportados para escuta: `Desktop\healer_hero_sfx\` e `Desktop\healer_hero_sfx\copias_procedurais\` (+ `comparacao_espectrogramas.png`).
 
+## 3b. Painel de balanceamento → jogo
+
+- `balanceamento.html` (simulador). O rascunho fica em `localStorage['hh_balance_params_v1']`; o botão **Salvar no jogo** copia para `localStorage['hh_balance_game_v1']`; **Voltar o jogo ao padrão** apaga essa chave.
+- O jogo (`index.html`, que é o que o Pages serve) lê `hh_balance_game_v1` no bloco `const BAL = (() => {...})()`, logo após `STAGES_DB`. Ele sobrescreve `ITEMS_DB`, `ENEMIES_DB`, `STAGES_DB` (escala/ondas), `MERCENARIES_DB`, `TIER_MULT`, `COMBINE_COST`, `COMBINE_UP_CHANCE`, `REFINE_BASE` e expõe escalares (`BAL.critChance`, `BAL.hpBase`, `BAL.expGrowth`, custos/força/recarga das skills, `BAL.dropChance`, `BAL.tabCosts`, stats da família...).
+- Ao adicionar um número balanceável novo: ponha o padrão em `BAL`, leia-o no bloco e use `BAL.x` no código, nunca o literal.
+- Só vale no mesmo navegador + mesma origem (localStorage). Não entra no código para outros jogadores. Drops fixos de chefe e "unlock" dos mercs ainda são fixos no código.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.

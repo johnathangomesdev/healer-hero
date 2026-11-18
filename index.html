@@ -1237,7 +1237,7 @@
     // bônus da instância: base × (tier da instância / tier original) × (+12% por refino)
     function instBonuses(inst) {
       const base = ITEMS_DB[inst.id];
-      const m = (TIER_MULT[inst.tier] / TIER_MULT[base.tier || 'COMMON']) * (1 + 0.12 * (inst.plus || 0));
+      const m = (TIER_MULT[inst.tier] / TIER_MULT[base.tier || 'COMMON']) * (1 + BAL.refinePct * (inst.plus || 0));
       return { vit: Math.round(base.bonuses.vit * m), pow: Math.round(base.bonuses.pow * m), def: Math.round(base.bonuses.def * m), spd: Math.round(base.bonuses.spd * m * 100) / 100 };
     }
     // "visão" da instância com o formato de um item do banco (para os helpers de UI)
@@ -1329,6 +1329,77 @@
       '5-3': { act: 5, sub: 3, sky: 'ALTAR', next: '5-1', scale: 3.8, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_MAGE_BOSS']] }
     };
 
+    // =========================================================================
+    // BALANCEAMENTO: o painel balanceamento.html salva os parâmetros em
+    // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
+    // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
+    // =========================================================================
+    const BAL = (() => {
+      const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
+        expBase: 60, expGrowth: 1.32, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
+        cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
+        dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25,
+        combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
+        hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
+      let P = null;
+      try { P = JSON.parse(localStorage.getItem('hh_balance_game_v1') || 'null'); } catch (e) { }
+      if (!P || typeof P !== 'object') return B;
+      const num = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
+      const take = (src, keys) => { if (src) for (const k of keys) if (k in src) B[k] = num(src[k], B[k]); };
+      try {
+        B.active = true;
+        take(P.general, ['critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
+        take(P.progression, ['expBase', 'expGrowth', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
+        take(P.skills, ['cost1', 'cost2', 'cost3', 'costGrowth', 'passBase', 'sk2Base', 'ultBase', 'perLevel', 'cd2', 'cd3']);
+        take(P.items, ['dropChance', 'refinePct', 'refineMax', 'bagPerTab']);
+        const IT = P.items || {};
+        if (Array.isArray(IT.tabCosts)) B.tabCosts = IT.tabCosts.map((v, i) => num(+v, B.tabCosts[i] || 0));
+        if (IT.tierMult) for (const t of TIER_KEYS) TIER_MULT[t] = num(IT.tierMult[t], TIER_MULT[t]);
+        B.combineCost = IT.combineCost || null; B.combineUp = IT.combineUp || null; B.refineBase = IT.refineBase || null;
+        const stat4 = (o, d) => ({ vit: num(o && o.vit, d.vit), pow: num(o && o.pow, d.pow), def: num(o && o.def, d.def), spd: num(o && o.spd, d.spd) });
+        if (P.hero) {
+          B.hero = stat4(P.hero, B.hero); B.fatherBonusVit = num(P.hero.fatherBonusVit, B.fatherBonusVit);
+          B.daughter = stat4(P.hero.daughter, B.daughter); B.father = stat4(P.hero.father, B.father);
+          if (P.hero.sister) B.sister = stat4(P.hero.sister, { vit: 22, pow: 10, def: 4, spd: 1.25 });
+        }
+        if (Array.isArray(P.itemList)) {
+          for (const r of P.itemList) {
+            const it = ITEMS_DB[r.id]; if (!it) continue;
+            if (r.name) it.name = r.name;
+            if (r.slot) it.slot = r.slot;
+            if (ITEM_TIERS[r.tier]) it.tier = r.tier;
+            if (typeof r.classes === 'string' && r.classes.trim()) it.classes = r.classes.split(',').map(x => x.trim()).filter(Boolean);
+            it.bonuses = stat4(r, it.bonuses);
+          }
+          const pool = P.itemList.filter(r => r.pool && ITEMS_DB[r.id]).map(r => r.id);
+          if (pool.length) B.pool = pool;
+        }
+        if (Array.isArray(P.enemies)) for (const r of P.enemies) {
+          const e = ENEMIES_DB[r.id]; if (!e) continue;
+          if (r.name) e.name = r.name;
+          e.stats = stat4(r, e.stats);
+          for (const k of ['speed', 'range', 'gold', 'dpe', 'exp']) e[k] = num(r[k], e[k]);
+          if (typeof r.splits === 'boolean') e.splits = r.splits;
+        }
+        if (Array.isArray(P.stages)) for (const r of P.stages) {
+          const s = STAGES_DB[r.id]; if (!s) continue;
+          s.scale = num(+r.scale, s.scale);
+          if (typeof r.waves === 'string') {
+            const w = r.waves.split('|').map(x => x.split(',').map(y => y.trim()).filter(y => ENEMIES_DB[y])).filter(x => x.length);
+            if (w.length) s.waves = w;
+          }
+        }
+        if (Array.isArray(P.mercs)) for (const r of P.mercs) {
+          const m = MERCENARIES_DB[r.id]; if (!m) continue;
+          if (r.name) m.name = r.name;
+          m.cost = num(r.cost, m.cost);
+          m.stats = stat4(r, m.stats);
+          if (typeof r.gear === 'string') m.gear = r.gear.split(',').map(x => x.trim()).filter(x => ITEMS_DB[x]);
+        }
+      } catch (e) { console.warn('Balanceamento inválido, usando padrão', e); }
+      return B;
+    })();
+
     const SKY_THEMES = {
       SUNSET: { top: '#1a132b', bot: '#9c4128', ground: '#182416', hill: '#22361f', moon: '#fbbf24' },
       DUSK:   { top: '#130e24', bot: '#4a1c57', ground: '#121f15', hill: '#1c2e20', moon: '#c084fc' },
@@ -1342,9 +1413,9 @@
     // =========================================================================
     const state = {
       gold: 0,
-      dpe: 15,
+      dpe: BAL.startDpe,
       dispGold: 0,
-      dispDpe: 15,
+      dispDpe: BAL.startDpe,
       pendingGold: 0,
       pendingDpe: 0,
       goldPop: 0,
@@ -1383,7 +1454,7 @@
         EXORCIST: { 1: 1, 2: 1, 3: 1 },
         MONK: { 1: 1, 2: 1, 3: 1 }
       },
-      cooldowns: { 2: { rem: 0, total: 6.0 }, 3: { rem: 0, total: 14.0 } },
+      cooldowns: { 2: { rem: 0, total: BAL.cd2 }, 3: { rem: 0, total: BAL.cd3 } },
       stageId: '1-1',
       waveIdx: 0,
       isScrolling: false,
@@ -1502,7 +1573,7 @@
 
         this.level = 1;
         this.exp = 0;
-        this.maxExp = 60;
+        this.maxExp = BAL.expBase;
         this.unspentPoints = 0;
 
         this.baseVit = stats.vit;
@@ -1556,14 +1627,14 @@
         this.recalcStats(true);
       }
 
-      getVit() { return this.baseVit + this.allocVit * 3 + this.bonusVit + this.equipVit; }
-      getPow() { return this.basePow + this.allocPow * 3 + this.equipPow; }
-      getDef() { return this.baseDef + this.allocDef * 2 + this.equipDef; }
-      getSpd() { return Math.max(0.35, Math.min(3.5, this.baseSpd + this.allocSpd * 0.08 + this.equipSpd + this.buffSpd)); }
+      getVit() { return this.baseVit + this.allocVit * BAL.vitPerPt + this.bonusVit + this.equipVit; }
+      getPow() { return this.basePow + this.allocPow * BAL.powPerPt + this.equipPow; }
+      getDef() { return this.baseDef + this.allocDef * BAL.defPerPt + this.equipDef; }
+      getSpd() { return Math.max(0.35, Math.min(3.5, this.baseSpd + this.allocSpd * BAL.spdPerPt + this.equipSpd + this.buffSpd)); }
 
       recalcStats(fullHeal = false) {
         const oldMax = this.maxHp || 100;
-        this.maxHp = Math.round(45 + this.getVit() * 9.5);
+        this.maxHp = Math.round(BAL.hpBase + this.getVit() * BAL.hpPerVit);
         if (fullHeal) this.hp = this.maxHp;
         else this.hp = Math.min(this.maxHp, this.hp + Math.max(0, this.maxHp - oldMax));
       }
@@ -1594,8 +1665,8 @@
         while (this.exp >= this.maxExp) {
           this.exp -= this.maxExp;
           this.level++;
-          this.unspentPoints += 3;
-          this.maxExp = Math.round(this.maxExp * 1.32);
+          this.unspentPoints += BAL.ptsPerLevel;
+          this.maxExp = Math.round(this.maxExp * BAL.expGrowth);
           up = true;
         }
         if (up) {
@@ -1701,10 +1772,10 @@
 
       receiveDamage(raw, attacker, isHoly = false, forceCrit = false) {
         if (this.isDead) return 0;
-        const isCrit = forceCrit || Math.random() < 0.22;
-        let dmg = raw * (isCrit ? 1.65 : 1.0);
+        const isCrit = forceCrit || Math.random() < BAL.critChance;
+        let dmg = raw * (isCrit ? BAL.critMult : 1.0);
         if ((this.rig === 'CORRUPTED_SLIME' || this.rig === 'SLIME_ALPHA') && !isHoly) dmg *= 0.8;
-        const mit = isHoly ? 0 : this.getDef() * 0.62;
+        const mit = isHoly ? 0 : this.getDef() * BAL.defMit;
         const finalDmg = Math.max(2, Math.round(dmg - mit));
 
         this.hp = Math.max(0, this.hp - finalDmg);
@@ -1770,19 +1841,19 @@
       partySlots[2] = new CombatEntity({
         name: 'Herói (Aldeão)', rig: 'HEALER', faction: 'ALLY', slotIndex: 2,
         isHealer: true, isVillager: true,
-        stats: { vit: 16, pow: 18, def: 6, spd: 1.15 },
+        stats: { ...BAL.hero },
         x: slotHomeX(2), y: GROUND_Y, range: 240, speed: 120
       });
       partySlots[1] = new CombatEntity({
         name: 'Filha (Aldeã)', rig: 'ARCHER', faction: 'ALLY', slotIndex: 1,
         isVillager: true, isRanged: true,
-        stats: { vit: 14, pow: 15, def: 4, spd: 1.25 },
+        stats: { ...BAL.daughter },
         x: slotHomeX(1), y: GROUND_Y, range: 240, speed: 120
       });
       partySlots[0] = new CombatEntity({
         name: 'Pai (Aldeão)', rig: 'TANK', faction: 'ALLY', slotIndex: 0,
         isVillager: true, isRanged: false,
-        stats: { vit: 28, pow: 13, def: 11, spd: 0.90 },
+        stats: { ...BAL.father },
         x: slotHomeX(0), y: GROUND_Y, range: 42, speed: 120
       });
     }
@@ -1896,7 +1967,7 @@
         const healer = partySlots[2];
         if (healer) {
           healer.homeX = 190;
-          if (healer.bonusVit < 25) healer.bonusVit = 25;
+          if (healer.bonusVit < BAL.fatherBonusVit) healer.bonusVit = BAL.fatherBonusVit;
           healer.recalcStats(true);
           shockwaveRings.push({ x: healer.x, y: healer.y - 16, color: '#fb923c', maxR: 68, ttl: 0.5, maxTtl: 0.5 });
         }
@@ -1998,7 +2069,7 @@
 
         if (wasPurified && state.stance === 'EXORCIST' && partySlots[2]) {
           const h = partySlots[2];
-          const mult = 1.25 + (state.skillLevels.EXORCIST[1] - 1) * 0.35;
+          const mult = BAL.passBase + (state.skillLevels.EXORCIST[1] - 1) * BAL.perLevel;
           const aoeDmg = h.getPow() * mult;
           shockwaveRings.push({ x: entity.x, y: entity.y - 14, color: '#38bdf8', maxR: 65, ttl: 0.35, maxTtl: 0.35 });
           for (const other of [...activeEnemies]) {
@@ -2021,9 +2092,9 @@
           spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'WOODEN_ROSARY');
         } else if (state.stageId === '2-1' && Math.random() < 0.6 && !hasItemId('PILGRIM_SANDALS')) {
           spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'PILGRIM_SANDALS');
-        } else if (state.tutorialCompleted && Math.random() < 0.07) {
+        } else if (state.tutorialCompleted && Math.random() < BAL.dropChance) {
           // roupas de classe: chance pequena em qualquer monstro, priorizando as que ainda não foram obtidas
-          const pool = ['MONK_ROBE', 'FATHER_WRAPS', 'PILGRIM_SANDALS', 'KNIGHT_PLATE', 'KNIGHT_GREAVES', 'KNIGHT_SWORD', 'ELVEN_TUNIC', 'ELVEN_BOOTS', 'EMERALD_CLOAK'];
+          const pool = BAL.pool || ['MONK_ROBE', 'FATHER_WRAPS', 'PILGRIM_SANDALS', 'KNIGHT_PLATE', 'KNIGHT_GREAVES', 'KNIGHT_SWORD', 'ELVEN_TUNIC', 'ELVEN_BOOTS', 'EMERALD_CLOAK'];
           const fresh = pool.filter(id => !hasItemId(id));
           const list = fresh.length ? fresh : pool;
           spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, list[Math.floor(Math.random() * list.length)]);
@@ -2143,7 +2214,7 @@
 
       const stance = state.stance;
       const lvl = state.skillLevels[stance][slot];
-      const mult = (slot === 2 ? 1.65 : 2.40) + (lvl - 1) * 0.35;
+      const mult = (slot === 2 ? BAL.sk2Base : BAL.ultBase) + (lvl - 1) * BAL.perLevel;
       const pow = healer.getPow();
       const enemies = getLivingEnemies();
       const castAnim = (cb) => healer.triggerAttackAnim(cb, slot === 3 ? 'ULTIMATE' : 'SKILL');
@@ -2567,7 +2638,7 @@
       const pow = ally.getPow();
       const vit = ally.getVit();
       const pLvl = state.skillLevels[stance][1];
-      const pMult = 1.25 + (pLvl - 1) * 0.35;
+      const pMult = BAL.passBase + (pLvl - 1) * BAL.perLevel;
 
       ally.autoCounter++;
       const isThird = ally.autoCounter >= 3;
@@ -5134,7 +5205,10 @@
     const COMBINE_COST = { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 };
     const COMBINE_UP_CHANCE = { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 };
     const REFINE_BASE = { COMMON: 40, UNCOMMON: 100, RARE: 250, MYTHIC: 600, LEGENDARY: 1400, DIVINE: 3000 };
-    const REFINE_MAX = 10;
+    const REFINE_MAX = BAL.refineMax;
+    if (BAL.combineCost) Object.assign(COMBINE_COST, BAL.combineCost);
+    if (BAL.combineUp) Object.assign(COMBINE_UP_CHANCE, BAL.combineUp);
+    if (BAL.refineBase) Object.assign(REFINE_BASE, BAL.refineBase);
     const craft = { mode: 'combine', slots: ['', '', ''], refine: '', result: '', resultMsg: '' };
     function refineCost(inst) { return REFINE_BASE[inst.tier] * ((inst.plus || 0) + 1); }
     function refineChance(inst) { return Math.max(0.15, 0.95 - (inst.plus || 0) * 0.08); }
@@ -5397,8 +5471,8 @@
 
     // ---- Resets e abas (custam ouro; o preço sobe a cada uso) ----
     const COIN_ICO = '<svg class="w-3 h-3 inline-block" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#facc15" stroke="#92400e" stroke-width="2.5"/></svg>';
-    const INV_TAB_COST = [0, 300, 800, 2000]; // preço para liberar a 2ª, 3ª e 4ª aba
-    const BAG_PER_TAB = 12;
+    const INV_TAB_COST = [0, ...BAL.tabCosts]; // preço para liberar a 2ª, 3ª e 4ª aba
+    const BAG_PER_TAB = BAL.bagPerTab;
     function attrResetCost() { return 100 * Math.pow(2, state.attrResets); }
     function talentResetCost() { return 150 * Math.pow(2, state.talentResets); }
     function bagCapacity() { return BAG_PER_TAB * state.invTabs; }
@@ -5428,7 +5502,7 @@
       for (const st of Object.keys(state.skillLevels)) {
         for (const slot of [1, 2, 3]) {
           const lvl = state.skillLevels[st][slot] || 1;
-          for (let l = 1; l < lvl; l++) total += Math.round((slot === 1 ? 12 : slot === 2 ? 18 : 30) * Math.pow(1.5, l - 1));
+          for (let l = 1; l < lvl; l++) total += Math.round((slot === 1 ? BAL.cost1 : slot === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, l - 1));
         }
       }
       return total;
@@ -5529,7 +5603,7 @@
           const prevY = idx === 0 ? classY + 14 : (84 + (idx - 1) * 34 + 13);
           const unlocked = isAct && isSkillNodeUnlocked(st, slot);
           const lvl = state.skillLevels[st][slot];
-          const cost = Math.round((slot === 1 ? 12 : slot === 2 ? 18 : 30) * Math.pow(1.5, lvl - 1));
+          const cost = Math.round((slot === 1 ? BAL.cost1 : slot === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, lvl - 1));
           const nodeInfo = stInfo.nodes[slot];
 
           // Conector Vertical
@@ -6700,7 +6774,7 @@
         partySlots[0] = null;
         partySlots[1] = null;
         if (partySlots[2]) {
-          partySlots[2].bonusVit = 25;
+          partySlots[2].bonusVit = BAL.fatherBonusVit;
           partySlots[2].recalcStats(true);
         }
         if (meta.postTutorialMerc && MERCENARIES_DB[meta.postTutorialMerc.key]) {

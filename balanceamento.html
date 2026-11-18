@@ -165,9 +165,14 @@ textarea { width: 100%; min-height: 160px; font-family: ui-monospace, Consolas, 
 
   <section class="panel">
     <h2>Parâmetros</h2>
-    <p class="sub" style="margin-bottom:12px">Os valores iniciais são os do jogo hoje. As alterações ficam salvas neste navegador.</p>
+    <p class="sub" style="margin-bottom:12px">Os valores iniciais são os do jogo hoje. Edite à vontade (o rascunho fica salvo aqui) e clique em <b>Salvar no jogo</b> para o jogo aberto neste mesmo navegador e endereço passar a usar esses números ao recarregar. Status de heróis e mercenários já existentes num save valem para novos jogos/contratações.</p>
     <div class="tabs" role="tablist" id="tabs"></div>
     <div id="tab-body"></div>
+    <div class="row-actions">
+      <button class="primary" id="btn-save-game">Salvar no jogo</button>
+      <button id="btn-clear-game">Voltar o jogo ao padrão</button>
+      <span id="game-msg" class="sub" style="align-self:center"></span>
+    </div>
     <div class="row-actions">
       <button id="btn-reset">Restaurar valores do jogo</button>
       <button id="btn-export">Copiar parâmetros (JSON)</button>
@@ -926,9 +931,29 @@ document.getElementById('btn-import').addEventListener('click', () => {
   catch (e) { msg.textContent = 'Não consegui ler esse JSON. Confira se copiou o texto inteiro.'; }
 });
 
+// ---------- aplicar no jogo: o jogo (index.html, mesma origem) lê esta chave ao abrir ----------
+const GAME_KEY = 'hh_balance_game_v1';
+function gameMsg() {
+  let saved = null; try { saved = localStorage.getItem(GAME_KEY); } catch (e) {}
+  const m = document.getElementById('game-msg');
+  if (!saved) { m.textContent = 'O jogo está usando os valores padrão.'; return; }
+  m.textContent = saved === JSON.stringify(P) ? '✔ O jogo está usando estes valores.' : 'Há mudanças ainda não salvas no jogo.';
+}
+document.getElementById('btn-save-game').addEventListener('click', () => {
+  try { localStorage.setItem(GAME_KEY, JSON.stringify(P)); saveParams(); } catch (e) { document.getElementById('game-msg').textContent = 'Não consegui salvar (armazenamento bloqueado).'; return; }
+  gameMsg(); document.getElementById('game-msg').textContent += ' Recarregue o jogo (F5) para aplicar.';
+});
+document.getElementById('btn-clear-game').addEventListener('click', () => {
+  if (!confirm('Remover o balanceamento salvo e voltar o jogo aos valores do código?')) return;
+  try { localStorage.removeItem(GAME_KEY); } catch (e) {}
+  gameMsg();
+});
+document.getElementById('tab-body').addEventListener('change', () => setTimeout(gameMsg, 300));
+
 syncTop();
 renderTabs();
 runAll();
+gameMsg();
 </script>
 
 </body>
