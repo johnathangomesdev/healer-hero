@@ -1,0 +1,9 @@
+# Instaladores / ferramentas baixadas
+*.exe
+*.zip
+*.7z
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
