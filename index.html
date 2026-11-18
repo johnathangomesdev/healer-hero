@@ -558,7 +558,8 @@
           <button data-dev="hero" class="icon-btn dev-btn">Adicionar Herói</button>
           <button id="dev-slow" class="icon-btn dev-btn">⏪ Desacelerar</button>
           <button id="dev-fast" class="icon-btn dev-btn">⏩ Acelerar</button>
-          <button id="dev-robot" class="icon-btn dev-btn col-span-2">🤖 Modo Robô: OFF</button>
+          <button id="dev-robot" class="icon-btn dev-btn">🤖 Robô: OFF</button>
+          <select id="dev-robot-stance" class="dev-btn" title="Vocação que o robô escolhe no fim do Ato I"><option value="">Classe do painel</option><option value="SAINT">Santo</option><option value="EXORCIST">Exorcista</option><option value="MONK">Monge</option></select>
           <button id="dev-sprites" class="icon-btn dev-btn col-span-2">✎ Editar Sprites</button>
         </div>
         <div id="dev-sub" class="hidden bg-slate-950/70 border border-slate-700 rounded-lg p-1.5 max-h-[150px] overflow-y-auto flex flex-col gap-1"></div>
@@ -7078,7 +7079,8 @@
     function robotLoadStrategy() {
       let st = JSON.parse(JSON.stringify(ROBOT_DEF));
       try {
-        const p = JSON.parse(localStorage.getItem('hh_balance_game_v1') || localStorage.getItem('hh_balance_params_v1') || 'null');
+        // a estratégia é só do robô: usa o rascunho mais recente do painel (não precisa "Salvar no jogo")
+        const p = JSON.parse(localStorage.getItem('hh_balance_params_v1') || localStorage.getItem('hh_balance_game_v1') || 'null');
         if (p && p.strategy) {
           const s = p.strategy;
           for (const k of ['stance', 'farmOnLoss', 'saveForMerc', 'doCombine', 'doRefine', 'replaceRatio']) if (k in s) st[k] = s[k];
@@ -7086,6 +7088,8 @@
           if (s.weights) for (const k in st.weights) Object.assign(st.weights[k], s.weights[k] || {});
         }
       } catch (_e) { }
+      const pick = document.getElementById('dev-robot-stance').value;
+      if (pick) st.stance = pick;
       if (!SKILLS_DB[st.stance]) st.stance = 'SAINT';
       return st;
     }
@@ -7255,7 +7259,8 @@
     }
     function syncRobotUI() {
       const b = document.getElementById('dev-robot');
-      b.textContent = `🤖 Modo Robô: ${ROBOT.on ? 'ON' : 'OFF'}` + (ROBOT.on ? ` (${STANCE_LABEL_ROBOT[ROBOT.st.stance] || ROBOT.st.stance})` : '');
+      b.textContent = `🤖 Robô: ${ROBOT.on ? 'ON' : 'OFF'}`;
+      b.dataset.tip = ROBOT.on ? `Robô jogando como <b>${STANCE_LABEL_ROBOT[ROBOT.st.stance]}</b>` + (state.isPathLocked && state.stance !== ROBOT.st.stance ? `<br>Este save já travou em ${STANCE_LABEL_ROBOT[state.stance]}: comece um Novo Jogo para trocar.` : '') : 'Liga o robô';
       b.classList.toggle('toggle-on', ROBOT.on);
     }
     const STANCE_LABEL_ROBOT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
@@ -7264,6 +7269,13 @@
       if (ROBOT.on) { ROBOT.st = robotLoadStrategy(); ROBOT.think = 0; ROBOT.wait = 0; state.isRepeat = false; state.isAutoAdvance = false; showBannerSafe('🤖 Robô no controle: decisões iguais às do simulador de balanceamento.'); }
       syncRobotUI(); refreshAllUI();
     };
+    document.getElementById('dev-robot-stance').onchange = () => {
+      try { localStorage.setItem('hh_robot_stance', document.getElementById('dev-robot-stance').value); } catch (_e) { }
+      ROBOT.st = robotLoadStrategy();
+      if (ROBOT.on && state.isPathLocked && state.stance !== ROBOT.st.stance) showBannerSafe(`Este jogo já travou a vocação em ${STANCE_LABEL_ROBOT[state.stance]}. Comece um Novo Jogo para o robô escolher ${STANCE_LABEL_ROBOT[ROBOT.st.stance]}.`);
+      syncRobotUI();
+    };
+    try { document.getElementById('dev-robot-stance').value = localStorage.getItem('hh_robot_stance') || ''; } catch (_e) { }
 
     // =========================================================================
     // 12c. EDITOR DE SPRITES (articulações, rotação, posição e escala das peças)
