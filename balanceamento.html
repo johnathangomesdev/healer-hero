@@ -208,6 +208,8 @@ const DEFAULTS = {
     combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
     refineBase: { COMMON: 40, UNCOMMON: 100, RARE: 250, MYTHIC: 600, LEGENDARY: 1400, DIVINE: 3000 } },
   itemList: [
+    { id: 'CLOTH_SHIRT', name: 'Roupa de Pano (inicial)', slot: 'CHEST', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK,TANK,ARCHER', vit: 3, pow: 0, def: 1, spd: 0, pool: false },
+    { id: 'CLOTH_BOOTS', name: 'Botas de Pano (inicial)', slot: 'FEET', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK,TANK,ARCHER', vit: 1, pow: 0, def: 1, spd: 0.03, pool: false },
     { id: 'WOODEN_ROSARY', name: 'Rosário de Madeira', slot: 'HEAD', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK', vit: 5, pow: 3, def: 1, spd: 0, pool: false },
     { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', slot: 'HEAD', tier: 'RARE', classes: 'SAINT,EXORCIST,ARCHER', vit: 10, pow: 12, def: 3, spd: 0.05, pool: true },
     { id: 'MONK_ROBE', name: 'Manto do Monge', slot: 'CHEST', tier: 'UNCOMMON', classes: 'MONK', vit: 14, pow: 10, def: 5, spd: 0.08, pool: true },
@@ -586,6 +588,9 @@ function simulate(P, seed) {
   S.party[2] = mkAlly('Herói', 'HERO', { vit: P.hero.vit, pow: P.hero.pow, def: P.hero.def, spd: P.hero.spd }, 2);
   S.party[1] = mkAlly('Filha', 'ARCHER', P.hero.daughter, 1);
   S.party[0] = mkAlly('Pai', 'TANK', P.hero.father, 0);
+  // todos começam com roupa e botas de pano
+  for (let k = 0; k < 3; k++) ['CLOTH_SHIRT', 'CLOTH_BOOTS'].forEach(id => { if (itemsById[id]) S.inv.push(newItem(id, 'COMMON')); });
+  equipAll();
   let idx = 0, runs = 0, streak = 0;
   while (idx < stages.length && runs < ST.maxStageRuns) {
     const stage = stages[idx]; runs++;
