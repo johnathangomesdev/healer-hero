@@ -1181,12 +1181,14 @@
     const ITEMS_DB = {
       // equipamento inicial de todo personagem: a própria roupa de aldeão (não muda o sprite)
       CLOTH_SHIRT: { id: 'CLOTH_SHIRT', name: 'Roupa de Pano', rank: 'C', slot: 'CHEST', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 3, pow: 0, def: 1, spd: 0 }, color: '#a8a29e' },
+      SAINT_STAFF: { id: 'SAINT_STAFF', name: 'Cajado do Santo', rank: 'C', slot: 'RIGHT_HAND', twoHanded: true, classes: ['SAINT'], bonuses: { vit: 1, pow: 4, def: 0, spd: 0 }, color: '#facc15' },
+      EXORCIST_ORB: { id: 'EXORCIST_ORB', name: 'Orbe do Exorcista', rank: 'C', slot: 'RIGHT_HAND', twoHanded: true, classes: ['EXORCIST'], bonuses: { vit: 0, pow: 5, def: 0, spd: 0 }, color: '#38bdf8' },
       OLD_SWORD: { id: 'OLD_SWORD', name: 'Espada Velha', rank: 'C', slot: 'RIGHT_HAND', classes: ['TANK'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0 }, color: '#cbd5e1' },
       WOOD_BUCKLER: { id: 'WOOD_BUCKLER', name: 'Broquel de Madeira', rank: 'C', slot: 'LEFT_HAND', classes: ['TANK'], bonuses: { vit: 1, pow: 0, def: 2, spd: 0 }, color: '#a16207' },
       HUNTING_BOW: { id: 'HUNTING_BOW', name: 'Arco de Caça', rank: 'C', slot: 'RIGHT_HAND', classes: ['ARCHER'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0.03 }, color: '#b45309' },
       CLOTH_BOOTS: { id: 'CLOTH_BOOTS', name: 'Botas de Pano', rank: 'C', slot: 'FEET', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 1, pow: 0, def: 1, spd: 0.03 }, color: '#a8a29e' },
       WOODEN_ROSARY: { id: 'WOODEN_ROSARY', name: 'Rosário de Madeira', rank: 'C', slot: 'HEAD', classes: ['SAINT', 'EXORCIST', 'MONK'], bonuses: { vit: 5, pow: 3, def: 1, spd: 0 }, color: '#eab308' },
-      EMERALD_CLOAK: { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', rank: 'B', slot: 'HEAD', classes: ['SAINT', 'EXORCIST', 'ARCHER'], bonuses: { vit: 10, pow: 12, def: 3, spd: 0.05 }, color: '#22c55e' },
+      EMERALD_CLOAK: { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', rank: 'B', slot: 'HEAD', classes: ['ARCHER'], bonuses: { vit: 10, pow: 12, def: 3, spd: 0.05 }, color: '#22c55e' },
       // roupas que trocam o sprite do personagem (ver ITEM_SKIN)
       MONK_ROBE: { id: 'MONK_ROBE', name: 'Manto do Monge', rank: 'B', slot: 'CHEST', classes: ['MONK'], bonuses: { vit: 14, pow: 10, def: 5, spd: 0.08 }, color: '#f59e0b' },
       KNIGHT_PLATE: { id: 'KNIGHT_PLATE', name: 'Couraça do Vanguarda', rank: 'B', slot: 'CHEST', classes: ['TANK'], bonuses: { vit: 20, pow: 6, def: 12, spd: -0.03 }, color: '#93c5fd' },
@@ -1196,12 +1198,12 @@
       ELVEN_BOOTS: { id: 'ELVEN_BOOTS', name: 'Botas Élficas', rank: 'C', slot: 'FEET', classes: ['ARCHER'], bonuses: { vit: 5, pow: 4, def: 2, spd: 0.1 }, color: '#86efac' },
       ELVEN_BOW: { id: 'ELVEN_BOW', name: 'Arco Élfico', rank: 'C', slot: 'RIGHT_HAND', classes: ['ARCHER'], bonuses: { vit: 2, pow: 12, def: 0, spd: 0.08 }, color: '#a3e635' },
       ELVEN_QUIVER: { id: 'ELVEN_QUIVER', name: 'Aljava de Flechas', rank: 'C', slot: 'LEFT_HAND', classes: ['ARCHER'], bonuses: { vit: 0, pow: 6, def: 0, spd: 0.06 }, color: '#d9a35f' },
-      PILGRIM_SANDALS: { id: 'PILGRIM_SANDALS', name: 'Sandálias do Peregrino', rank: 'C', slot: 'FEET', classes: ['SAINT', 'EXORCIST', 'MONK'], bonuses: { vit: 4, pow: 2, def: 2, spd: 0.08 }, color: '#d97706' },
-      FATHER_WRAPS: { id: 'FATHER_WRAPS', name: 'Bandagens do Pai', rank: 'B', slot: 'RIGHT_HAND', classes: ['MONK', 'TANK'], bonuses: { vit: 12, pow: 10, def: 4, spd: 0.10 }, color: '#f97316' },
-      IRON_BUCKLER: { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', rank: 'B', slot: 'LEFT_HAND', classes: ['TANK', 'MONK'], bonuses: { vit: 15, pow: 4, def: 12, spd: -0.02 }, color: '#94a3b8' },
-      CRIMSON_WRAPS: { id: 'CRIMSON_WRAPS', name: 'Bandagens Carmesim', rank: 'B', slot: 'RIGHT_HAND', classes: ['MONK'], bonuses: { vit: 8, pow: 14, def: 3, spd: 0.12 }, color: '#ef4444' },
+      PILGRIM_SANDALS: { id: 'PILGRIM_SANDALS', name: 'Sandálias do Peregrino', rank: 'C', slot: 'FEET', classes: ['MONK'], bonuses: { vit: 4, pow: 2, def: 2, spd: 0.08 }, color: '#d97706' },
+      FATHER_WRAPS: { id: 'FATHER_WRAPS', name: 'Bandagens do Pai', rank: 'B', slot: 'RIGHT_HAND', twoHanded: true, classes: ['MONK'], bonuses: { vit: 12, pow: 10, def: 4, spd: 0.10 }, color: '#f97316' },
+      IRON_BUCKLER: { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', rank: 'B', slot: 'LEFT_HAND', classes: ['TANK'], bonuses: { vit: 15, pow: 4, def: 12, spd: -0.02 }, color: '#94a3b8' },
+      CRIMSON_WRAPS: { id: 'CRIMSON_WRAPS', name: 'Bandagens Carmesim', rank: 'B', slot: 'RIGHT_HAND', twoHanded: true, classes: ['MONK'], bonuses: { vit: 8, pow: 14, def: 3, spd: 0.12 }, color: '#ef4444' },
       GOLDEN_ARMOR: { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', rank: 'A', slot: 'CHEST', classes: ['TANK'], bonuses: { vit: 35, pow: 22, def: 18, spd: 0.05 }, color: '#facc15' },
-      NECRO_MANTLE_SS: { id: 'NECRO_MANTLE_SS', name: 'Cajado do Necromante', rank: 'SS', slot: 'RIGHT_HAND', classes: ['EXORCIST', 'SAINT'], bonuses: { vit: 80, pow: 85, def: 42, spd: 0.50 }, color: '#c084fc' }
+      NECRO_MANTLE_SS: { id: 'NECRO_MANTLE_SS', name: 'Cajado do Necromante', rank: 'SS', slot: 'RIGHT_HAND', twoHanded: true, classes: ['EXORCIST', 'SAINT'], bonuses: { vit: 80, pow: 85, def: 42, spd: 0.50 }, color: '#c084fc' }
     };
 
     // Tiers (raridade) dos itens: cor da moldura, do nome e do brilho no chão
@@ -1214,7 +1216,7 @@
       DIVINE:    { label: 'Divino',   color: '#fde68a', order: 5, sparkle: true } // dourado com brilhos brancos
     };
     Object.entries({
-      CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', OLD_SWORD: 'COMMON', WOOD_BUCKLER: 'COMMON', HUNTING_BOW: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
+      SAINT_STAFF: 'COMMON', EXORCIST_ORB: 'COMMON', CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', OLD_SWORD: 'COMMON', WOOD_BUCKLER: 'COMMON', HUNTING_BOW: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
       FATHER_WRAPS: 'UNCOMMON', MONK_ROBE: 'UNCOMMON', KNIGHT_PLATE: 'UNCOMMON', KNIGHT_SWORD: 'UNCOMMON', ELVEN_TUNIC: 'UNCOMMON',
       EMERALD_CLOAK: 'RARE', CRIMSON_WRAPS: 'RARE',
       IRON_BUCKLER: 'MYTHIC',
@@ -1343,6 +1345,7 @@
     // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
     // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
     // =========================================================================
+    const BAL_VERSION = 3;
     const BAL = (() => {
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
@@ -1352,7 +1355,8 @@
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
       let P = null;
       try { P = JSON.parse(localStorage.getItem('hh_balance_game_v1') || 'null'); } catch (e) { }
-      if (!P || typeof P !== 'object') return B;
+      // só aceita parâmetros salvos pela versão atual do painel (valores antigos reativavam regras velhas)
+      if (!P || typeof P !== 'object' || P.version !== BAL_VERSION) return B;
       const num = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
       const take = (src, keys) => { if (src) for (const k of keys) if (k in src) B[k] = num(src[k], B[k]); };
       try {
@@ -1878,7 +1882,8 @@
         stats: { ...BAL.father },
         x: slotHomeX(0), y: GROUND_Y, range: 42, speed: 120
       });
-      giveStarterGear(2);
+      giveStarterGear(2, ['SAINT_STAFF']);
+      if (!state.inv.some(x => x.id === 'EXORCIST_ORB')) addItem('EXORCIST_ORB', 'COMMON'); // vai para a mão quando virar Exorcista
       giveStarterGear(1, ['HUNTING_BOW']);           // filha: arco de caça
       giveStarterGear(0, ['OLD_SWORD', 'WOOD_BUCKLER']); // pai: espada velha e broquel
     }
@@ -2969,6 +2974,8 @@
 
     // ---- Ícone dos itens: as próprias peças dos sprites (com tinta quando a peça é reaproveitada) ----
     const ITEM_ART = {
+      SAINT_STAFF: { draw: g => { g.rotate(0.6); cPoly(g, [[-1.3, 9], [1.3, 9], [1.2, -15], [-1.2, -15]], '#eab308'); cPoly(g, [[-4.6, -13.6], [-1.6, -15.6], [-1.6, -17.4], [-3.6, -19.4]], '#fde047'); cPoly(g, [[4.6, -13.6], [1.6, -15.6], [1.6, -17.4], [3.6, -19.4]], '#fde047'); cNgon(g, 0, -18, 3.6, 6, Math.PI / 6, '#fef9c3'); cStar(g, 0, -18, 2.9, '#facc15'); } },
+      EXORCIST_ORB: { draw: g => { g.translate(0, -5); g.globalCompositeOperation = 'lighter'; cCircle(g, 0, 0, 11, 'rgba(56,189,248,0.3)', false); g.globalCompositeOperation = 'source-over'; cNgon(g, 0, 0, 6.5, 6, 0.3, '#7dd3fc'); cCircle(g, -1.6, -1.6, 2, '#ffffff', false); } },
       CLOTH_SHIRT: { lib: 'rig', img: 'torso' },
       CLOTH_BOOTS: { lib: 'rig', img: 'legR' },
       OLD_SWORD: { lib: 'rig', img: 'sword' },
@@ -3003,6 +3010,7 @@
       if (_itemIconCache[id]) return _itemIconCache[id];
       const art = ITEM_ART[id];
       if (!art) return null;
+      if (art.draw) { const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'); g.translate(48, 56); g.scale(3.4, 3.4); g.lineWidth = 0.9; g.strokeStyle = '#0d0b12'; art.draw(g); return (_itemIconCache[id] = c); }
       const im = (art.lib === 'mon' ? MON_IMG : RIG_IMG)[art.img];
       if (!im || !im.complete || !im.naturalWidth) return null;
       const S = 96, c = document.createElement('canvas');
@@ -4631,7 +4639,7 @@
             cPoly(g, [[-3.6, -16.4], [0, -19.6], [3.6, -16.4], [2.2, -14], [-2.2, -14]], '#581c87');
             cNgon(g, 0, -20.4, 3.6 + Math.sin(T * 3) * 0.5 + pose.glow * 1.6, 6, T * 0.6, '#4ade80');
           });
-        } else if (isSaint) {
+        } else if (isSaint && eqSlots.RIGHT_HAND === 'SAINT_STAFF') {
           g.rotate(pose.wpn * 0.55);
           sprCode(g, 'cajado_santo', () => {
             cPoly(g, [[-1.3, 9], [1.3, 9], [1.2, -15], [-1.2, -15]], '#eab308');
@@ -4641,7 +4649,7 @@
             cNgon(g, 0, -18, pr, 6, Math.PI / 6, '#fef9c3');
             cStar(g, 0, -18, pr * 0.8, '#facc15');
           });
-        } else if (isExorcist) {
+        } else if (isExorcist && eqSlots.RIGHT_HAND === 'EXORCIST_ORB') {
           g.translate(3.5, -6 + Math.sin(T * 2.2) * 1.4);
           sprCode(g, 'orbe_exorcista', () => {
             g.save(); g.globalCompositeOperation = 'lighter';
@@ -5722,11 +5730,28 @@
       return it.classes.includes(tag);
     }
 
+    // Arma de duas mãos (cajado, orbe, bandagens): ocupa Mão D. e Mão E. ao mesmo tempo
+    function isTwoHanded(uid) { const id = itemIdOf(uid); return !!(id && ITEMS_DB[id].twoHanded); }
+    function fixTwoHanded(slotIdx, placed) {
+      const e = state.equippedSlots[slotIdx];
+      if (placed === 'RIGHT_HAND' && isTwoHanded(e.RIGHT_HAND)) e.LEFT_HAND = '';
+      if (placed === 'LEFT_HAND' && e.LEFT_HAND && isTwoHanded(e.RIGHT_HAND)) e.RIGHT_HAND = '';
+    }
+    // herói sem arma: equipa a arma da classe que estiver na bolsa (ex.: troca de vocação no tutorial)
+    function autoEquipClassWeapon(slotIdx) {
+      const e = state.equippedSlots[slotIdx];
+      if (e.RIGHT_HAND) return;
+      const w = getBagItems().filter(i => ITEMS_DB[i.id].slot === 'RIGHT_HAND' && canEquipItem(slotIdx, i.id))
+        .sort((a, b) => ITEM_TIERS[b.tier].order - ITEM_TIERS[a.tier].order)[0];
+      if (w) { e.RIGHT_HAND = w.uid; fixTwoHanded(slotIdx, 'RIGHT_HAND'); }
+    }
     function unequipIncompatible(slotIdx) {
       const slots = state.equippedSlots[slotIdx];
       for (const k of Object.keys(slots)) {
         if (slots[k] && !canEquipItem(slotIdx, itemIdOf(slots[k]))) slots[k] = '';
       }
+      if (slotIdx === 2) autoEquipClassWeapon(2);
+      fixTwoHanded(slotIdx, 'RIGHT_HAND');
       if (partySlots[slotIdx]) partySlots[slotIdx].applyEquipmentBonuses();
     }
 
@@ -5742,6 +5767,7 @@
       if (!getBagItems().includes(inst)) return; // só equipa o que está livre na bolsa
       // o item que estava no slot volta para a bolsa automaticamente (a bolsa = possuídos − equipados)
       state.equippedSlots[slotIdx][it.slot] = uid;
+      fixTwoHanded(slotIdx, it.slot);
       if (partySlots[slotIdx]) partySlots[slotIdx].applyEquipmentBonuses();
       sfx.play('COIN');
       refreshAllUI();
@@ -5940,6 +5966,18 @@
       const rightDefs = [{ key: 'CHEST', label: 'Peito' }, { key: 'LEFT_HAND', label: 'Mão E.' }, { key: 'FEET', label: 'Pés' }];
 
       const buildEquipBox = (sd) => {
+        const twoH = sd.key === 'LEFT_HAND' && !state.equippedSlots[sIdx].LEFT_HAND && isTwoHanded(state.equippedSlots[sIdx].RIGHT_HAND);
+        if (twoH) {
+          const v = instView(invGet(state.equippedSlots[sIdx].RIGHT_HAND));
+          const box = document.createElement('div');
+          box.className = 'relative w-8 h-8 rounded-lg border flex items-center justify-center opacity-45';
+          box.style.cssText = tierFrameStyle(v);
+          box.dataset.tip = `<b>${v.name}</b><br>Arma de <b>duas mãos</b>: ocupa a Mão E. também.<br>Equipe algo aqui para trocar.`;
+          box.innerHTML = itemIconHtml(v, 'w-[85%] h-[85%]');
+          box.ondragover = e => e.preventDefault();
+          box.ondrop = e => { e.preventDefault(); const d = e.dataTransfer.getData('text/plain'); if (d.startsWith('bag:')) { const it = ITEMS_DB[itemIdOf(d.slice(4))]; if (it && it.slot === 'LEFT_HAND') equipItem(sIdx, d.slice(4)); } };
+          return box;
+        }
         const eqInst = invGet(state.equippedSlots[sIdx][sd.key]);
         const eqIt = eqInst && ITEMS_DB[eqInst.id] ? instView(eqInst) : null;
         const box = document.createElement('div');
@@ -7193,7 +7231,9 @@
           const curUid = state.equippedSlots[s][slot], cur = invGet(curUid);
           let best = cur && canEquipItem(s, cur.id) ? cur : null, bs = best ? robotScore(best, role) : 0;
           for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id)) { const sc = robotScore(i, role); if (sc > bs) { bs = sc; best = i; } }
+          if (slot === 'LEFT_HAND' && isTwoHanded(state.equippedSlots[s].RIGHT_HAND)) continue;
           if (best && best.uid !== curUid) state.equippedSlots[s][slot] = best.uid;
+          if (slot === 'RIGHT_HAND') fixTwoHanded(s, 'RIGHT_HAND');
         }
         a.applyEquipmentBonuses();
       }
@@ -7340,8 +7380,8 @@
     // 12c. EDITOR DE SPRITES (articulações, rotação, posição e escala das peças)
     // =========================================================================
     const SE_CHARS = [
-      { label: 'Herói Aldeão (Santo)', kind: 'human', rig: 'HEALER', stance: 'SAINT', villager: true },
-      { label: 'Herói Aldeão (Exorcista)', kind: 'human', rig: 'HEALER', stance: 'EXORCIST', villager: true },
+      { label: 'Herói Aldeão (Santo)', kind: 'human', rig: 'HEALER', stance: 'SAINT', villager: true, eq: { RIGHT_HAND: 'SAINT_STAFF' } },
+      { label: 'Herói Aldeão (Exorcista)', kind: 'human', rig: 'HEALER', stance: 'EXORCIST', villager: true, eq: { RIGHT_HAND: 'EXORCIST_ORB' } },
       { label: 'Herói Aldeão (Monge)', kind: 'human', rig: 'HEALER', stance: 'MONK', villager: true },
       { label: 'Herói Monge (roupa)', kind: 'human', rig: 'HEALER', stance: 'MONK', villager: false, eq: { HEAD: 'MONK_TONSURE', CHEST: 'MONK_ROBE', FEET: 'PILGRIM_SANDALS', RIGHT_HAND: 'FATHER_WRAPS' } },
       { label: 'Pai (Aldeão c/ espada)', kind: 'human', rig: 'TANK', villager: true },
