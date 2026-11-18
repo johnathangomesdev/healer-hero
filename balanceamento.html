@@ -198,7 +198,7 @@ const STANCE_PT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
 const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
-  version: 3, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  version: 4, // mude junto com BAL_VERSION do jogo quando as regras mudarem
   general: { targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
@@ -245,21 +245,31 @@ const DEFAULTS = {
     { id: 'ZOMBIE_MAGE_BOSS', name: 'Necromante', vit: 320, pow: 68, def: 32, spd: 0.95, speed: 45, range: 250, gold: 208, dpe: 80, exp: 650, splits: false, boss: true }
   ],
   stages: [
-    { id: '1-1', scale: 1.0, waves: 'CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '1-1', scale: 1, waves: 'CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
     { id: '1-2', scale: 1.1, waves: 'TUTORIAL_WOLF | TUTORIAL_WOLF,CORRUPTED_SLIME', drop: '' },
-    { id: '1-3', scale: 1.0, waves: 'TUTORIAL_WOLF,TUTORIAL_WOLF | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
-    { id: '2-1', scale: 4.8, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
-    { id: '2-2', scale: 5.33, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
-    { id: '2-3', scale: 6.02, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | SLIME_ALPHA', drop: 'SLIME_ALPHA:CRIMSON_WRAPS' },
-    { id: '3-1', scale: 8.03, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
-    { id: '3-2', scale: 8.66, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
-    { id: '3-3', scale: 9.5, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
-    { id: '4-1', scale: 8.21, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
-    { id: '4-2', scale: 8.89, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
-    { id: '4-3', scale: 9.76, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | BEAR_ALPHA', drop: 'BEAR_ALPHA:IRON_BUCKLER' },
-    { id: '5-1', scale: 8.18, waves: 'CORRUPTED_SLIME,CORRUPTED_BEAR | ZOMBIE_WOLF,CORRUPTED_BEAR,CORRUPTED_SLIME', drop: '' },
-    { id: '5-2', scale: 8.98, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
-    { id: '5-3', scale: 10.03, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_MAGE_BOSS', drop: 'ZOMBIE_MAGE_BOSS:NECRO_MANTLE_SS' }
+    { id: '1-3', scale: 1, waves: 'CORRUPTED_SLIME,TUTORIAL_WOLF | TUTORIAL_WOLF,TUTORIAL_WOLF', drop: '' },
+    { id: '1-4', scale: 1, waves: 'TUTORIAL_WOLF,TUTORIAL_WOLF | TUTORIAL_WOLF,CORRUPTED_SLIME,TUTORIAL_WOLF', drop: '' },
+    { id: '1-5', scale: 1, waves: 'TUTORIAL_WOLF,TUTORIAL_WOLF | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '2-1', scale: 3.84, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-2', scale: 4.08, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-3', scale: 4.33, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-4', scale: 4.58, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-5', scale: 4.82, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | SLIME_ALPHA', drop: 'SLIME_ALPHA:CRIMSON_WRAPS' },
+    { id: '3-1', scale: 6.42, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '3-2', scale: 6.72, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
+    { id: '3-3', scale: 7.01, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
+    { id: '3-4', scale: 7.3, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '3-5', scale: 7.6, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '4-1', scale: 6.57, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '4-2', scale: 6.88, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '4-3', scale: 7.18, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '4-4', scale: 7.5, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
+    { id: '4-5', scale: 7.81, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | BEAR_ALPHA', drop: 'BEAR_ALPHA:IRON_BUCKLER' },
+    { id: '5-1', scale: 6.54, waves: 'CORRUPTED_SLIME,CORRUPTED_BEAR | ZOMBIE_WOLF,CORRUPTED_BEAR,CORRUPTED_SLIME', drop: '' },
+    { id: '5-2', scale: 6.91, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
+    { id: '5-3', scale: 7.28, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
+    { id: '5-4', scale: 7.66, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '5-5', scale: 8.02, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_MAGE_BOSS', drop: 'ZOMBIE_MAGE_BOSS:NECRO_MANTLE_SS' }
   ],
   mercs: [
     { id: 'VANGUARD_WARRIOR', name: 'Guerreiro Vanguarda', role: 'TANK', cost: 95, vit: 38, pow: 16, def: 15, spd: 0.88, unlock: '2-1', gear: 'KNIGHT_SWORD,KNIGHT_PLATE,IRON_BUCKLER,KNIGHT_GREAVES', active: true },
@@ -384,7 +394,10 @@ function simulate(P, seed) {
     for (const s of [0, 1, 2]) {
       const a = S.party[s]; if (!a) continue;
       const isHero = a.role === 'HERO';
-      units.push({ a, slot: s, isHero, hp: hpOf(a), maxHp: hpOf(a), x: (isHero && S.tutorial && stage.id === '1-3') ? 190 : POS_X[s],
+      // vida e mortes continuam entre fases do mesmo ato (só cura no X-1 ou ao tentar de novo após derrota)
+      const fresh = stage.sub === 1 || S.freshNext || a.hpFrac === undefined;
+      if (!fresh && a.hpFrac <= 0) continue;
+      units.push({ a, slot: s, isHero, hp: fresh ? hpOf(a) : Math.max(1, Math.round(hpOf(a) * a.hpFrac)), maxHp: hpOf(a), x: (isHero && S.tutorial && stage.id === '1-5') ? 190 : POS_X[s],
         melee: a.role === 'TANK' || (isHero && S.stance === 'MONK'), mspd: isHero ? 150 : 120, at: 0.4, buff: 0, buffT: 0, counter: 0 });
     }
     const cd = { 2: 0, 3: 0 };
@@ -491,8 +504,10 @@ function simulate(P, seed) {
         }
         wt += dt;
       }
-      t += wt + (w < stage.waves.length - 1 ? G.waveGap : (stage.sub < 3 ? G.stageGap : 0));
+      t += wt + (w < stage.waves.length - 1 ? G.waveGap : (stage.sub < 5 ? G.stageGap : 0));
     }
+    for (const u of units) u.a.hpFrac = u.hp > 0 ? u.hp / u.maxHp : 0;
+    S.freshNext = false;
     const al = units.filter(u => u.hp > 0);
     const hpPct = units.length ? al.reduce((s, u) => s + u.hp, 0) / units.reduce((s, u) => s + u.maxHp, 0) * 100 : 0;
     return { win: true, time: t, hpPct };
@@ -605,7 +620,7 @@ function simulate(P, seed) {
     if (S.tutorial) {
       if (stage.id === '1-1') S.stance = 'SAINT';
       if (stage.id === '1-2') { S.stance = 'EXORCIST'; S.party[1] = null; }
-      if (stage.id === '1-3') { S.stance = 'MONK'; S.party[0] = null; S.party[1] = null; S.party[2].bonusVit = Math.max(S.party[2].bonusVit, P.hero.fatherBonusVit); if (!S.owned.has('FATHER_WRAPS')) pre.push('FATHER_WRAPS'); }
+      if (stage.id === '1-5') { S.stance = 'MONK'; S.party[0] = null; S.party[1] = null; S.party[2].bonusVit = Math.max(S.party[2].bonusVit, P.hero.fatherBonusVit); if (!S.owned.has('FATHER_WRAPS')) pre.push('FATHER_WRAPS'); }
       equipAll();
     }
     const r = runStage(stage, pre);
@@ -614,13 +629,13 @@ function simulate(P, seed) {
     const last = idx === stages.length - 1;
     if (r.win) {
       streak = 0;
-      if (stage.sub === 3) S.t += G.actEndSec + G.menuSecPerAct;
-      if (S.tutorial && stage.id === '1-3') {
+      if (stage.sub === 5) S.t += G.actEndSec + G.menuSecPerAct;
+      if (S.tutorial && stage.id === '1-5') {
         S.tutorial = false; S.party[0] = null; S.party[1] = null;
         if (S.gold < 95) { S.goldEarned += 115 - S.gold; S.gold = 115; }
         S.stance = ST.stance; S.furthest = Math.max(S.furthest, idx + 1);
       }
-    } else { S.defeats++; streak++; }
+    } else { S.defeats++; streak++; S.freshNext = true; }
     manage();
     const mercs = [0, 1].map(s => S.party[s]).filter(Boolean);
     S.rows.push({ t: S.t, stage: stage.id, act: stage.act, win: r.win, dur: r.time * G.timeFactor, hpPct: r.hpPct, heroLv: S.party[2].level,
@@ -628,7 +643,7 @@ function simulate(P, seed) {
       dpe: S.dpe, dpeEarned: S.dpeEarned, skills: `${S.skill[1]}/${S.skill[2]}/${S.skill[3]}`,
       equipped: S.inv.filter(i => i.owner !== null).map(i => ({ tier: i.tier, plus: i.plus })), stance: S.stance });
     if (r.win) {
-      if (stage.sub === 3) S.actEnd[stage.act] = S.t;
+      if (stage.sub === 5) S.actEnd[stage.act] = S.t;
       if (last) { S.finished = true; break; }
       idx++;
     } else {
@@ -764,7 +779,7 @@ function drawPace(rep) {
   const pts = [[0, 0]]; rep.rows.forEach(r => pts.push([r.t / 60, r.win ? order.indexOf(r.stage) + 1 : order.indexOf(r.stage)]));
   const tg = [[0, 0]]; let acc = 0; P.general.actTargets.forEach((m, i) => { acc += m; tg.push([acc, Math.min(nS, (i + 1) * 3)]); });
   const xa = minuteAxis(Math.max(acc, pts[pts.length - 1][0]));
-  const labels = ['início', '1-3', '2-3', '3-3', '4-3', '5-3'];
+  const labels = ['início', '1-5', '2-5', '3-5', '4-5', '5-5'];
   const { sx, sy, g } = axes(xa.xMax, nS, v => Math.round(v) + 'm', v => v, 5, xa.ticks, labels);
   let d = ''; pts.forEach(([x, y], i) => { d += i ? `H${sx(x).toFixed(1)}V${sy(y).toFixed(1)}` : `M${sx(x).toFixed(1)} ${sy(y).toFixed(1)}`; });
   const td = tg.map(([x, y], i) => `${i ? 'L' : 'M'}${sx(x).toFixed(1)} ${sy(y).toFixed(1)}`).join('');

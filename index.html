@@ -463,10 +463,14 @@
         <span id="lbl-act-roman" class="ui-h2 text-amber-300">I</span>
         <div class="flex items-center">
           <span id="dot-sub-1" class="w-2.5 h-2.5 rounded-full bg-red-500 border border-red-200 shadow-[0_0_8px_#ef4444]"></span>
-          <span id="line-sub-1" class="w-4 h-0.5 bg-slate-500"></span>
+          <span id="line-sub-1" class="w-3 h-0.5 bg-slate-500"></span>
           <span id="dot-sub-2" class="w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-400"></span>
-          <span id="line-sub-2" class="w-4 h-0.5 bg-slate-500"></span>
+          <span id="line-sub-2" class="w-3 h-0.5 bg-slate-500"></span>
           <span id="dot-sub-3" class="w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-400"></span>
+          <span id="line-sub-3" class="w-3 h-0.5 bg-slate-500"></span>
+          <span id="dot-sub-4" class="w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-400"></span>
+          <span id="line-sub-4" class="w-3 h-0.5 bg-slate-500"></span>
+          <span id="dot-sub-5" class="w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-400"></span>
         </div>
         <svg class="w-3.5 h-3.5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
       </button>
@@ -665,7 +669,7 @@
     </div>
 
     <!-- =================================================================== -->
-    <!-- MODAL: DECISÃO IRREVERSÍVEL DO HERÓI (PÓS-1-3 LOBO ALFA)            -->
+    <!-- MODAL: DECISÃO IRREVERSÍVEL DO HERÓI (PÓS-1-5 LOBO ALFA)            -->
     <!-- =================================================================== -->
     <div id="modal-path-choice" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-30 p-4">
       <div class="glass-drawer rounded-2xl p-4 max-w-md w-full text-center border-2 border-amber-400">
@@ -1323,21 +1327,31 @@
     };
 
     const STAGES_DB = {
-      '1-1': { act: 1, sub: 1, sky: 'SUNSET', next: '1-2', scale: 1.0, waves: [['CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
+      '1-1': { act: 1, sub: 1, sky: 'SUNSET', next: '1-2', scale: 1, waves: [['CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
       '1-2': { act: 1, sub: 2, sky: 'DUSK', next: '1-3', scale: 1.1, event: 'SISTER_ZOMBIE', waves: [['TUTORIAL_WOLF'], ['TUTORIAL_WOLF', 'CORRUPTED_SLIME']] },
-      '1-3': { act: 1, sub: 3, sky: 'BLOOD', next: '2-1', scale: 1.0, event: 'FATHER_FALL', waves: [['TUTORIAL_WOLF', 'TUTORIAL_WOLF'], ['ALPHA_DEMON_WOLF']] },
-      '2-1': { act: 2, sub: 1, sky: 'SWAMP', next: '2-2', scale: 4.8, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
-      '2-2': { act: 2, sub: 2, sky: 'SWAMP', next: '2-3', scale: 5.33, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
-      '2-3': { act: 2, sub: 3, sky: 'SWAMP', next: '3-1', scale: 6.02, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['SLIME_ALPHA']] },
-      '3-1': { act: 3, sub: 1, sky: 'DUSK', next: '3-2', scale: 8.03, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['ZOMBIE_WOLF', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF']] },
-      '3-2': { act: 3, sub: 2, sky: 'DUSK', next: '3-3', scale: 8.66, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF']] },
-      '3-3': { act: 3, sub: 3, sky: 'BLOOD', next: '4-1', scale: 9.5, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ALPHA_DEMON_WOLF']] },
-      '4-1': { act: 4, sub: 1, sky: 'ALTAR', next: '4-2', scale: 8.21, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF']] },
-      '4-2': { act: 4, sub: 2, sky: 'ALTAR', next: '4-3', scale: 8.89, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
-      '4-3': { act: 4, sub: 3, sky: 'ALTAR', next: '5-1', scale: 9.76, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['BEAR_ALPHA']] },
-      '5-1': { act: 5, sub: 1, sky: 'ALTAR', next: '5-2', scale: 8.18, waves: [['CORRUPTED_SLIME', 'CORRUPTED_BEAR'], ['ZOMBIE_WOLF', 'CORRUPTED_BEAR', 'CORRUPTED_SLIME']] },
-      '5-2': { act: 5, sub: 2, sky: 'ALTAR', next: '5-3', scale: 8.98, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
-      '5-3': { act: 5, sub: 3, sky: 'ALTAR', next: '5-1', scale: 10.03, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_MAGE_BOSS']] }
+      '1-3': { act: 1, sub: 3, sky: 'DUSK', next: '1-4', scale: 1, waves: [['CORRUPTED_SLIME', 'TUTORIAL_WOLF'], ['TUTORIAL_WOLF', 'TUTORIAL_WOLF']] },
+      '1-4': { act: 1, sub: 4, sky: 'BLOOD', next: '1-5', scale: 1, waves: [['TUTORIAL_WOLF', 'TUTORIAL_WOLF'], ['TUTORIAL_WOLF', 'CORRUPTED_SLIME', 'TUTORIAL_WOLF']] },
+      '1-5': { act: 1, sub: 5, sky: 'BLOOD', next: '2-1', scale: 1, event: 'FATHER_FALL', waves: [['TUTORIAL_WOLF', 'TUTORIAL_WOLF'], ['ALPHA_DEMON_WOLF']] },
+      '2-1': { act: 2, sub: 1, sky: 'SWAMP', next: '2-2', scale: 3.84, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
+      '2-2': { act: 2, sub: 2, sky: 'SWAMP', next: '2-3', scale: 4.08, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
+      '2-3': { act: 2, sub: 3, sky: 'SWAMP', next: '2-4', scale: 4.33, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
+      '2-4': { act: 2, sub: 4, sky: 'SWAMP', next: '2-5', scale: 4.58, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
+      '2-5': { act: 2, sub: 5, sky: 'SWAMP', next: '3-1', scale: 4.82, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['SLIME_ALPHA']] },
+      '3-1': { act: 3, sub: 1, sky: 'DUSK', next: '3-2', scale: 6.42, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['ZOMBIE_WOLF', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF']] },
+      '3-2': { act: 3, sub: 2, sky: 'DUSK', next: '3-3', scale: 6.72, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF']] },
+      '3-3': { act: 3, sub: 3, sky: 'DUSK', next: '3-4', scale: 7.01, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF']] },
+      '3-4': { act: 3, sub: 4, sky: 'BLOOD', next: '3-5', scale: 7.3, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
+      '3-5': { act: 3, sub: 5, sky: 'BLOOD', next: '4-1', scale: 7.6, waves: [['ZOMBIE_WOLF', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ALPHA_DEMON_WOLF']] },
+      '4-1': { act: 4, sub: 1, sky: 'ALTAR', next: '4-2', scale: 6.57, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF']] },
+      '4-2': { act: 4, sub: 2, sky: 'ALTAR', next: '4-3', scale: 6.88, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
+      '4-3': { act: 4, sub: 3, sky: 'ALTAR', next: '4-4', scale: 7.18, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
+      '4-4': { act: 4, sub: 4, sky: 'ALTAR', next: '4-5', scale: 7.5, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
+      '4-5': { act: 4, sub: 5, sky: 'ALTAR', next: '5-1', scale: 7.81, waves: [['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF'], ['BEAR_ALPHA']] },
+      '5-1': { act: 5, sub: 1, sky: 'ALTAR', next: '5-2', scale: 6.54, waves: [['CORRUPTED_SLIME', 'CORRUPTED_BEAR'], ['ZOMBIE_WOLF', 'CORRUPTED_BEAR', 'CORRUPTED_SLIME']] },
+      '5-2': { act: 5, sub: 2, sky: 'ALTAR', next: '5-3', scale: 6.91, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
+      '5-3': { act: 5, sub: 3, sky: 'ALTAR', next: '5-4', scale: 7.28, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
+      '5-4': { act: 5, sub: 4, sky: 'ALTAR', next: '5-5', scale: 7.66, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
+      '5-5': { act: 5, sub: 5, sky: 'ALTAR', next: '5-1', scale: 8.02, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_MAGE_BOSS']] }
     };
 
     // =========================================================================
@@ -1345,7 +1359,7 @@
     // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
     // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
     // =========================================================================
-    const BAL_VERSION = 3;
+    const BAL_VERSION = 4;
     const BAL = (() => {
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
@@ -1898,6 +1912,8 @@
     }
 
     function startStage(stageId) {
+      // vida e mortes continuam de uma fase para a outra; só cura/revive no início do ato ou ao tentar de novo após derrota
+      const wasDefeated = state.isDefeated || getLivingAllies().length === 0;
       if (state.tutorialCompleted && stageId.startsWith('1-')) {
         stageId = '2-1';
         if (state.postTutorialStance) {
@@ -1941,12 +1957,14 @@
         setHeroStanceTutorialOrUser('SAINT', true);
       }
 
+      const freshStart = stageId.endsWith('-1') || wasDefeated;
       for (const s of [0, 1, 2]) {
         const ally = partySlots[s];
         if (ally && ally.faction === 'ALLY') {
+          if (!freshStart && ally.isDead) continue; // quem caiu fica caído até o fim do ato
           ally.isDead = false;
           ally.deathTimer = 0;
-          ally.recalcStats(true);
+          ally.recalcStats(freshStart);
           ally.homeX = slotHomeX(s);
           ally.x = slotHomeX(s);
           ally.y = GROUND_Y;
@@ -1954,7 +1972,7 @@
       }
 
       // =====================================================================
-      // EVENTOS NARRATIVOS DO TUTORIAL (1-2 EXORCISTA & 1-3 MONGE)
+      // EVENTOS NARRATIVOS DO TUTORIAL (1-2 EXORCISTA & 1-5 MONGE)
       // =====================================================================
       if (cfg.event === 'SISTER_ZOMBIE') {
         // Garante que a Irmã exista para a cena da mordida e troca automática para EXORCISTA
@@ -1986,7 +2004,7 @@
         sfx.play('SKILL');
         showBanner('1-2: A Irmã foi mordida! Postura EXORCISTA ativada — Purifique-a com Luz!');
       } else if (cfg.event === 'FATHER_FALL') {
-        // Sacrifício do Pai na abertura de 1-3 -> dropa Bandagens do Pai + troca automática para MONGE (+25 VIT)
+        // Sacrifício do Pai na abertura de 1-5 -> dropa Bandagens do Pai + troca automática para MONGE (+25 VIT)
         const father = partySlots[0];
         const dropX = father ? father.x : 225;
         if (father) {
@@ -2006,7 +2024,7 @@
         // Troca automática para MONGE durante o tutorial
         setHeroStanceTutorialOrUser('MONK', true);
         sfx.play('SKILL');
-        showBanner('1-3: O Pai tombou! Postura MONGE ativada (+25 VIT) — Derrote o Lobo Alfa nos punhos!');
+        showBanner('1-5: O Pai tombou! Postura MONGE ativada (+25 VIT) — Derrote o Lobo Alfa nos punhos!');
       }
 
       spawnWave();
@@ -2178,12 +2196,12 @@
     }
 
     function onStageCompleted() {
-      const slowIntro = state.stageId === '1-3' && !state.isPathLocked && !finalBlowDone;
+      const slowIntro = state.stageId === '1-5' && !state.isPathLocked && !finalBlowDone;
       if (!slowIntro) sfx.play('STAGE_CLEAR');
       const cfg = STAGES_DB[state.stageId];
 
       // Subestágios X-1 e X-2 avançam direto sem abrir Tela de Vitória
-      if (cfg.sub < 3) {
+      if (cfg.sub < 5) {
         state.isScrolling = true;
         const from = state.stageId;
         setTimeout(() => {
@@ -2193,8 +2211,8 @@
         return;
       }
 
-      // Pós-Boss 1-3 (Lobo Alfa): Escolha irreversível de vocação + Taverna de Mercenários
-      if (state.stageId === '1-3') {
+      // Pós-Boss 1-5 (Lobo Alfa): Escolha irreversível de vocação + Taverna de Mercenários
+      if (state.stageId === '1-5') {
         state.tutorialCompleted = true;
         state.tavernUnlocked = true;
         if (!state.isPathLocked) {
@@ -5232,15 +5250,14 @@
       document.getElementById('lbl-act-roman').textContent = toRoman(cfg.act);
 
       // Atualiza indicador de bolinhas ●---●---○
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 5; i++) {
         const dot = document.getElementById(`dot-sub-${i}`);
         const active = i <= cfg.sub;
         dot.className = active
           ? 'w-2.5 h-2.5 rounded-full bg-red-500 border border-red-200 shadow-[0_0_8px_#ef4444]'
           : 'w-2.5 h-2.5 rounded-full bg-slate-700 border border-slate-400';
       }
-      document.getElementById('line-sub-1').className = cfg.sub >= 2 ? 'w-4 h-0.5 bg-red-400' : 'w-4 h-0.5 bg-slate-500';
-      document.getElementById('line-sub-2').className = cfg.sub >= 3 ? 'w-4 h-0.5 bg-red-400' : 'w-4 h-0.5 bg-slate-500';
+      for (let i = 1; i <= 4; i++) document.getElementById(`line-sub-${i}`).className = cfg.sub > i ? 'w-3 h-0.5 bg-red-400' : 'w-3 h-0.5 bg-slate-500';
 
       // Toggles Top-Right
       document.getElementById('btn-skill-mode').classList.toggle('toggle-on', state.isAutoSkill);
@@ -7333,8 +7350,12 @@
         return;
       }
       if (state.awaitingAct2Lock && state.isPathLocked) {
-        const k = Object.keys(MERCENARIES_DB).filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
-        if (k) hireMercenaryLv1(firstFreeTeamSlot(), k);
+        let k = Object.keys(MERCENARIES_DB).filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
+        if (!k) { // sem ouro para nenhum: o jogo garante o primeiro mercenário do Ato II
+          k = Object.keys(MERCENARIES_DB).sort((a, b) => MERCENARIES_DB[a].cost - MERCENARIES_DB[b].cost)[0];
+          state.gold = Math.max(state.gold, MERCENARIES_DB[k].cost);
+        }
+        hireMercenaryLv1(firstFreeTeamSlot(), k);
         if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);
         return;
       }
@@ -7355,6 +7376,10 @@
         if (state.isVictory) { ROBOT.stats.stages++; startStage(cfg.next); }
         else { ROBOT.stats.defeats++; startStage(ROBOT.st.farmOnLoss ? `${cfg.act}-1` : state.stageId); }
       } else ROBOT.wait = 0;
+      // vigia: nada acontecendo (sem inimigos, sem transição, sem janela) por 4 s → destrava a fase
+      const idle = !activeEnemies.some(e => !e.isDead) && !state.isScrolling && !state.isVictory && !state.isDefeated && !state.awaitingAct2Lock && SLOWMO.t <= 0 && !state.waveClearing;
+      ROBOT.idle = idle ? (ROBOT.idle || 0) + dt : 0;
+      if (ROBOT.idle > 4) { ROBOT.idle = 0; ROBOT.stats.unstuck = (ROBOT.stats.unstuck || 0) + 1; startStage(state.stageId); }
     }
     function syncRobotUI() {
       const b = document.getElementById('dev-robot');
