@@ -1359,12 +1359,12 @@
     // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
     // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
     // =========================================================================
-    const BAL_VERSION = 4;
+    const BAL_VERSION = 5;
     const BAL = (() => {
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
-        tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25,
+        tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
       let P = null;
@@ -1375,7 +1375,7 @@
       const take = (src, keys) => { if (src) for (const k of keys) if (k in src) B[k] = num(src[k], B[k]); };
       try {
         B.active = true;
-        take(P.general, ['critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
+        take(P.general, ['secondMercMin', 'critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
         take(P.progression, ['expBase', 'expGrowth', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
         take(P.skills, ['cost1', 'cost2', 'cost3', 'costGrowth', 'passBase', 'sk2Base', 'ultBase', 'perLevel', 'cd2', 'cd3']);
         take(P.items, ['tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab']);
@@ -6099,7 +6099,7 @@
       for (const mKey of Object.keys(MERCENARIES_DB)) {
         const m = MERCENARIES_DB[mKey];
         const hired = isMercHired(mKey);
-        const canHire = state.tavernUnlocked && !hired && freeSlot !== null && state.gold >= m.cost;
+        const canHire = state.tavernUnlocked && !hired && freeSlot !== null && state.gold >= mercCost(mKey);
         const card = document.createElement('div');
         card.className = 'bg-slate-950/75 border border-slate-700/80 rounded-xl p-2 flex items-center gap-2.5';
 
@@ -6117,7 +6117,7 @@
             <div class="flex items-center gap-1 mt-1">${(m.gear || []).filter(id => ITEMS_DB[id]).map(id => instView({ uid: '', id, tier: 'COMMON', plus: 0 })).map(it =>
               `<div class="relative w-6 h-6 rounded-md border bg-slate-900 flex items-center justify-center" style="${tierFrameStyle(it)}" data-tip="${itemTipTitle(it).replace(/"/g, '&quot;')}<br>Vem equipado com o mercenário.">${itemIconHtml(it, 'w-[85%] h-[85%]')}</div>`).join('')}</div>
             <button class="hire-btn icon-btn w-full py-1 mt-1 gap-1 border-amber-400/80 text-amber-300 ui-btn" ${canHire ? '' : 'disabled'}>
-              ${hired ? '<span>✔ Já está no time</span>' : (freeSlot === null && state.tavernUnlocked ? '<span>Time cheio</span>' : `<span>Contratar • ${m.cost}</span>${COIN_ICO}`)}
+              ${hired ? '<span>✔ Já está no time</span>' : (freeSlot === null && state.tavernUnlocked ? '<span>Time cheio</span>' : `<span>Contratar • ${mercCost(mKey)}</span>${COIN_ICO}`)}
             </button>
           </div>
         `;
@@ -6133,6 +6133,12 @@
     }
 
     // primeira posição livre do time (as posições 1 e 2 são dos mercenários; a 3 é o herói)
+    // Preço: o 1º mercenário do time custa o preço base; o 2º custa no mínimo BAL.secondMercMin
+    function mercCost(key) {
+      const m = MERCENARIES_DB[key]; if (!m) return Infinity;
+      const inTeam = [0, 1].filter(s => partySlots[s] && partySlots[s].mercKey).length;
+      return inTeam >= 1 ? Math.max(m.cost, BAL.secondMercMin) : m.cost;
+    }
     function firstFreeTeamSlot() {
       for (const s of [0, 1]) if (!partySlots[s]) return s;
       return null;
@@ -6157,11 +6163,11 @@
 
     function hireMercenaryLv1(slotIdx, mercKey) {
       const m = MERCENARIES_DB[mercKey];
-      if (!m || !state.tavernUnlocked || state.gold < m.cost) return;
+      if (!m || !state.tavernUnlocked || state.gold < mercCost(mercKey)) return;
       if (isMercHired(mercKey)) { showBanner(`${m.name} já está no seu time!`); return; }
       if (slotIdx === null || slotIdx === undefined || partySlots[slotIdx]) slotIdx = firstFreeTeamSlot();
       if (slotIdx === null) { showBanner('Time cheio! Não há posição livre.'); return; }
-      state.gold -= m.cost;
+      state.gold -= mercCost(mercKey);
       sfx.play('LEVEL_UP');
 
       // Sempre contratado no Nível 1
@@ -7318,19 +7324,19 @@
         if (!av.length) break;
         const free = firstFreeTeamSlot();
         if (free !== null) {
-          const afford = av.filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]));
+          const afford = av.filter(k => mercCost(k) <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]));
           if (afford.length) { hireMercenaryLv1(free, afford[0]); continue; }
-          reserve = Math.min(...av.map(k => MERCENARIES_DB[k].cost)); break;
+          reserve = Math.min(...av.map(k => mercCost(k))); break;
         }
         const weakest = [0, 1].filter(s => partySlots[s]).sort((a, b) => robotPower(partySlots[a]) - robotPower(partySlots[b]))[0];
         if (weakest === undefined) break;
         const better = av.filter(k => robotMercPower(MERCENARIES_DB[k]) > robotPower(partySlots[weakest]) * ROBOT.st.replaceRatio).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]));
         if (!better.length) break;
-        if (MERCENARIES_DB[better[0]].cost <= state.gold) {
+        if (mercCost(better[0]) <= state.gold) {
           for (const k of Object.keys(state.equippedSlots[weakest])) state.equippedSlots[weakest][k] = '';
           partySlots[weakest] = null; hireMercenaryLv1(weakest, better[0]); continue;
         }
-        if (ROBOT.st.saveForMerc) reserve = MERCENARIES_DB[better[0]].cost;
+        if (ROBOT.st.saveForMerc) reserve = mercCost(better[0]);
         break;
       }
       return reserve;
@@ -7405,10 +7411,10 @@
         return;
       }
       if (state.awaitingAct2Lock && state.isPathLocked) {
-        let k = Object.keys(MERCENARIES_DB).filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
+        let k = Object.keys(MERCENARIES_DB).filter(k => mercCost(k) <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
         if (!k) { // sem ouro para nenhum: o jogo garante o primeiro mercenário do Ato II
-          k = Object.keys(MERCENARIES_DB).sort((a, b) => MERCENARIES_DB[a].cost - MERCENARIES_DB[b].cost)[0];
-          state.gold = Math.max(state.gold, MERCENARIES_DB[k].cost);
+          k = Object.keys(MERCENARIES_DB).sort((a, b) => mercCost(a) - mercCost(b))[0];
+          state.gold = Math.max(state.gold, mercCost(k));
         }
         hireMercenaryLv1(firstFreeTeamSlot(), k);
         if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);

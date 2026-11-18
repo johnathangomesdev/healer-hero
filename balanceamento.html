@@ -198,8 +198,8 @@ const STANCE_PT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
 const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
-  version: 4, // mude junto com BAL_VERSION do jogo quando as regras mudarem
-  general: { targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
+  version: 5, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  general: { secondMercMin: 1000, targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
   skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
@@ -514,6 +514,8 @@ function simulate(P, seed) {
   }
 
   // ---------- gestão entre fases (o jogador "certo") ----------
+  // 1º mercenário no time: preço base; 2º: no mínimo general.secondMercMin
+  const mcost = m => [0, 1].some(s => S.party[s] && S.party[s].mercId) ? Math.max(m.cost, G.secondMercMin) : m.cost;
   function skillCost(slot) { const base = slot === 1 ? SK.cost1 : slot === 2 ? SK.cost2 : SK.cost3; return Math.round(base * Math.pow(SK.costGrowth, S.skill[slot] - 1)); }
   function spendDpe() {
     if (S.tutorial) return; // guarda o DPE para a classe definitiva
@@ -529,7 +531,7 @@ function simulate(P, seed) {
   function mercPower(m) { return Math.sqrt((G.hpBase + m.vit * G.hpPerVit) * m.pow * m.spd); }
   function availableMercs() { return P.mercs.filter(m => m.active && stageIdx(m.unlock) <= S.furthest && ![0, 1].some(s => S.party[s] && S.party[s].mercId === m.id)); }
   function hire(m, slot) {
-    pay(m.cost); S.hires++;
+    pay(mcost(m)); S.hires++;
     const a = mkAlly(m.name, m.role, { vit: m.vit, pow: m.pow, def: m.def, spd: m.spd }, slot); a.mercId = m.id;
     S.party[slot] = a;
     String(m.gear || '').split(',').map(x => x.trim()).filter(id => itemsById[id]).forEach(id => { S.inv.push(newItem(id, 'COMMON')); });
@@ -541,16 +543,16 @@ function simulate(P, seed) {
       const av = availableMercs(); if (!av.length) break;
       const free = [0, 1].find(s => !S.party[s]);
       if (free !== undefined) {
-        const afford = av.filter(m => m.cost <= S.gold).sort((a, b) => mercPower(b) - mercPower(a));
+        const afford = av.filter(m => mcost(m) <= S.gold).sort((a, b) => mercPower(b) - mercPower(a));
         if (afford.length) { hire(afford[0], free); continue; }
-        reserve = Math.min(...av.map(m => m.cost)); break;
+        reserve = Math.min(...av.map(m => mcost(m))); break;
       }
       // troca o mercenário mais fraco por um bem mais forte
       const weakest = [0, 1].map(s => S.party[s]).sort((a, b) => powerOf(a) - powerOf(b))[0];
       const better = av.filter(m => mercPower(m) > powerOf(weakest) * ST.replaceRatio).sort((a, b) => mercPower(b) - mercPower(a));
       if (!better.length) break;
-      if (better[0].cost <= S.gold) { hire(better[0], weakest.slot); continue; }
-      if (ST.saveForMerc) reserve = better[0].cost;
+      if (mcost(better[0]) <= S.gold) { hire(better[0], weakest.slot); continue; }
+      if (ST.saveForMerc) reserve = mcost(better[0]);
       break;
     }
     return reserve;
@@ -860,7 +862,7 @@ function renderTabs() {
   const b = document.getElementById('tab-body');
   const tierFields = (obj, label, step) => `<div class="group-title">${label}</div><div class="fields">${TIERS.map(t => fld(`items.${obj}.${t}`, TIER_PT[t], step)).join('')}</div>`;
   const stageOpts = P.stages.map(s => [s.id, s.id]);
-  if (activeTab === 'geral') b.innerHTML = `<div class="fields">${fld('general.targetMin', 'Meta da demo (min)')}${fld('general.runs', 'Simulações por rodada', 1)}${fld('general.timeFactor', 'Fator de tempo real')}${fld('general.collectPct', '% dos drops coletados')}${fld('general.startDpe', 'DPE inicial')}${fld('general.tutorialSec', 'Tempo de diálogos do tutorial (s)')}${fld('general.menuSecPerAct', 'Tempo em menus por ato (s)')}${fld('general.actEndSec', 'Tela de vitória por ato (s)')}${fld('general.waveGap', 'Transição entre ondas (s)')}${fld('general.stageGap', 'Transição entre fases (s)')}</div>
+  if (activeTab === 'geral') b.innerHTML = `<div class="fields">${fld('general.targetMin', 'Meta da demo (min)')}${fld('general.runs', 'Simulações por rodada', 1)}${fld('general.timeFactor', 'Fator de tempo real')}${fld('general.collectPct', '% dos drops coletados')}${fld('general.startDpe', 'DPE inicial')}${fld('general.secondMercMin', 'Preço mínimo do 2º mercenário')}${fld('general.tutorialSec', 'Tempo de diálogos do tutorial (s)')}${fld('general.menuSecPerAct', 'Tempo em menus por ato (s)')}${fld('general.actEndSec', 'Tela de vitória por ato (s)')}${fld('general.waveGap', 'Transição entre ondas (s)')}${fld('general.stageGap', 'Transição entre fases (s)')}</div>
     <div class="group-title">Meta de tempo por ato (min)</div><div class="fields">${[0, 1, 2, 3, 4].map(i => fld(`general.actTargets.${i}`, `Ato ${i + 1}`)).join('')}</div>
     <div class="group-title">Fórmulas de combate</div><div class="fields">${fld('general.critChance', 'Chance de crítico')}${fld('general.critMult', 'Multiplicador do crítico')}${fld('general.defMit', 'Defesa: redução por ponto')}${fld('general.hpBase', 'HP base')}${fld('general.hpPerVit', 'HP por VIT')}</div>`;
   else if (activeTab === 'prog') b.innerHTML = `<div class="fields">${fld('progression.expBase', 'EXP para o nível 2')}${fld('progression.expGrowth', 'Crescimento da EXP por nível (×)')}${fld('progression.ptsPerLevel', 'Pontos por nível', 1)}${fld('progression.vitPerPt', 'VIT por ponto')}${fld('progression.powPerPt', 'POW por ponto')}${fld('progression.defPerPt', 'DEF por ponto')}${fld('progression.spdPerPt', 'SPD por ponto')}</div>${expTable()}`;
