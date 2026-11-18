@@ -490,18 +490,18 @@
     <!-- =================================================================== -->
     <div class="absolute bottom-2 left-1/2 -translate-x-1/2 glass-pill rounded-xl px-2.5 py-1.5 flex items-center gap-2 z-20">
       <div id="act-skill-1" class="relative w-8 h-8 rounded-lg bg-slate-900/90 border border-emerald-400/80 flex items-center justify-center cursor-pointer overflow-hidden" data-tip="Passiva">
-        <canvas id="cvs-skill-1" width="30" height="30"></canvas>
+        <div id="cvs-skill-1" class="flex items-center justify-center pointer-events-none"></div>
         <span class="absolute top-0.5 left-1 ui-tiny text-white">P</span>
         <span id="badge-skill-1" class="absolute bottom-0 right-1 ui-tiny text-emerald-300">L1</span>
       </div>
       <div id="act-skill-2" class="relative w-8 h-8 rounded-lg bg-slate-900/90 border border-amber-400 flex items-center justify-center cursor-pointer overflow-hidden" data-tip="Ativa 1 (Tecla 1)">
-        <canvas id="cvs-skill-2" width="30" height="30"></canvas>
+        <div id="cvs-skill-2" class="flex items-center justify-center pointer-events-none"></div>
         <div id="cd-mask-2" class="absolute bottom-0 left-0 right-0 bg-slate-950/80 border-t border-white/60 pointer-events-none" style="height:0%"></div>
         <span class="absolute top-0.5 left-1 ui-tiny text-white">1</span>
         <span id="badge-skill-2" class="absolute bottom-0 right-1 ui-tiny text-amber-300">L1</span>
       </div>
       <div id="act-skill-3" class="relative w-8 h-8 rounded-lg bg-slate-900/90 border border-orange-500 flex items-center justify-center cursor-pointer overflow-hidden" data-tip="Ultimate (Tecla 2)">
-        <canvas id="cvs-skill-3" width="30" height="30"></canvas>
+        <div id="cvs-skill-3" class="flex items-center justify-center pointer-events-none"></div>
         <div id="cd-mask-3" class="absolute bottom-0 left-0 right-0 bg-slate-950/80 border-t border-white/60 pointer-events-none" style="height:0%"></div>
         <span class="absolute top-0.5 left-1 ui-tiny text-white">2</span>
         <span id="badge-skill-3" class="absolute bottom-0 right-1 ui-tiny text-orange-300">L1</span>
@@ -4868,106 +4868,93 @@
     // =========================================================================
     // 9. ICON DRAWING HELPERS (FOR SKILLS & PREVIEWS)
     // =========================================================================
-    function drawSkillCanvasIcon(cvs, stance, slot) {
-      hiRes(cvs);
-      const c = cvs.getContext('2d');
-      const w = cvs.width, h = cvs.height;
-      c.clearRect(0, 0, w, h);
-      const col = SKILLS_DB[stance].color;
-      const OUT = '#0d0b12';
-
-      c.save();
-      c.translate(w * 0.5, h * 0.5);
-      const sc = Math.min(w, h) / 30;
-      c.scale(sc, sc);
-      c.lineJoin = 'round'; c.lineCap = 'round';
-      c.strokeStyle = OUT; c.lineWidth = 1.3;
-
-      // aura de fundo
-      const gr = c.createRadialGradient(0, 0, 1, 0, 0, 14.5);
-      gr.addColorStop(0, hexA(col, 0.6));
-      gr.addColorStop(1, hexA(col, 0));
-      c.fillStyle = gr;
-      c.beginPath(); c.arc(0, 0, 14.5, 0, Math.PI * 2); c.fill();
-
-      const burst = (n, r1, r2, fill, jitter = 0) => {
-        const pts = [];
-        for (let i = 0; i < n * 2; i++) {
-          const rr = (i % 2 === 0 ? r1 : r2) * (1 + (jitter ? Math.sin(i * 2.3) * jitter : 0));
-          const a = -Math.PI / 2 + i * Math.PI / n;
-          pts.push([Math.cos(a) * rr, Math.sin(a) * rr]);
-        }
-        cPoly(c, pts, fill);
-      };
-
-      if (stance === 'SAINT') {
-        if (slot === 1) { // Trindade: cruz sagrada + 3 faíscas
-          cPoly(c, [[-2.6, -12], [2.6, -12], [2.6, -6.4], [8.4, -6.4], [8.4, -1.8], [2.6, -1.8], [2.6, 12], [-2.6, 12], [-2.6, -1.8], [-8.4, -1.8], [-8.4, -6.4], [-2.6, -6.4]], '#fde047');
-          cPoly(c, [[-2.6, -12], [-0.8, -12], [-0.8, 10.5], [-2.6, 10.5]], 'rgba(255,255,255,0.55)', false);
-          cStar(c, 9, -11, 2.6, '#ffffff'); cStar(c, -9.5, 5, 2.2, '#fef9c3'); cStar(c, 9.5, 7.5, 1.8, '#ffffff');
-        } else if (slot === 2) { // Prece Restauradora: coração + cruz
-          c.beginPath();
-          c.moveTo(0, 11); c.bezierCurveTo(-15, 1, -9, -11.5, 0, -5); c.bezierCurveTo(9, -11.5, 15, 1, 0, 11);
-          c.closePath(); c.fillStyle = '#4ade80'; c.fill(); c.stroke();
-          cEllipse(c, -5.2, -4.2, 2.6, 1.5, -0.7, 'rgba(255,255,255,0.6)', false);
-          cPoly(c, [[-1.4, -3.6], [1.4, -3.6], [1.4, -0.9], [4.2, -0.9], [4.2, 1.9], [1.4, 1.9], [1.4, 4.8], [-1.4, 4.8], [-1.4, 1.9], [-4.2, 1.9], [-4.2, -0.9], [-1.4, -0.9]], '#f0fdf4');
-        } else { // Santuário: sol + auréola
-          burst(8, 13, 8, '#facc15');
-          cCircle(c, 0, 0, 6.2, '#fef9c3');
-          cPoly(c, [[-1.2, -4], [1.2, -4], [1.2, -1.2], [4, -1.2], [4, 1.2], [1.2, 1.2], [1.2, 4], [-1.2, 4], [-1.2, 1.2], [-4, 1.2], [-4, -1.2], [-1.2, -1.2]], '#eab308', false);
-          cEllipse(c, 0, -12.2, 5.5, 1.8, 0, 'rgba(253,224,71,0.7)');
-        }
-      } else if (stance === 'EXORCIST') {
-        if (slot === 1) { // Ressonância: explosão arcana
-          burst(8, 13, 6, '#38bdf8');
-          cNgon(c, 0, 0, 5.2, 6, 0, '#e0f2fe');
-          cCircle(c, 0, 0, 2, '#0ea5e9', false);
-        } else if (slot === 2) { // Cometa de luz
-          cPoly(c, [[-13, 12], [-5, -1], [1, 5]], '#0ea5e9');
-          cPoly(c, [[-11, 11], [-5.5, 1], [-2.5, 5.2]], '#7dd3fc', false);
-          cCircle(c, 4.5, -4.5, 7, '#7dd3fc');
-          cCircle(c, 4.5, -4.5, 3.8, '#e0f2fe', false);
-          cCircle(c, 2.6, -6.4, 1.6, '#ffffff', false);
-          cStar(c, 11, -11, 2.4, '#ffffff'); cStar(c, -9, -8, 1.8, '#bae6fd');
-        } else { // Pilares do Juízo
-          const ps = [[-8, -4], [0, -10], [8, -4]];
-          for (const [px, top] of ps) {
-            cPoly(c, [[px - 3.2, 11.5], [px - 1.9, top], [px + 1.9, top], [px + 3.2, 11.5]], '#38bdf8');
-            cPoly(c, [[px - 1, 11], [px - 0.5, top + 1], [px + 0.5, top + 1], [px + 1, 11]], '#e0f2fe', false);
-            cStar(c, px, top - 2, 2.4, '#ffffff');
-          }
-          cPoly(c, [[-12, 11.5], [12, 11.5], [10, 13.5], [-10, 13.5]], '#0369a1');
-        }
-      } else { // MONK
-        if (slot === 1) { // Lótus
-          cPoly(c, [[-11, 8], [0, 5.5], [11, 8], [0, 12.5]], '#4ade80');
-          for (const ang of [-1.25, 1.25, -0.65, 0.65, 0]) {
-            c.save(); c.translate(0, 8); c.rotate(ang);
-            cPoly(c, [[0, 0], [-4.2, -6], [0, -16.5], [4.2, -6]], ang === 0 ? '#fdba74' : '#fb923c');
-            cPoly(c, [[0, -2], [-0.8, -7], [0, -13]], 'rgba(255,255,255,0.45)', false);
-            c.restore();
-          }
-          cCircle(c, 0, -2, 1.6, '#fde047', false);
-        } else if (slot === 2) { // Punho enfaixado
-          for (const [ix, iy] of [[-9, -10], [-5.5, -12.5], [-2, -13.5]]) {
-            c.save(); c.strokeStyle = col; c.lineWidth = 1.4;
-            c.beginPath(); c.moveTo(ix, iy); c.lineTo(ix + 3.4, iy + 3); c.stroke(); c.restore();
-          }
-          for (let k = 0; k < 4; k++) cCircle(c, -6.6 + k * 4.3, -4.6, 2.6, '#fdba74');
-          c.beginPath(); c.roundRect(-9.2, -4.8, 18.4, 14, 4.5); c.fillStyle = '#fdba74'; c.fill(); c.stroke();
-          cPoly(c, [[-9.2, 3.4], [9.2, 3.4], [9.2, 7.6], [-9.2, 7.6]], '#ef4444');
-          cPoly(c, [[9.2, 4.2], [13, 7], [11, 9.4], [9.2, 7.6]], '#dc2626');
-          cEllipse(c, -9.4, 1.4, 2.6, 3.2, 0.3, '#fdba74');
-          cEllipse(c, -4, -2.4, 2.4, 1.1, 0, 'rgba(255,255,255,0.5)', false);
-        } else { // Martírio: explosão de impactos
-          burst(7, 14, 7, '#fb923c', 0.16);
-          burst(6, 8.6, 4.2, '#fde047');
-          cNgon(c, 0, 0, 3.4, 5, 0, '#ef4444');
-          cStar(c, -9, -9, 2, '#ffffff'); cStar(c, 10, 8, 2, '#ffffff');
-        }
+    // Ícones de habilidades e classes no mesmo estilo cartunizado dos ícones de menu
+    // (SVG 32x32, contorno escuro grosso, cores chapadas e um brilho)
+    const SK_O = '#1b1220';
+    const skSvg = (body, cls) => `<svg class="${cls}" viewBox="0 0 32 32" stroke="${SK_O}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">${body}</svg>`;
+    const spk = (x, y, r, fill = '#ffffff') => `<path d="M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3} Z" fill="${fill}" stroke-width="1.2"/>`;
+    function burstPts(cx, cy, n, r1, r2, rot = -Math.PI / 2) {
+      let d = '';
+      for (let i = 0; i < n * 2; i++) {
+        const a = rot + i * Math.PI / n, r = i % 2 ? r2 : r1;
+        d += (i ? 'L' : 'M') + (cx + Math.cos(a) * r).toFixed(1) + ' ' + (cy + Math.sin(a) * r).toFixed(1);
       }
-      c.restore();
+      return d + 'Z';
     }
+    const CLASS_ICONS = {
+      // Santo: cruz dourada com auréola
+      SAINT: `<ellipse cx="16" cy="4.6" rx="7" ry="2.6" fill="none" stroke-width="3.8"/><ellipse cx="16" cy="4.6" rx="7" ry="2.6" fill="none" stroke="#fde047" stroke-width="1.8"/>
+              <path d="M13.5 9 H18.5 V13.5 H24.5 V18.5 H18.5 V30 H13.5 V18.5 H7.5 V13.5 H13.5 Z" fill="#facc15"/>
+              <path d="M15 10.5 V28.5 M9 15 H13" stroke="#fef9c3" stroke-width="1.4"/>`,
+      // Exorcista: cajado com cristal arcano
+      EXORCIST: `<path d="M8 30 L19.5 15" stroke-width="5.4"/><path d="M8 30 L19.5 15" stroke="#a16207" stroke-width="2.8"/>
+                 <path d="M21 2.5 L27 9.5 L21 18 L15 9.5 Z" fill="#38bdf8"/>
+                 <path d="M21 4.5 L17.2 9.5 L21 15.5 Z" fill="#bae6fd" stroke="none"/>
+                 ${spk(7.5, 8, 4)}${spk(28, 22, 2.6, '#e0f2fe')}`,
+      // Monge: equilíbrio (taiji) em laranja e creme
+      MONK: `<circle cx="16" cy="16" r="13" fill="#fff7ed"/>
+             <path d="M16 3 A13 13 0 0 1 16 29 A6.5 6.5 0 0 1 16 16 A6.5 6.5 0 0 0 16 3 Z" fill="#f97316"/>
+             <circle cx="16" cy="9.5" r="2.2" fill="#f97316" stroke-width="1.4"/><circle cx="16" cy="22.5" r="2.2" fill="#fff7ed" stroke-width="1.4"/>
+             <path d="M7 10 q2-3.5 5.5-4.5" stroke="#ffffff" stroke-width="1.6" fill="none"/>`
+    };
+    const SKILL_ICONS = {
+      SAINT: {
+        // Trindade da Graça: três orbes de luz ligados + cruz de cura
+        1: `<path d="M16 6.5 L26 24 H6 Z" fill="none" stroke-width="5"/><path d="M16 6.5 L26 24 H6 Z" fill="none" stroke="#fde047" stroke-width="2.4"/>
+            <circle cx="16" cy="6.5" r="4.2" fill="#fef9c3"/><circle cx="26" cy="24" r="4.2" fill="#fef9c3"/><circle cx="6" cy="24" r="4.2" fill="#fef9c3"/>
+            <path d="M14.6 13.5 h2.8 v2.8 h2.8 v2.8 h-2.8 v2.8 h-2.8 v-2.8 h-2.8 v-2.8 h2.8Z" fill="#4ade80" stroke-width="1.4"/>
+            <path d="M14.4 5 a2.2 2.2 0 0 1 2-1.2" stroke="#ffffff" stroke-width="1.2" fill="none"/>`,
+        // Prece Restauradora: coração verde com cruz
+        2: `<path d="M16 28 C3 19 2.5 11 7 7.5 c3.8-3 7.5-1 9 2 c1.5-3 5.2-5 9-2 c4.5 3.5 4 11.5 -9 20.5Z" fill="#4ade80"/>
+            <path d="M8 10.5 q1.5-3 4.5-2.5" stroke="#dcfce7" stroke-width="2" fill="none"/>
+            <path d="M14 10.5 h4 v3.5 h3.5 v4 h-3.5 v3.5 h-4 v-3.5 h-3.5 v-4 h3.5Z" fill="#f0fdf4" stroke-width="1.5"/>`,
+        // Santuário Celestial: sol sagrado
+        3: `<path d="${burstPts(16, 16, 8, 14.5, 9.5)}" fill="#facc15"/>
+            <circle cx="16" cy="16" r="6.8" fill="#fef9c3"/>
+            <path d="M15 12 h2 v3 h3 v2 h-3 v3 h-2 v-3 h-3 v-2 h3Z" fill="#eab308" stroke="none"/>
+            <path d="M11 11.5 a6 6 0 0 1 3.5-2" stroke="#ffffff" stroke-width="1.4" fill="none"/>`
+      },
+      EXORCIST: {
+        // Ressonância Sacra: explosão arcana
+        1: `<path d="${burstPts(16, 16, 8, 14.5, 7)}" fill="#38bdf8"/>
+            <path d="${burstPts(16, 16, 3, 6, 6, 0)}" fill="#e0f2fe"/>
+            <circle cx="16" cy="16" r="2" fill="#0ea5e9" stroke="none"/>
+            <path d="M9 7.5 L12 11" stroke="#e0f2fe" stroke-width="1.4"/>`,
+        // Lança de Purificação: lança de luz
+        2: `<path d="M4.5 27.5 L19.5 12.5" stroke-width="6"/><path d="M4.5 27.5 L19.5 12.5" stroke="#7dd3fc" stroke-width="3.2"/>
+            <path d="M17 10 L28.5 3.5 L22 15 Z" fill="#e0f2fe"/>
+            <path d="M19.5 11.5 L26 6" stroke="#38bdf8" stroke-width="1.4"/>
+            ${spk(7, 9, 3.4)}${spk(25, 24, 2.8, '#bae6fd')}`,
+        // Pilares do Juízo: três pilares de luz
+        3: `<path d="M4.8 27 L6 13 H10 L11.2 27 Z" fill="#38bdf8"/><path d="M12.8 27 L14 7 H18 L19.2 27 Z" fill="#7dd3fc"/><path d="M20.8 27 L22 13 H26 L27.2 27 Z" fill="#38bdf8"/>
+            <path d="M15.4 9 V25 M7.4 15 V25 M23.4 15 V25" stroke="#e0f2fe" stroke-width="1.2"/>
+            <path d="M3 27 H29 L27 30.5 H5 Z" fill="#0369a1"/>
+            ${spk(16, 3.2, 2.8)}${spk(8, 9.2, 2.4, '#e0f2fe')}${spk(24, 9.2, 2.4, '#e0f2fe')}`
+      },
+      MONK: {
+        // Ciclo do Lótus: flor de lótus
+        1: `<path d="M16 25 C9.5 24 4.5 18.5 3.5 11 C10 12 14.5 17 16 25Z" fill="#fb923c"/>
+            <path d="M16 25 C22.5 24 27.5 18.5 28.5 11 C22 12 17.5 17 16 25Z" fill="#fb923c"/>
+            <path d="M16 5 C20 10.5 20 18.5 16 25 C12 18.5 12 10.5 16 5Z" fill="#fdba74"/>
+            <path d="M15 9.5 q-1.2 5 0 10" stroke="#fff7ed" stroke-width="1.4" fill="none"/>
+            <path d="M3.5 25.5 Q16 32.5 28.5 25.5 Q16 21 3.5 25.5Z" fill="#4ade80"/>`,
+        // Punho Sísmico: punho enfaixado
+        2: `<path d="M1.5 11 h3.5 M1 16 h4 M1.5 21 h3.5" stroke="#fb923c" stroke-width="2"/>
+            <rect x="7" y="7.5" width="18" height="15.5" rx="4.5" fill="#fdba74"/>
+            <path d="M11.5 8 v6 M16 8 v6 M20.5 8 v6" stroke-width="1.5"/>
+            <path d="M7.5 16.5 q5.5-1.5 10 1" fill="none" stroke-width="1.6"/>
+            <path d="M9.5 10.5 v2.5" stroke="#fff7ed" stroke-width="1.4"/>
+            <rect x="7" y="22" width="18" height="6.5" rx="1.5" fill="#ef4444"/>
+            <path d="M25 23.5 L29.5 25.5 L27.5 29 L25 27.5 Z" fill="#dc2626"/>`,
+        // Martírio do Titã: explosão de impactos
+        3: `<path d="${burstPts(16, 16, 7, 14.5, 7.5)}" fill="#fb923c"/>
+            <path d="${burstPts(16, 16, 6, 9, 4.8, -Math.PI / 3)}" fill="#fde047"/>
+            <circle cx="16" cy="16" r="3" fill="#ef4444" stroke-width="1.4"/>
+            ${spk(5, 5, 2.8)}${spk(27, 27, 2.8)}`
+      }
+    };
+    const skillIconHtml = (stance, slot, cls = 'w-6 h-6') => skSvg(SKILL_ICONS[stance][slot], cls);
+    const classIconHtml = (stance, cls = 'w-6 h-6') => skSvg(CLASS_ICONS[stance], cls);
 
     let _lastSkillBarKey = '';
     function updateSkillBarIcons() {
@@ -4978,7 +4965,7 @@
       for (const slot of [1, 2, 3]) {
         if (needRedraw) {
           const cvs = document.getElementById(`cvs-skill-${slot}`);
-          if (cvs) drawSkillCanvasIcon(cvs, state.stance, slot);
+          if (cvs) cvs.innerHTML = skillIconHtml(state.stance, slot, 'w-7 h-7');
         }
         const badge = document.getElementById(`badge-skill-${slot}`);
         if (badge) badge.textContent = `L${lv[slot]}`;
@@ -5342,10 +5329,7 @@
               const wrap = document.createElement('div');
               wrap.className = 'relative w-6 h-6 rounded bg-slate-900 border border-amber-500/60 flex items-center justify-center';
               wrap.dataset.tip = `<b>${info.title}</b> [Lv.${lvl}]<br>${info.desc}`;
-              const sc = document.createElement('canvas');
-              sc.width = 22; sc.height = 22;
-              drawSkillCanvasIcon(sc, state.stance, sl);
-              wrap.appendChild(sc);
+              wrap.innerHTML = skillIconHtml(state.stance, sl, 'w-5 h-5');
               const b = document.createElement('span');
               b.className = 'absolute -bottom-0.5 right-0.5 ui-tiny text-amber-300';
               b.textContent = `L${lvl}`;
@@ -5521,11 +5505,7 @@
         classBtn.style.top = `${(classY / h) * 100}%`;
         classBtn.dataset.tip = `<b>${stInfo.name}</b><br>${stInfo.desc}`;
         classBtn.disabled = state.isPathLocked && !isAct;
-        classBtn.innerHTML = st === 'SAINT'
-          ? '<svg class="w-4 h-4 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M5 9h14"/></svg>'
-          : (st === 'EXORCIST'
-            ? '<svg class="w-4 h-4 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15 9 22 12 15 15 12 22 9 15 2 12 9 9 12 2"/></svg>'
-            : '<svg class="w-4 h-4 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8"/></svg>');
+        classBtn.innerHTML = classIconHtml(st, 'w-6 h-6');
         classBtn.onclick = () => {
           if (!state.isPathLocked) {
             state.stance = st;
@@ -5563,10 +5543,7 @@
             ? `<b>${nodeInfo.title}</b> [Lv.${lvl}]<br>${nodeInfo.desc}<br><span class="text-cyan-300 font-bold">Clique para evoluir (${cost} DPE)</span>`
             : `<b>${nodeInfo.title}</b> [Bloqueado]<br>Evolua a habilidade acima para Lv.2 primeiro.`;
 
-          const sc = document.createElement('canvas');
-          sc.width = 24; sc.height = 24;
-          drawSkillCanvasIcon(sc, st, slot);
-          sBtn.appendChild(sc);
+          sBtn.innerHTML = skillIconHtml(st, slot, 'w-5 h-5');
 
           const lvlTag = document.createElement('span');
           lvlTag.className = 'absolute -right-5 ui-tiny text-slate-200 pointer-events-none';
@@ -6108,10 +6085,13 @@
                <rect x="4.5" y="3" width="23" height="5" rx="2.5" fill="#d97706"/><rect x="4.5" y="24" width="23" height="5" rx="2.5" fill="#d97706"/>
                <path d="M16 10.5 l1.8 3.7 4 .6 -2.9 2.8 .7 4 -3.6-1.9 -3.6 1.9 .7-4 -2.9-2.8 4-.6Z" fill="#ef4444" stroke-width="1.4"/>
                <path d="M9 9.5 v13" stroke="#fffbeb" stroke-width="1.4"/>`,
-      tree: `<rect x="13.5" y="18" width="5" height="11" rx="1" fill="#92400e"/>
-             <path d="M16 2.5 c7 0 12 4.5 12 10.5 c0 5.5 -5 8 -12 8 c-7 0 -12-2.5 -12-8 c0-6 5-10.5 12-10.5Z" fill="#22c55e"/>
-             <path d="M8 10 q3-5 8-5.5" stroke="#bbf7d0" stroke-width="1.8" fill="none"/>
-             <circle cx="11" cy="13" r="2.4" fill="#fde047" stroke-width="1.4"/><circle cx="21" cy="12" r="2.4" fill="#fde047" stroke-width="1.4"/><circle cx="16" cy="7.5" r="2.4" fill="#fef9c3" stroke-width="1.4"/>`,
+      tree: `<path d="M4 30.5 q12-5.5 24 0 Z" fill="#78716c"/>
+             <g fill="none">
+               <path d="M16 21 L10 15 L8.5 9 M10 15 L5 13.5 M16 18 L22 12 L23 6 M22 12 L27 10.5 M16 15 L14.5 8 L16.5 3 M14.8 9 L11.5 5.5" stroke-width="4.4"/>
+               <path d="M16 21 L10 15 L8.5 9 M10 15 L5 13.5 M16 18 L22 12 L23 6 M22 12 L27 10.5 M16 15 L14.5 8 L16.5 3 M14.8 9 L11.5 5.5" stroke="#a16207" stroke-width="2"/>
+             </g>
+             <path d="M12 29.5 q2.5-1.5 2.6-6 L14.8 13 H17.2 L17.4 23.5 q0.1 4.5 2.6 6 Z" fill="#8b5a2b"/>
+             <path d="M15.6 15 V26" stroke="#c08a4f" stroke-width="1.2"/>`,
       bag: `<path d="M10 9 q0-6 6-6 q6 0 6 6" fill="none" stroke-width="3.6"/><path d="M10 9 q0-6 6-6 q6 0 6 6" fill="none" stroke="#a16207" stroke-width="1.6"/>
             <rect x="5" y="9" width="22" height="20" rx="5" fill="#b45309"/>
             <path d="M5 15 q11 5 22 0 v-1 q0-5 -5-5 h-12 q-5 0 -5 5Z" fill="#d97706"/>
@@ -6121,6 +6101,15 @@
             <rect x="6" y="9" width="17" height="20" rx="3" fill="#f59e0b"/>
             <path d="M11 13 v12 M16 13 v12" stroke="#fde68a" stroke-width="1.6"/>
             <path d="M5 10 q0-5 4.5-4 q1.5-3.5 5.5-2 q3-2.5 6 0 q4 0 3 6 Z" fill="#ffffff"/>`,
+      house: `<rect x="20.5" y="4" width="4.5" height="9" rx="0.8" fill="#a8a29e"/>
+              <rect x="6" y="14" width="20" height="15.5" rx="1" fill="#f5d08a"/>
+              <path d="M6 18 H26" stroke="#b45309" stroke-width="1.4"/>
+              <path d="M2.5 16 L16 4 L29.5 16 Z" fill="#dc2626"/>
+              <path d="M6.5 14.5 L16 6.5" stroke="#fca5a5" stroke-width="1.6"/>
+              <path d="M13 29.5 V23.5 a3 3 0 0 1 6 0 V29.5 Z" fill="#92400e"/>
+              <circle cx="17.4" cy="26.3" r="0.8" fill="#facc15" stroke="none"/>
+              <rect x="8.5" y="20" width="3.6" height="3.6" rx="0.6" fill="#fde047" stroke-width="1.5"/>
+              <rect x="19.9" y="20" width="3.6" height="3.6" rx="0.6" fill="#fde047" stroke-width="1.5"/>`,
       map: `<path d="M3 7 l8-3 10 3 8-3 v21 l-8 3 -10-3 -8 3Z" fill="#fde68a"/>
             <path d="M11 4 v21 M21 7 v21" stroke="#d6b25e" stroke-width="1.4"/>
             <path d="M6 20 q4-7 9-3 q4 3 7-6" stroke="#b45309" stroke-width="1.6" stroke-dasharray="2 2" fill="none"/>
@@ -6152,7 +6141,11 @@
       put(document.getElementById('btn-advance-mode'), 'advance');
       put(document.getElementById('btn-system-menu'), 'gear');
       put(document.getElementById('btn-open-map'), 'map', 'w-4 h-4');
-      const drawerIcons = ['team', 'scroll', 'tree', 'bag', 'mug', 'anvil'];
+      const drawerIcons = ['team', 'scroll', 'tree', 'bag', 'house', 'anvil'];
+      document.querySelectorAll('[data-lock-path]').forEach(b => {
+        const old = b.querySelector('svg');
+        if (old) old.outerHTML = classIconHtml(b.dataset.lockPath, 'w-9 h-9');
+      });
       document.querySelectorAll('.drawer-btn').forEach(b => put(b, drawerIcons[+b.dataset.drawer], 'w-6 h-6'));
       put(document.getElementById('btn-up-vit'), 'heart', 'w-7 h-7');
       put(document.getElementById('btn-up-pow'), 'power', 'w-7 h-7');
