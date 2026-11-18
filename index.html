@@ -143,6 +143,44 @@
     @media (orientation: portrait) and (pointer: coarse) {
       #rotate-overlay { display: flex; }
     }
+    /* ===== TUTORIAL GUIADO (jogo congelado + destaque piscando + caixa de explicação) ===== */
+    #guide-ring {
+      position: fixed; z-index: 99990; pointer-events: none; display: none;
+      border: 3px solid #facc15; border-radius: 10px;
+      box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.68), 0 0 18px rgba(250, 204, 21, 0.9);
+      animation: guideBlink 0.9s ease-in-out infinite;
+    }
+    #guide-ring.no-target { border-color: transparent; animation: none; box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.68); }
+    @keyframes guideBlink {
+      0%, 100% { border-color: #facc15; box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.68), 0 0 18px rgba(250, 204, 21, 0.95); }
+      50% { border-color: rgba(250, 204, 21, 0.25); box-shadow: 0 0 0 9999px rgba(2, 4, 10, 0.68), 0 0 4px rgba(250, 204, 21, 0.2); }
+    }
+    #guide-box {
+      position: fixed; z-index: 99991; display: none; left: 50%; translate: -50% 0;
+      width: min(clamp(440px, 46vw, 760px), calc(100vw - 32px)); padding: 0.85em 1em;
+      background: rgba(8, 14, 12, 0.97); border: 2px solid rgba(74, 222, 128, 0.75); border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8); color: #e2e8f0;
+      font-family: 'Inter', sans-serif; font-size: clamp(14px, 2.2vh, 22px); line-height: 1.4; font-weight: 600;
+      animation: guideIn 0.22s ease-out;
+    }
+    @keyframes guideIn { from { opacity: 0; scale: 0.94; } to { opacity: 1; scale: 1; } }
+    #guide-box .g-title { font-family: 'Lilita One', 'Arial Black', sans-serif; font-weight: 400; font-size: 1.3em; letter-spacing: 0.05em; color: #86efac; margin-bottom: 0.25em; }
+    #guide-box .g-text b { color: #fde047; }
+    #guide-box .g-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 0.7em; }
+    #guide-box .g-dots { display: flex; gap: 0.35em; }
+    #guide-box .g-dots i { width: 0.5em; height: 0.5em; border-radius: 50%; background: #334155; }
+    #guide-box .g-dots i.on { background: #4ade80; }
+    #guide-box button { font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: 1em; letter-spacing: 0.05em; cursor: pointer; border-radius: 9px; }
+    #guide-box .g-next { padding: 0.4em 1.1em; background: linear-gradient(180deg, #4ade80, #16a34a); border: 2px solid #dcfce7; color: #052e16; }
+    #guide-box .g-next:active { translate: 0 2px; filter: brightness(1.2); }
+    #guide-box .g-skip { padding: 0.3em 0.4em; background: none; border: none; color: #64748b; font-size: 0.85em; }
+    /* celular deitado (tela baixa): caixa compacta para não cobrir o que está destacado */
+    @media (max-height: 500px) {
+      #guide-box { padding: 7px 12px; font-size: 12.5px; line-height: 1.32; width: min(520px, calc(100vw - 32px)); }
+      #guide-box .g-title { font-size: 1.2em; margin-bottom: 2px; }
+      #guide-box .g-row { margin-top: 5px; }
+      #guide-box .g-next { padding: 3px 14px; }
+    }
     /* no toque, o arrastar é feito pela ponte touchDragDrop (JS); desliga o arrastar nativo do iOS */
     @media (pointer: coarse) { [draggable="true"] { -webkit-user-drag: none; } }
 
@@ -304,6 +342,16 @@
     <div class="rot-sub">Healer Hero é jogado na horizontal</div>
   </div>
   <div id="hud-tooltip"></div>
+  <div id="guide-ring"></div>
+  <div id="guide-box">
+    <div class="g-title"></div>
+    <div class="g-text"></div>
+    <div class="g-row">
+      <button class="g-skip" type="button">Pular</button>
+      <div class="g-dots"></div>
+      <button class="g-next" type="button">Continuar</button>
+    </div>
+  </div>
 
   <div id="game-viewport">
     <!-- MENU INICIAL -->
@@ -1553,6 +1601,7 @@
           shockwaveRings.push({ x: this.x, y: this.y - 12, color: '#fef9c3', maxR: 46, ttl: 0.45, maxTtl: 0.45 });
           spawnParticles(this.x, this.y - 20, '#fde047', 18, 0);
           spawnFloatingText(this.x, this.y - 68, 'LEVEL UP!', '#facc15', 'LEVELUP');
+          if (this === partySlots[2]) guideTrigger('LEVELUP');
         }
       }
 
@@ -2474,6 +2523,7 @@
         flyingDrops.push({ kind: 'DPE', amount: d.amount, sx: d.x, sy: d.y - 4, tx: tgt.x, ty: tgt.y, x: d.x, y: d.y - 4, t: 0, dur: 0.42 });
         sfx.play('COIN');
         spawnFloatingText(d.x, d.y - 12, `+${d.amount} DPE`, '#38bdf8');
+        guideTrigger('DPE');
       } else if (d.kind === 'ITEM' && d.itemId && ITEMS_DB[d.itemId]) {
         if (getBagItems().length >= bagCapacity()) {
           showBanner('Bolsa cheia! Compre uma nova aba no Inventário.');
@@ -2483,6 +2533,7 @@
         state.hasNewItemNotif = true;
         sfx.play('LEVEL_UP');
         spawnFloatingText(d.x, d.y - 16, `${ITEMS_DB[d.itemId].name}!`, ITEM_TIERS[inst.tier].color);
+        guideTrigger('ITEM', { uid: inst.uid, compat: canEquipItem(2, d.itemId) });
       }
       scheduleRefreshUI();
     }
@@ -6499,6 +6550,7 @@
     function saveGameProgress(key = SAVE_KEY) {
       const savePayload = {
         savedAt: Date.now(),
+        guideSeen: state.guideSeen || {},
         gold: state.gold,
         dpe: state.dpe,
         stance: state.stance,
@@ -6550,6 +6602,7 @@
       try {
         const data = JSON.parse(raw);
         initInitialFamily();
+        state.guideSeen = data.guideSeen || {};
         state.gold = data.gold ?? 0;
         state.dpe = data.dpe ?? 15;
         state.dispGold = state.gold;
@@ -6617,6 +6670,7 @@
       try { localStorage.removeItem('healer_hero_tutorial_v1'); } catch (_e) {}
       const meta = null;
       initInitialFamily();
+      state.guideSeen = {}; // novo jogo: o tutorial guiado aparece de novo
       state.gold = 0;
       state.dpe = 15;
       state.dispGold = 0;
@@ -7461,6 +7515,191 @@
       }, true);
     })();
 
+    // =========================================================================
+    // TUTORIAL GUIADO: na 1ª vez (durante o tutorial do Ato I) que o herói sobe de nível, coleta DPE
+    // ou coleta um item, o jogo CONGELA, a tela escurece e só o elemento certo fica aceso piscando,
+    // com uma caixa de explicação. Só os elementos destacados respondem ao toque. Ao terminar, o jogo segue.
+    // =========================================================================
+    const GUIDE = { key: null, idx: 0, t0: 0, queue: [], ctx: {} };
+    const $id = id => document.getElementById(id);
+    const drawerBtn = i => document.querySelector(`.drawer-btn[data-drawer="${i}"]`);
+    const closeDrawers = () => { if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer); };
+    const openDrawerIs = i => state.activeDrawer === i;
+    const statStep = (id, title, text) => ({
+      title, text, targets: () => [$id(id)], allow: () => [], next: 'auto', dur: 2.6,
+      back: () => !openDrawerIs(1) ? 0 : -1
+    });
+    const GUIDE_FLOWS = {
+      LEVELUP: [
+        {
+          title: 'LEVEL UP!',
+          text: 'Seu herói subiu de nível e ganhou <b>3 pontos de atributo</b>.<br>Toque no botão <b>Atributos</b> que está piscando.',
+          onEnter: () => { closeDrawers(); state.selectedSlot = 2; },
+          targets: () => [drawerBtn(1)], next: 'done', done: () => openDrawerIs(1)
+        },
+        statStep('btn-up-vit', 'VITALIDADE', '<b>VIT</b> aumenta o <b>HP máximo</b>: mais vida para aguentar os golpes dos monstros.'),
+        statStep('btn-up-pow', 'PODER', '<b>POW</b> aumenta o <b>dano</b> dos ataques e a <b>cura</b> das habilidades.'),
+        statStep('btn-up-def', 'DEFESA', '<b>DEF</b> reduz o <b>dano físico</b> que o personagem recebe.'),
+        statStep('btn-up-spd', 'VELOCIDADE', '<b>SPD</b> deixa os <b>ataques automáticos</b> mais rápidos.'),
+        {
+          title: 'SUA VEZ',
+          text: () => `Toque nos atributos para usar seus pontos.<br>Pontos restantes: <b>${partySlots[2] ? partySlots[2].unspentPoints : 0}</b>`,
+          onEnter: () => { if (state.selectedSlot !== 2) { state.selectedSlot = 2; refreshAllUI(); } },
+          targets: () => ['btn-up-vit', 'btn-up-pow', 'btn-up-def', 'btn-up-spd'].map($id),
+          next: 'done', done: () => !partySlots[2] || partySlots[2].unspentPoints <= 0,
+          back: () => !openDrawerIs(1) ? 0 : -1
+        },
+        { title: 'MUITO BEM!', text: 'Seu herói ficou mais forte. A batalha continua!', onEnter: closeDrawers, targets: () => [], next: 'auto', dur: 1.6 }
+      ],
+      DPE: [
+        {
+          title: 'ESSÊNCIA (DPE)',
+          text: 'Você coletou <b>DPE</b> — Essência Demoníaca Purificada, que os monstros deixam ao morrer.<br>Ela serve para <b>evoluir as habilidades</b> do herói.',
+          onEnter: closeDrawers,
+          targets: () => [$id('lbl-dpe') && $id('lbl-dpe').closest('[data-tip]')], next: 'button'
+        },
+        {
+          title: 'ÁRVORE DE SKILLS',
+          text: 'Toque no botão da <b>Árvore de Skills</b> que está piscando.',
+          targets: () => [drawerBtn(2)], next: 'done', done: () => openDrawerIs(2)
+        },
+        {
+          title: 'HABILIDADES',
+          text: 'Cada ícone é uma habilidade. Toque nela para <b>evoluí-la gastando DPE</b>.<br>Derrote monstros para juntar mais!',
+          targets: () => [$id('vertical-tree-nodes')], allow: () => [$id('vertical-tree-nodes')],
+          next: 'button', btn: 'Entendi', back: () => !openDrawerIs(2) ? 1 : -1
+        }
+      ],
+      ITEM: [
+        {
+          title: 'NOVO ITEM!',
+          text: 'Você encontrou um <b>equipamento</b>! Toque na <b>Bolsa</b> que está piscando.',
+          onEnter: () => { closeDrawers(); state.selectedSlot = 2; },
+          targets: () => [drawerBtn(3)], next: 'done', done: () => openDrawerIs(3)
+        },
+        {
+          title: 'EQUIPAR',
+          text: () => GUIDE.ctx.compat === false
+            ? 'Este item não serve para a classe do herói, mas pode servir para outro personagem ou na <b>Forja</b>.'
+            : 'Para equipar: <b>toque 2x</b> no item ou <b>arraste</b> até o espaço do corpo do herói.',
+          onEnter: () => { if (state.selectedSlot !== 2) { state.selectedSlot = 2; refreshAllUI(); } },
+          targets: () => [$id('pane-3')], allow: () => [$id('pane-3')],
+          next: () => GUIDE.ctx.compat === false ? 'button' : 'done',
+          done: () => !GUIDE.ctx.uid || equippedUidSet().has(GUIDE.ctx.uid),
+          back: () => !openDrawerIs(3) ? 0 : -1
+        },
+        { title: 'EQUIPADO!', text: 'Equipamentos aumentam os atributos do personagem. A batalha continua!', targets: () => [], next: 'auto', dur: 1.8, onEnter: () => setTimeout(closeDrawers, 900) }
+      ]
+    };
+    const gRing = $id('guide-ring'), gBox = $id('guide-box');
+    const gTitle = gBox.querySelector('.g-title'), gText = gBox.querySelector('.g-text'), gDots = gBox.querySelector('.g-dots');
+    const gNext = gBox.querySelector('.g-next'), gSkip = gBox.querySelector('.g-skip');
+    const val = (v) => typeof v === 'function' ? v() : v;
+    function guideActive() { return !!GUIDE.key; }
+    function guideTrigger(key, ctx) {
+      if (state.inMainMenu || state.tutorialCompleted) return;
+      state.guideSeen = state.guideSeen || {};
+      if (state.guideSeen[key] || GUIDE.key === key || GUIDE.queue.some(q => q.key === key)) return;
+      GUIDE.queue.push({ key, ctx: ctx || {} });
+      setTimeout(guideTryStart, 450); // deixa o efeito (LEVEL UP!, item voando) aparecer antes de congelar
+    }
+    function guideTryStart() {
+      if (GUIDE.key || !GUIDE.queue.length || state.inMainMenu || SE.open) return;
+      const q = GUIDE.queue.shift();
+      GUIDE.key = q.key; GUIDE.ctx = q.ctx; GUIDE.idx = 0;
+      if (typeof hideTip === 'function') hideTip();
+      guideEnter();
+    }
+    function guideStep() { return GUIDE_FLOWS[GUIDE.key][GUIDE.idx]; }
+    function guideEnter() {
+      const st = guideStep();
+      GUIDE.t0 = performance.now(); // relógio real (o dt do loop é limitado e atrasaria em celular lento)
+      if (st.onEnter) st.onEnter();
+      gTitle.textContent = st.title;
+      gText.innerHTML = val(st.text);
+      const flow = GUIDE_FLOWS[GUIDE.key];
+      gDots.innerHTML = flow.map((_, i) => `<i class="${i <= GUIDE.idx ? 'on' : ''}"></i>`).join('');
+      const mode = val(st.next);
+      gNext.style.display = mode === 'button' ? '' : 'none';
+      gNext.textContent = st.btn || 'Continuar';
+      gSkip.style.display = GUIDE.idx === flow.length - 1 ? 'none' : '';
+      gBox.style.display = 'block';
+      gBox.style.animation = 'none'; void gBox.offsetWidth; gBox.style.animation = '';
+      gRing.style.display = 'block';
+      guidePlace();
+    }
+    function guideAdvance() {
+      if (!GUIDE.key) return;
+      GUIDE.idx++;
+      if (GUIDE.idx >= GUIDE_FLOWS[GUIDE.key].length) guideFinish();
+      else guideEnter();
+    }
+    function guideFinish() {
+      state.guideSeen = state.guideSeen || {};
+      state.guideSeen[GUIDE.key] = true;
+      GUIDE.key = null;
+      gBox.style.display = 'none'; gRing.style.display = 'none';
+      refreshAllUI();
+      setTimeout(guideTryStart, 350);
+    }
+    function guideTargets() {
+      return (guideStep().targets() || []).filter(el => el && el.getClientRects().length);
+    }
+    function guidePlace() {
+      const els = guideTargets();
+      if (!els.length) {
+        gRing.classList.add('no-target');
+        Object.assign(gRing.style, { left: '50%', top: '50%', width: '0px', height: '0px' });
+        gBox.style.top = '50%'; gBox.style.bottom = ''; gBox.style.translate = '-50% -50%';
+        return;
+      }
+      gRing.classList.remove('no-target');
+      let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+      for (const el of els) { const q = el.getBoundingClientRect(); l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom); }
+      const pad = 5;
+      Object.assign(gRing.style, { left: (l - pad) + 'px', top: (t - pad) + 'px', width: (r - l + pad * 2) + 'px', height: (b - t + pad * 2) + 'px' });
+      // caixa logo acima do destaque (se ele está embaixo) ou logo abaixo (se está em cima)
+      gBox.style.translate = '-50% 0'; gBox.style.bottom = '';
+      const h = gBox.offsetHeight, H = window.innerHeight;
+      // destaque dentro do painel aberto: a caixa fica acima do painel inteiro (não cobre as abas)
+      const drawer = $id('floating-drawer');
+      const inDrawer = drawer && !drawer.classList.contains('hidden') && els.every(el => drawer.contains(el));
+      const anchorTop = inDrawer ? Math.min(t, drawer.getBoundingClientRect().top) : t;
+      const top = (t + b) / 2 > H / 2
+        ? Math.max(4, anchorTop - pad - h - 6)
+        : Math.min(H - h - 4, b + pad + 6);
+      gBox.style.top = top + 'px';
+    }
+    function guideTick() {
+      if (!GUIDE.key) return;
+      const st = guideStep();
+      const back = st.back ? st.back() : -1;
+      if (back >= 0) { GUIDE.idx = back; guideEnter(); return; }
+      const mode = val(st.next);
+      if (mode === 'auto' && (performance.now() - GUIDE.t0) / 1000 >= st.dur) { guideAdvance(); return; }
+      if (mode === 'done' && st.done && st.done()) { guideAdvance(); return; }
+      if (typeof st.text === 'function') { const h = st.text(); if (gText.innerHTML !== h) gText.innerHTML = h; }
+      guidePlace();
+    }
+    gNext.onclick = () => guideAdvance();
+    gSkip.onclick = () => guideFinish();
+    gBox.addEventListener('click', e => { // tocar na caixa adianta a animação dos atributos
+      if (e.target === gNext || e.target === gSkip) return;
+      if (GUIDE.key && val(guideStep().next) === 'auto') guideAdvance();
+    });
+    // bloqueia toques/cliques/teclas fora do que está destacado enquanto o guia está ativo
+    const guideBlock = e => {
+      if (!GUIDE.key) return;
+      const st = guideStep();
+      const allowed = [gBox, ...((st.allow ? st.allow() : st.targets()) || [])].filter(Boolean);
+      if (allowed.some(a => a.contains(e.target))) return;
+      e.preventDefault(); e.stopPropagation();
+    };
+    for (const ev of ['pointerdown', 'mousedown', 'touchstart', 'click', 'dblclick', 'contextmenu']) {
+      window.addEventListener(ev, guideBlock, { capture: true, passive: false });
+    }
+    window.addEventListener('keydown', e => { if (GUIDE.key) { e.preventDefault(); e.stopPropagation(); } }, { capture: true });
+
     // Autosave: salva a cada 30s em jogo e sempre que a página vai para segundo plano
     // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
     function autoSave() {
@@ -7484,9 +7723,13 @@
           if (DEV.infGold && state.gold < 999999) state.gold = 999999;
           if (DEV.infDpe && state.dpe < 999999) state.dpe = 999999;
         }
-        const sc = devTimeScale();
-        if (sc > 1) { const n = Math.ceil(sc); for (let i = 0; i < n; i++) updateSimulation(dt * sc / n); }
-        else updateSimulation(dt * sc);
+        if (guideActive()) {
+          guideTick(); // tutorial guiado: mundo congelado, só a explicação anda
+        } else {
+          const sc = devTimeScale();
+          if (sc > 1) { const n = Math.ceil(sc); for (let i = 0; i < n; i++) updateSimulation(dt * sc / n); }
+          else updateSimulation(dt * sc);
+        }
         renderArena();
       }
       requestAnimationFrame(loop);
