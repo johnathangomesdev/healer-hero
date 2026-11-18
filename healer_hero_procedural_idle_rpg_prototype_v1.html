@@ -975,8 +975,8 @@
           SWORD: ['sword', [], 0.5, 1], SWORD_CRIT: ['sword', [], 0.62, 0.88],
           BOW_DRAW: ['bow', [0.12], 0.42, 1],          // puxar encurtado para caber na animação + baque da soltura
           ARROW_HIT: ['arrowHit', [], 0.42, 1],
-          MAGIC: ['magic', [], 0.3, 1],
-          HEAL: ['heal', [], 0.34, 1],
+          MAGIC: ['magic', [], 0.14, 1],               // ataque básico do Santo/Exorcista (era 0.3: alto demais)
+          HEAL: ['heal', [], 0.24, 1],
           PUNCH: ['punch', [], 0.75, 1], PUNCH_CRIT: ['punch', [], 0.85, 0.85]
         }[type];
         if (P) {
@@ -4948,17 +4948,43 @@
     // 10. HUD DRAWERS, VERTICAL SKILL TREE, INVENTORY & WORLD MAP
     // =========================================================================
     const tooltipEl = document.getElementById('hud-tooltip');
-    document.addEventListener('pointermove', (e) => {
-      const target = e.target.closest('[data-tip]');
+    // Tooltip: segue o cursor. No toque, some 1,5s depois de tirar o dedo; e some sempre que o
+    // elemento sai da tela (troca de menu/janela), ao começar a arrastar ou quando o mouse sai da janela.
+    let tipTarget = null, tipHideTimer = 0, tipSuppressed = false; // suprimido enquanto arrasta
+    function hideTip() {
+      clearTimeout(tipHideTimer);
+      tooltipEl.style.display = 'none';
+      tipTarget = null;
+    }
+    function updateTip(e) {
+      const target = !tipSuppressed && e.target.closest && e.target.closest('[data-tip]');
       if (target && target.dataset.tip) {
+        clearTimeout(tipHideTimer);
+        tipTarget = target;
         tooltipEl.innerHTML = target.dataset.tip;
         tooltipEl.style.display = 'block';
-        tooltipEl.style.left = Math.min(window.innerWidth - 240, e.clientX + 12) + 'px';
+        tooltipEl.style.left = Math.max(4, Math.min(window.innerWidth - 240, e.clientX + 12)) + 'px';
         tooltipEl.style.top = Math.max(8, e.clientY - 52) + 'px';
       } else {
-        tooltipEl.style.display = 'none';
+        hideTip();
       }
-    });
+    }
+    document.addEventListener('pointermove', updateTip);
+    document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') updateTip(e); });
+    const tipTouchEnd = e => {
+      tipSuppressed = false;
+      if (e.pointerType === 'mouse') return;
+      clearTimeout(tipHideTimer);
+      tipHideTimer = setTimeout(hideTip, 1500);
+    };
+    document.addEventListener('pointerup', tipTouchEnd);
+    document.addEventListener('pointercancel', tipTouchEnd);
+    document.addEventListener('dragstart', () => { tipSuppressed = true; hideTip(); });
+    document.addEventListener('dragend', () => { tipSuppressed = false; });
+    document.addEventListener('mouseout', e => { if (!e.relatedTarget) hideTip(); });
+    setInterval(() => {
+      if (tipTarget && (!tipTarget.isConnected || tipTarget.getClientRects().length === 0)) hideTip();
+    }, 200);
 
     // Rastreio do cursor do mouse na arena para coletar drops
     canvas.addEventListener('pointermove', (e) => {
