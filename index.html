@@ -1181,6 +1181,9 @@
     const ITEMS_DB = {
       // equipamento inicial de todo personagem: a própria roupa de aldeão (não muda o sprite)
       CLOTH_SHIRT: { id: 'CLOTH_SHIRT', name: 'Roupa de Pano', rank: 'C', slot: 'CHEST', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 3, pow: 0, def: 1, spd: 0 }, color: '#a8a29e' },
+      OLD_SWORD: { id: 'OLD_SWORD', name: 'Espada Velha', rank: 'C', slot: 'RIGHT_HAND', classes: ['TANK'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0 }, color: '#cbd5e1' },
+      WOOD_BUCKLER: { id: 'WOOD_BUCKLER', name: 'Broquel de Madeira', rank: 'C', slot: 'LEFT_HAND', classes: ['TANK'], bonuses: { vit: 1, pow: 0, def: 2, spd: 0 }, color: '#a16207' },
+      HUNTING_BOW: { id: 'HUNTING_BOW', name: 'Arco de Caça', rank: 'C', slot: 'RIGHT_HAND', classes: ['ARCHER'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0.03 }, color: '#b45309' },
       CLOTH_BOOTS: { id: 'CLOTH_BOOTS', name: 'Botas de Pano', rank: 'C', slot: 'FEET', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 1, pow: 0, def: 1, spd: 0.03 }, color: '#a8a29e' },
       WOODEN_ROSARY: { id: 'WOODEN_ROSARY', name: 'Rosário de Madeira', rank: 'C', slot: 'HEAD', classes: ['SAINT', 'EXORCIST', 'MONK'], bonuses: { vit: 5, pow: 3, def: 1, spd: 0 }, color: '#eab308' },
       EMERALD_CLOAK: { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', rank: 'B', slot: 'HEAD', classes: ['SAINT', 'EXORCIST', 'ARCHER'], bonuses: { vit: 10, pow: 12, def: 3, spd: 0.05 }, color: '#22c55e' },
@@ -1211,7 +1214,7 @@
       DIVINE:    { label: 'Divino',   color: '#fde68a', order: 5, sparkle: true } // dourado com brilhos brancos
     };
     Object.entries({
-      CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
+      CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', OLD_SWORD: 'COMMON', WOOD_BUCKLER: 'COMMON', HUNTING_BOW: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
       FATHER_WRAPS: 'UNCOMMON', MONK_ROBE: 'UNCOMMON', KNIGHT_PLATE: 'UNCOMMON', KNIGHT_SWORD: 'UNCOMMON', ELVEN_TUNIC: 'UNCOMMON',
       EMERALD_CLOAK: 'RARE', CRIMSON_WRAPS: 'RARE',
       IRON_BUCKLER: 'MYTHIC',
@@ -1845,10 +1848,10 @@
     // =========================================================================
     // Roupa e botas de pano: equipa em quem estiver sem nada naquele espaço (reaproveita as da bolsa)
     const STARTER_GEAR = ['CLOTH_SHIRT', 'CLOTH_BOOTS'];
-    function giveStarterGear(slotIdx) {
+    function giveStarterGear(slotIdx, extra = []) {
       if (!partySlots[slotIdx]) return;
       const eq = state.equippedSlots[slotIdx];
-      for (const id of STARTER_GEAR) {
+      for (const id of [...STARTER_GEAR, ...extra]) {
         const sl = ITEMS_DB[id].slot;
         if (eq[sl]) continue;
         const inst = getBagItems().find(x => x.id === id) || addItem(id, 'COMMON');
@@ -1875,7 +1878,9 @@
         stats: { ...BAL.father },
         x: slotHomeX(0), y: GROUND_Y, range: 42, speed: 120
       });
-      for (const s of [0, 1, 2]) giveStarterGear(s);
+      giveStarterGear(2);
+      giveStarterGear(1, ['HUNTING_BOW']);           // filha: arco de caça
+      giveStarterGear(0, ['OLD_SWORD', 'WOOD_BUCKLER']); // pai: espada velha e broquel
     }
 
     function setHeroStanceTutorialOrUser(newStance, isScriptedTutorial = false) {
@@ -2953,6 +2958,9 @@
     const ITEM_ART = {
       CLOTH_SHIRT: { lib: 'rig', img: 'torso' },
       CLOTH_BOOTS: { lib: 'rig', img: 'legR' },
+      OLD_SWORD: { lib: 'rig', img: 'sword' },
+      WOOD_BUCKLER: { lib: 'rig', img: 'shield' },
+      HUNTING_BOW: { lib: 'rig', img: 's_bow' },
       WOODEN_ROSARY: { lib: 'rig', img: 'a_hood', filter: 'sepia(1) saturate(1.4) hue-rotate(-12deg) brightness(0.85)' },
       EMERALD_CLOAK: { lib: 'rig', img: 'a_hood' },
       PILGRIM_SANDALS: { lib: 'rig', img: 'm_legR' },
