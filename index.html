@@ -106,6 +106,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     input, textarea, select { -webkit-user-select: text; user-select: text; }
+    .icon-btn.hidden, .menu-btn.hidden { display: none !important; }
 
     .mono {
       font-family: 'JetBrains Mono', monospace;
@@ -272,6 +273,7 @@
       <div id="menu-buttons">
         <button id="menu-btn-start" class="menu-btn primary">▶ Iniciar</button>
         <button id="menu-btn-continue" class="menu-btn">⟳ Continuar</button>
+        <button id="menu-btn-autosave" class="menu-btn hidden">⟲ Retomar Autosave</button>
         <button id="menu-btn-settings" class="menu-btn">⚙ Configurações</button>
         <button id="menu-btn-sprites" class="menu-btn dev">✎ Editar Sprites</button>
         <button id="menu-btn-dev" class="menu-btn dev">🛠 Modo Dev: OFF</button>
@@ -629,6 +631,10 @@
         <button id="btn-sys-load" class="icon-btn py-2 gap-2 ui-btn">
           <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Carregar Progresso
+        </button>
+        <button id="btn-sys-autoload" class="icon-btn py-2 gap-2 ui-btn hidden">
+          <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span>Retomar Autosave</span>
         </button>
         <button id="btn-sys-quit" class="icon-btn py-2 gap-2 text-rose-300 border-rose-500/50 ui-btn">
           <svg class="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -6391,8 +6397,28 @@
       } catch (_e) { return null; }
     }
 
-    function saveGameProgress() {
+    // Dois espaços de save: o manual ("Salvar Progresso") e o automático (a cada 30s / ao bloquear a tela).
+    // O autosave nunca sobrescreve o save manual.
+    const SAVE_KEY = 'healer_hero_save_v1';
+    const AUTOSAVE_KEY = 'healer_hero_autosave_v1';
+    function saveSlotTime(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const t = JSON.parse(raw).savedAt;
+        return typeof t === 'number' ? t : 0;
+      } catch (_e) { return null; }
+    }
+    function fmtSaveTime(t) {
+      if (!t) return '';
+      const d = new Date(t), now = new Date();
+      const hm = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + hm;
+    }
+
+    function saveGameProgress(key = SAVE_KEY) {
       const savePayload = {
+        savedAt: Date.now(),
         gold: state.gold,
         dpe: state.dpe,
         stance: state.stance,
@@ -6432,11 +6458,11 @@
           };
         })
       };
-      localStorage.setItem('healer_hero_save_v1', JSON.stringify(savePayload));
+      localStorage.setItem(key, JSON.stringify(savePayload));
     }
 
-    function loadSavedGame() {
-      const raw = localStorage.getItem('healer_hero_save_v1');
+    function loadSavedGame(key = SAVE_KEY) {
+      const raw = localStorage.getItem(key);
       if (!raw) {
         showBanner('Nenhum save encontrado!');
         return false;
@@ -6497,7 +6523,7 @@
         updateSkillBarIcons();
         startStage(data.stageId || (state.tutorialCompleted ? '2-1' : '1-1'));
         sfx.play('STAGE_CLEAR');
-        showBanner('Progresso carregado!');
+        showBanner(key === AUTOSAVE_KEY ? 'Autosave carregado!' : 'Progresso carregado!');
         return true;
       } catch (_err) {
         showBanner('Erro ao carregar o save.');
@@ -6577,17 +6603,41 @@
     }
 
     function refreshMainMenuState() {
-      const hasSave = !!localStorage.getItem('healer_hero_save_v1');
+      const hasSave = !!localStorage.getItem(SAVE_KEY);
       const btnCont = document.getElementById('menu-btn-continue');
       if (btnCont) btnCont.disabled = !hasSave;
+      syncAutosaveButtons();
       const note = document.getElementById('menu-note');
       if (note) note.classList.add('hidden');
       document.getElementById('menu-settings').classList.add('hidden');
       document.getElementById('menu-buttons').classList.remove('hidden');
     }
 
+    // Botões "Retomar Autosave": só aparecem quando existe autosave, com o horário dele
+    function syncAutosaveButtons() {
+      const t = saveSlotTime(AUTOSAVE_KEY);
+      const label = 'Retomar Autosave' + (t ? ' (' + fmtSaveTime(t) + ')' : '');
+      const mb = document.getElementById('menu-btn-autosave');
+      if (mb) { mb.classList.toggle('hidden', t === null); mb.textContent = '⟲ ' + label; }
+      const sb = document.getElementById('btn-sys-autoload');
+      if (sb) { sb.classList.toggle('hidden', t === null); const s = sb.querySelector('span'); if (s) s.textContent = label; }
+    }
+    document.getElementById('menu-btn-autosave').onclick = () => {
+      if (loadSavedGame(AUTOSAVE_KEY)) {
+        state.inMainMenu = false;
+        document.getElementById('main-menu').classList.add('hidden');
+        refreshAllUI();
+      }
+    };
+    document.getElementById('btn-sys-autoload').onclick = () => {
+      if (loadSavedGame(AUTOSAVE_KEY)) {
+        document.getElementById('modal-system-menu').classList.add('hidden');
+      }
+    };
+
     document.getElementById('btn-system-menu').onclick = () => {
       syncSettingsUI();
+      syncAutosaveButtons();
       document.getElementById('modal-system-menu').classList.remove('hidden');
     };
     document.getElementById('btn-sys-resume').onclick = () => {
@@ -7212,7 +7262,7 @@
     // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
     function autoSave() {
       if (state.inMainMenu || SE.open) return;
-      try { saveGameProgress(); } catch (_e) {}
+      try { saveGameProgress(AUTOSAVE_KEY); } catch (_e) {}
     }
     setInterval(autoSave, 30000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autoSave(); });
