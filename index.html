@@ -7862,9 +7862,12 @@
         },
         {
           title: 'HABILIDADES',
-          text: 'Cada ícone é uma habilidade. Toque nela para <b>evoluí-la gastando DPE</b>.<br>Derrote monstros para juntar mais!',
+          text: 'Cada ícone é uma habilidade. Toque na <b>primeira habilidade</b> para <b>evoluí-la gastando DPE</b>.<br>Derrote monstros para juntar mais!',
+          onEnter: () => { GUIDE.ctx.dpe0 = talentSpentDpe(); },
           targets: () => [$id('vertical-tree-nodes')], allow: () => [$id('vertical-tree-nodes')],
-          next: 'button', btn: 'Entendi', back: () => !openDrawerIs(2) ? 1 : -1
+          next: 'done', done: () => talentSpentDpe() > (GUIDE.ctx.dpe0 || 0), back: () => !openDrawerIs(2) ? 1 : -1
+        },
+        { title: 'EVOLUIU!', text: 'Habilidades mais fortes são essenciais para sobreviver ao <b>Ato II</b>. Continue evoluindo sempre que juntar DPE!', onEnter: closeDrawers, targets: () => [], next: 'auto', dur: 2.2
         }
       ],
       ITEM: [
@@ -7919,7 +7922,7 @@
       const mode = val(st.next);
       gNext.style.display = mode === 'button' ? '' : 'none';
       gNext.textContent = st.btn || 'Continuar';
-      gSkip.style.display = GUIDE.idx === flow.length - 1 ? 'none' : '';
+      gSkip.style.display = 'none'; // tutorial obrigatório: sem pular
       gBox.style.display = 'block';
       gBox.style.animation = 'none'; void gBox.offsetWidth; gBox.style.animation = '';
       gRing.style.display = 'block';
@@ -7979,7 +7982,7 @@
       guidePlace();
     }
     gNext.onclick = () => guideAdvance();
-    gSkip.onclick = () => guideFinish();
+    gSkip.onclick = () => { };
     gBox.addEventListener('click', e => { // tocar na caixa adianta a animação dos atributos
       if (e.target === gNext || e.target === gSkip) return;
       if (GUIDE.key && val(guideStep().next) === 'auto') guideAdvance();
