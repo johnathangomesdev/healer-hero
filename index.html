@@ -1905,6 +1905,7 @@
         }
       }
       state.stageId = stageId;
+      finalBlowDone = false; SLOWMO.t = 0; SLOWMO.cb = null;
       state.waveIdx = 0;
       state.isDefeated = false;
       state.isVictory = false;
@@ -2172,7 +2173,8 @@
     }
 
     function onStageCompleted() {
-      sfx.play('STAGE_CLEAR');
+      const slowIntro = state.stageId === '1-3' && !state.isPathLocked && !finalBlowDone;
+      if (!slowIntro) sfx.play('STAGE_CLEAR');
       const cfg = STAGES_DB[state.stageId];
 
       // Subestágios X-1 e X-2 avançam direto sem abrir Tela de Vitória
@@ -2191,6 +2193,8 @@
         state.tutorialCompleted = true;
         state.tavernUnlocked = true;
         if (!state.isPathLocked) {
+          // golpe final em câmera lenta; a escolha da vocação só aparece depois
+          if (!finalBlowDone) { finalBlowDone = true; triggerShake(5, 0.35); startSlowMo(2.8, 0.18, () => onStageCompleted()); return; }
           state.awaitingAct2Lock = true;
           partySlots[0] = null;
           partySlots[1] = null;
@@ -2292,7 +2296,16 @@
     // =========================================================================
     // 7. SIMULATION & MOUSE DROP COLLECTION LOOP
     // =========================================================================
+    // Câmera lenta (golpe final do Monge no Lobo Alfa do tutorial): dura SLOWMO.t segundos reais
+    const SLOWMO = { t: 0, scale: 0.2, cb: null };
+    let finalBlowDone = false;
+    function startSlowMo(sec, scale, cb) { SLOWMO.t = sec; SLOWMO.scale = scale; SLOWMO.cb = cb; }
     function updateSimulation(dt) {
+      if (SLOWMO.t > 0) {
+        SLOWMO.t -= dt;
+        dt *= SLOWMO.scale;
+        if (SLOWMO.t <= 0) { const cb = SLOWMO.cb; SLOWMO.cb = null; if (cb) cb(); }
+      }
       // Atualiza drops voando até os contadores de Gold e DPE
       for (let i = flyingDrops.length - 1; i >= 0; i--) {
         const f = flyingDrops[i];
