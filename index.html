@@ -40,19 +40,33 @@
       margin-top: 0.4em; font-family: 'Lilita One', sans-serif; letter-spacing: 0.3em;
       font-size: clamp(0.6rem, min(1.9cqw, 3.4cqh), 1.1rem); color: #bbf7d0; text-shadow: 0 2px 6px #000, 0 0 12px rgba(74, 222, 128, 0.7);
     }
-    #menu-buttons { position: absolute; right: 5%; top: 30%; width: 25%; min-width: 150px; display: flex; flex-direction: column; gap: 0.9cqw; }
+    /* Botões do menu: todos do mesmo tamanho, só texto, sem padding interno. A altura acompanha a
+       altura da tela (cqh) para os 7 botões caberem abaixo do título até no celular deitado. */
+    #menu-buttons {
+      position: absolute; right: 4%; top: 31%; width: clamp(130px, 22%, 300px);
+      display: flex; flex-direction: column; gap: clamp(4px, 1.4cqh, 12px);
+    }
     .menu-btn {
-      font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: clamp(0.8rem, min(2.5cqw, 4.4cqh), 1.5rem); letter-spacing: 0.06em;
-      padding: 0.65em 0.8em; border-radius: 0.8em; color: #ecfdf5; cursor: pointer;
+      font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: clamp(11px, 3.4cqh, 22px); letter-spacing: 0.06em;
+      height: clamp(26px, 7.2cqh, 54px); width: 100%; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      border-radius: 0.7em; color: #ecfdf5; cursor: pointer;
       background: linear-gradient(180deg, rgba(20, 40, 32, 0.92), rgba(8, 20, 16, 0.92));
       border: 2px solid rgba(74, 222, 128, 0.55);
       box-shadow: 0 4px 0 #052e16, 0 8px 18px rgba(0, 0, 0, 0.6);
       text-shadow: 0 2px 0 #052e16;
-      transition: all 0.12s ease;
+      transition: scale 0.1s ease, translate 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease, border-color 0.1s ease;
     }
     .menu-btn.primary { background: linear-gradient(180deg, #4ade80, #16a34a); border-color: #dcfce7; color: #052e16; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
-    .menu-btn:hover:not(:disabled) { scale: 1.06; border-color: #bbf7d0; box-shadow: 0 4px 0 #052e16, 0 0 22px rgba(74, 222, 128, 0.65); }
-    .menu-btn:active:not(:disabled) { scale: 0.96; }
+    @media (hover: hover) {
+      .menu-btn:hover:not(:disabled) { scale: 1.04; border-color: #bbf7d0; box-shadow: 0 4px 0 #052e16, 0 0 22px rgba(74, 222, 128, 0.65); }
+    }
+    /* clique/toque: o botão "afunda" (desce, perde a sombra) e brilha */
+    .menu-btn:active:not(:disabled), .menu-btn.pressed:not(:disabled) {
+      scale: 0.96; translate: 0 3px; filter: brightness(1.3);
+      border-color: #f0fdf4; box-shadow: 0 1px 0 #052e16, 0 0 18px rgba(74, 222, 128, 0.8);
+    }
     .menu-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     #menu-settings, #menu-note {
       position: absolute; right: 5%; top: 40%; width: 25%; min-width: 170px; padding: 0.9cqw 1.2cqw; border-radius: 0.9em;
@@ -62,7 +76,7 @@
     #menu-note { top: auto; bottom: 6%; text-align: center; }
 
     /* ================= MODO DEV & EDITOR DE SPRITES ================= */
-    .menu-btn.dev { border-color: rgba(232, 121, 249, 0.6); font-size: clamp(0.65rem, min(1.9cqw, 3.4cqh), 1.1rem); padding: 0.5em 0.8em; }
+    .menu-btn.dev { border-color: rgba(232, 121, 249, 0.6); }
     #dev-panel select, #dev-panel input[type=number], #se-side select, #se-side input[type=number] {
       background: #0f1422; border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 6px; color: #e2e8f0; padding: 2px 4px; font-size: 11px; width: 100%;
     }
@@ -300,13 +314,13 @@
         <div id="menu-sub">A LUZ QUE CURA, A LUZ QUE PURIFICA</div>
       </div>
       <div id="menu-buttons">
-        <button id="menu-btn-start" class="menu-btn primary">▶ Iniciar</button>
-        <button id="menu-btn-continue" class="menu-btn">⟳ Continuar</button>
-        <button id="menu-btn-autosave" class="menu-btn hidden">⟲ Retomar Autosave</button>
-        <button id="menu-btn-settings" class="menu-btn">⚙ Configurações</button>
-        <button id="menu-btn-sprites" class="menu-btn dev">✎ Editar Sprites</button>
-        <button id="menu-btn-dev" class="menu-btn dev">🛠 Modo Dev: OFF</button>
-        <button id="menu-btn-exit" class="menu-btn">✖ Sair</button>
+        <button id="menu-btn-start" class="menu-btn primary">Iniciar</button>
+        <button id="menu-btn-continue" class="menu-btn">Continuar</button>
+        <button id="menu-btn-autosave" class="menu-btn hidden">Retomar Autosave</button>
+        <button id="menu-btn-settings" class="menu-btn">Configurações</button>
+        <button id="menu-btn-sprites" class="menu-btn dev">Editar Sprites</button>
+        <button id="menu-btn-dev" class="menu-btn dev">Modo Dev: OFF</button>
+        <button id="menu-btn-exit" class="menu-btn">Sair</button>
       </div>
       <div id="menu-settings" class="hidden">
         <div style="text-align:center;letter-spacing:.15em;margin-bottom:.6em;color:#86efac">CONFIGURAÇÕES</div>
@@ -6684,7 +6698,7 @@
       const t = saveSlotTime(AUTOSAVE_KEY);
       const label = 'Retomar Autosave' + (t ? ' (' + fmtSaveTime(t) + ')' : '');
       const mb = document.getElementById('menu-btn-autosave');
-      if (mb) { mb.classList.toggle('hidden', t === null); mb.textContent = '⟲ ' + label; }
+      if (mb) { mb.classList.toggle('hidden', t === null); mb.textContent = label; }
       const sb = document.getElementById('btn-sys-autoload');
       if (sb) { sb.classList.toggle('hidden', t === null); const s = sb.querySelector('span'); if (s) s.textContent = label; }
     }
@@ -6776,7 +6790,7 @@
     function devEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
     function syncDevUI() {
-      document.getElementById('menu-btn-dev').textContent = '🛠 Modo Dev: ' + (DEV.on ? 'ON' : 'OFF');
+      document.getElementById('menu-btn-dev').textContent = 'Modo Dev: ' + (DEV.on ? 'ON' : 'OFF');
       document.getElementById('dev-panel').classList.toggle('hidden', !DEV.on);
       document.getElementById('dev-inf-gold').classList.toggle('toggle-on', DEV.infGold);
       document.getElementById('dev-inf-dpe').classList.toggle('toggle-on', DEV.infDpe);
@@ -7322,6 +7336,14 @@
       } catch (_e) { wakeLock = null; }
     }
     document.addEventListener('pointerdown', requestWakeLock, { passive: true });
+    // Indicação visual de clique nos botões do menu (o :active do iOS não é confiável no toque)
+    document.addEventListener('pointerdown', e => {
+      const b = e.target.closest && e.target.closest('.menu-btn');
+      if (!b || b.disabled) return;
+      b.classList.add('pressed');
+      const up = () => { setTimeout(() => b.classList.remove('pressed'), 90); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); };
+      document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    }, { passive: true });
     // Android (Chrome): tenta travar na horizontal. O iOS não suporta — lá vale o aviso #rotate-overlay.
     document.addEventListener('pointerdown', () => {
       try {
