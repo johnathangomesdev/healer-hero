@@ -558,6 +558,7 @@
           <button data-dev="hero" class="icon-btn dev-btn">Adicionar Herói</button>
           <button id="dev-slow" class="icon-btn dev-btn">⏪ Desacelerar</button>
           <button id="dev-fast" class="icon-btn dev-btn">⏩ Acelerar</button>
+          <button id="dev-robot" class="icon-btn dev-btn col-span-2">🤖 Modo Robô: OFF</button>
           <button id="dev-sprites" class="icon-btn dev-btn col-span-2">✎ Editar Sprites</button>
         </div>
         <div id="dev-sub" class="hidden bg-slate-950/70 border border-slate-700 rounded-lg p-1.5 max-h-[150px] overflow-y-auto flex flex-col gap-1"></div>
@@ -7066,6 +7067,205 @@
     document.getElementById('dev-sprites').onclick = () => seOpen();
 
     // =========================================================================
+    // 12b'. MODO ROBÔ: joga sozinho com as mesmas decisões do jogador simulado
+    // do balanceamento.html (estratégia lida de hh_balance_game_v1 → strategy)
+    // =========================================================================
+    const ROBOT_DEF = { stance: 'SAINT', farmOnLoss: true, saveForMerc: true, doCombine: true, doRefine: true, replaceRatio: 1.15,
+      alloc: { SAINT: { vit: 30, pow: 50, def: 20, spd: 0 }, EXORCIST: { vit: 25, pow: 60, def: 15, spd: 0 }, MONK: { vit: 35, pow: 40, def: 25, spd: 0 },
+        TANK: { vit: 40, pow: 20, def: 40, spd: 0 }, ARCHER: { vit: 20, pow: 60, def: 0, spd: 20 } },
+      weights: { HERO: { vit: 1, pow: 1.6, def: 1, spd: 40 }, TANK: { vit: 1.4, pow: 0.6, def: 1.6, spd: 10 }, ARCHER: { vit: 0.8, pow: 1.6, def: 0.5, spd: 45 } } };
+    const ROBOT = { on: false, st: ROBOT_DEF, think: 0, wait: 0, stats: { stages: 0, defeats: 0 } };
+    function robotLoadStrategy() {
+      let st = JSON.parse(JSON.stringify(ROBOT_DEF));
+      try {
+        const p = JSON.parse(localStorage.getItem('hh_balance_game_v1') || localStorage.getItem('hh_balance_params_v1') || 'null');
+        if (p && p.strategy) {
+          const s = p.strategy;
+          for (const k of ['stance', 'farmOnLoss', 'saveForMerc', 'doCombine', 'doRefine', 'replaceRatio']) if (k in s) st[k] = s[k];
+          if (s.alloc) for (const k in st.alloc) Object.assign(st.alloc[k], s.alloc[k] || {});
+          if (s.weights) for (const k in st.weights) Object.assign(st.weights[k], s.weights[k] || {});
+        }
+      } catch (_e) { }
+      if (!SKILLS_DB[st.stance]) st.stance = 'SAINT';
+      return st;
+    }
+    function robotRole(s) { return s === 2 ? 'HERO' : (state.slotClassTags[s] === 'ARCHER' ? 'ARCHER' : 'TANK'); }
+    function robotScore(inst, role) {
+      const w = ROBOT.st.weights[role] || ROBOT.st.weights.HERO, b = instBonuses(inst);
+      return b.vit * w.vit + b.pow * w.pow + b.def * w.def + b.spd * w.spd;
+    }
+    function robotPower(e) { return Math.sqrt(e.maxHp * Math.max(1, e.getPow()) * e.getSpd()); }
+    function robotMercPower(m) { return Math.sqrt((BAL.hpBase + m.stats.vit * BAL.hpPerVit) * m.stats.pow * m.stats.spd); }
+    function robotSpendPoints() {
+      for (const s of [0, 1, 2]) {
+        const a = partySlots[s]; if (!a || a.unspentPoints <= 0) continue;
+        const prof = ROBOT.st.alloc[s === 2 ? state.stance : robotRole(s)] || ROBOT.st.alloc.SAINT;
+        const tot = (prof.vit + prof.pow + prof.def + prof.spd) || 1;
+        const al = () => ({ vit: a.allocVit, pow: a.allocPow, def: a.allocDef, spd: a.allocSpd });
+        while (a.unspentPoints > 0) {
+          const cur = al(), spent = cur.vit + cur.pow + cur.def + cur.spd + 1;
+          let best = 'pow', gap = -1e9;
+          for (const k of ['vit', 'pow', 'def', 'spd']) { const g = prof[k] / tot * spent - cur[k]; if (prof[k] > 0 && g > gap) { gap = g; best = k; } }
+          a['alloc' + best[0].toUpperCase() + best.slice(1)]++; a.unspentPoints--;
+        }
+        a.recalcStats(false);
+      }
+    }
+    function robotSpendDpe() {
+      if (!state.tutorialCompleted || !state.isPathLocked) return; // guarda o DPE para a classe definitiva
+      const st = state.stance;
+      for (let guard = 0; guard < 50; guard++) {
+        const cost = s => Math.round((s === 1 ? BAL.cost1 : s === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, state.skillLevels[st][s] - 1));
+        const opts = [1, 2, 3].filter(s => isSkillNodeUnlocked(st, s)).sort((a, b) => cost(a) - cost(b));
+        const s = opts[0], c = cost(s);
+        if (state.dpe < c) break;
+        state.dpe -= c; state.skillLevels[st][s]++;
+      }
+    }
+    function robotEquipAll() {
+      for (const s of [2, 0, 1]) {
+        const a = partySlots[s]; if (!a) continue;
+        const role = robotRole(s);
+        for (const slot of ['HEAD', 'CHEST', 'RIGHT_HAND', 'LEFT_HAND', 'FEET']) {
+          const curUid = state.equippedSlots[s][slot], cur = invGet(curUid);
+          let best = cur && canEquipItem(s, cur.id) ? cur : null, bs = best ? robotScore(best, role) : 0;
+          for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id)) { const sc = robotScore(i, role); if (sc > bs) { bs = sc; best = i; } }
+          if (best && best.uid !== curUid) state.equippedSlots[s][slot] = best.uid;
+        }
+        a.applyEquipmentBonuses();
+      }
+    }
+    function robotManageMercs() {
+      if (!state.tavernUnlocked || !state.isPathLocked) return 0;
+      let reserve = 0;
+      for (let guard = 0; guard < 4; guard++) {
+        const av = Object.keys(MERCENARIES_DB).filter(k => !isMercHired(k));
+        if (!av.length) break;
+        const free = firstFreeTeamSlot();
+        if (free !== null) {
+          const afford = av.filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]));
+          if (afford.length) { hireMercenaryLv1(free, afford[0]); continue; }
+          reserve = Math.min(...av.map(k => MERCENARIES_DB[k].cost)); break;
+        }
+        const weakest = [0, 1].filter(s => partySlots[s]).sort((a, b) => robotPower(partySlots[a]) - robotPower(partySlots[b]))[0];
+        if (weakest === undefined) break;
+        const better = av.filter(k => robotMercPower(MERCENARIES_DB[k]) > robotPower(partySlots[weakest]) * ROBOT.st.replaceRatio).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]));
+        if (!better.length) break;
+        if (MERCENARIES_DB[better[0]].cost <= state.gold) {
+          for (const k of Object.keys(state.equippedSlots[weakest])) state.equippedSlots[weakest][k] = '';
+          partySlots[weakest] = null; hireMercenaryLv1(weakest, better[0]); continue;
+        }
+        if (ROBOT.st.saveForMerc) reserve = MERCENARIES_DB[better[0]].cost;
+        break;
+      }
+      return reserve;
+    }
+    function robotManageItems(reserve) {
+      robotEquipAll();
+      if (ROBOT.st.doCombine) {
+        for (let guard = 0; guard < 50; guard++) {
+          let did = false;
+          for (const tier of TIER_KEYS) {
+            if (tier === 'DIVINE' && !(COMBINE_UP_CHANCE[tier] > 0)) continue;
+            const bag = getBagItems().filter(i => i.tier === tier), cost = COMBINE_COST[tier];
+            if (bag.length >= 3 && state.gold - cost >= reserve) {
+              bag.sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
+              const three = bag.slice(0, 3); state.gold -= cost;
+              const pick = three[Math.floor(Math.random() * 3)];
+              const up = Math.random() < COMBINE_UP_CHANCE[tier];
+              three.forEach(i => destroyItem(i.uid));
+              addItem(pick.id, up ? TIER_KEYS[Math.min(5, TIER_KEYS.indexOf(tier) + 1)] : tier);
+              robotEquipAll(); did = true; break;
+            }
+          }
+          if (!did) break;
+        }
+      }
+      // bolsa cheia: compra aba ou descarta o pior
+      while (getBagItems().length >= bagCapacity()) {
+        const c = INV_TAB_COST[state.invTabs];
+        if (state.invTabs < 4 && c !== undefined && state.gold - c >= reserve) { state.gold -= c; state.invTabs++; continue; }
+        const bag = getBagItems().sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
+        if (!bag.length) break;
+        destroyItem(bag[0].uid);
+      }
+      if (ROBOT.st.doRefine) {
+        for (let guard = 0; guard < 200; guard++) {
+          let best = null, bv = 0, bs = -1;
+          for (const s of [0, 1, 2]) {
+            if (!partySlots[s]) continue;
+            for (const uid of Object.values(state.equippedSlots[s])) {
+              const i = invGet(uid); if (!i || (i.plus || 0) >= REFINE_MAX) continue;
+              const c = refineCost(i); if (state.gold - c < reserve) continue;
+              const role = robotRole(s);
+              const v = (robotScore(Object.assign({}, i, { plus: (i.plus || 0) + 1 }), role) - robotScore(i, role)) / c;
+              if (v > bv) { bv = v; best = i; bs = s; }
+            }
+          }
+          if (!best) break;
+          state.gold -= refineCost(best);
+          if (Math.random() < refineChance(best)) best.plus = (best.plus || 0) + 1;
+        }
+        robotEquipAll();
+      }
+    }
+    function robotTick(dt) {
+      if (!ROBOT.on || state.inMainMenu || SE.open) return;
+      if (guideActive()) { guideFinish(); return; }
+      state.isAutoSkill = true;
+      // coleta tudo o que cair (o jogador "certo" pega todos os drops)
+      for (let i = physicalDrops.length - 1; i >= 0; i--) {
+        const d = physicalDrops[i];
+        if (d.age < 0.35) continue;
+        if (d.kind === 'ITEM' && getBagItems().length >= bagCapacity()) robotManageItems(0);
+        if (collectPhysicalDrop(d) === false) { d.age = -1.5; continue; }
+        physicalDrops.splice(i, 1);
+      }
+      // escolha irreversível de vocação após o 1-3
+      const pathModal = document.getElementById('modal-path-choice');
+      if (!pathModal.classList.contains('hidden')) {
+        const b = document.querySelector(`[data-lock-path="${ROBOT.st.stance}"]`) || document.querySelector('[data-lock-path]');
+        if (b) b.click();
+        if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);
+        return;
+      }
+      if (state.awaitingAct2Lock && state.isPathLocked) {
+        const k = Object.keys(MERCENARIES_DB).filter(k => MERCENARIES_DB[k].cost <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
+        if (k) hireMercenaryLv1(firstFreeTeamSlot(), k);
+        if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);
+        return;
+      }
+      ROBOT.think -= dt;
+      if (ROBOT.think <= 0) {
+        ROBOT.think = 0.5;
+        robotSpendPoints();
+        robotSpendDpe();
+        robotManageItems(robotManageMercs());
+        scheduleRefreshUI();
+      }
+      // fim de fase
+      if (state.isVictory || state.isDefeated) {
+        ROBOT.wait += dt;
+        if (ROBOT.wait < 1.2) return;
+        ROBOT.wait = 0;
+        const cfg = STAGES_DB[state.stageId] || STAGES_DB['1-1'];
+        if (state.isVictory) { ROBOT.stats.stages++; startStage(cfg.next); }
+        else { ROBOT.stats.defeats++; startStage(ROBOT.st.farmOnLoss ? `${cfg.act}-1` : state.stageId); }
+      } else ROBOT.wait = 0;
+    }
+    function syncRobotUI() {
+      const b = document.getElementById('dev-robot');
+      b.textContent = `🤖 Modo Robô: ${ROBOT.on ? 'ON' : 'OFF'}` + (ROBOT.on ? ` (${STANCE_LABEL_ROBOT[ROBOT.st.stance] || ROBOT.st.stance})` : '');
+      b.classList.toggle('toggle-on', ROBOT.on);
+    }
+    const STANCE_LABEL_ROBOT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
+    document.getElementById('dev-robot').onclick = () => {
+      ROBOT.on = !ROBOT.on;
+      if (ROBOT.on) { ROBOT.st = robotLoadStrategy(); ROBOT.think = 0; ROBOT.wait = 0; state.isRepeat = false; state.isAutoAdvance = false; showBannerSafe('🤖 Robô no controle: decisões iguais às do simulador de balanceamento.'); }
+      syncRobotUI(); refreshAllUI();
+    };
+
+    // =========================================================================
     // 12c. EDITOR DE SPRITES (articulações, rotação, posição e escala das peças)
     // =========================================================================
     const SE_CHARS = [
@@ -7797,11 +7997,13 @@
           if (DEV.infDpe && state.dpe < 999999) state.dpe = 999999;
         }
         if (guideActive()) {
-          guideTick(); // tutorial guiado: mundo congelado, só a explicação anda
+          if (DEV.on && ROBOT.on) guideFinish(); // o robô pula as explicações
+          else guideTick(); // tutorial guiado: mundo congelado, só a explicação anda
         } else {
           const sc = devTimeScale();
           if (sc > 1) { const n = Math.ceil(sc); for (let i = 0; i < n; i++) updateSimulation(dt * sc / n); }
           else updateSimulation(dt * sc);
+          if (DEV.on && ROBOT.on) robotTick(dt * sc);
         }
         renderArena();
       }

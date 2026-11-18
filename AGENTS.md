@@ -60,6 +60,13 @@
 - Ao adicionar um número balanceável novo: ponha o padrão em `BAL`, leia-o no bloco e use `BAL.x` no código, nunca o literal.
 - Só vale no mesmo navegador + mesma origem (localStorage). Não entra no código para outros jogadores. Drops fixos de chefe e "unlock" dos mercs ainda são fixos no código.
 
+## 3c. Modo Robô (menu DEV)
+
+- Botão `#dev-robot`; código em `ROBOT`/`robotTick` (seção 12b' do `index.html`), chamado no `loop` só com `DEV.on && ROBOT.on` (respeita a velocidade do DEV). Pula guias do tutorial (`guideFinish`).
+- Replica o jogador "certo" do `simulate()` do balanceamento: distribui pontos pela proporção `strategy.alloc`, guarda DPE até a classe definitiva e depois compra o nível de skill mais barato liberado, equipa o melhor item por `strategy.weights`, contrata/troca o mercenário mais forte (`replaceRatio`, `saveForMerc`), combina 3 piores do mesmo tier, compra aba/descarta o pior com bolsa cheia, refina pelo melhor ganho/ouro, coleta todos os drops, escolhe a vocação `strategy.stance`, avança na vitória e na derrota volta ao início do ato (`farmOnLoss`).
+- Estratégia lida de `hh_balance_game_v1` (ou o rascunho `hh_balance_params_v1`) ao ligar o robô. Se mudar a lógica do simulador, mude aqui também.
+- Teste headless: trocar `setTimeout` por fila manual e chamar `updateSimulation(0.05)` + `robotTick(0.05)` em laço (20 min de jogo → chega ao Ato 5 sem derrotas com os valores padrão).
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
