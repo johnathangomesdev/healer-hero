@@ -1,0 +1,15 @@
+{
+  "name": "Healer Hero",
+  "short_name": "Healer Hero",
+  "description": "Procedural Idle RPG",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#06070c",
+  "theme_color": "#06070c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
