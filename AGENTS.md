@@ -75,6 +75,17 @@
 - Ritmo: meta de ≥30 min jogando perfeito. Medido com o Modo Robô no jogo real (headless): Monge ~41, Exorcista ~44, Santo ~53 min. O simulador do painel NÃO bate com o jogo real (erra por classe); valide mudanças de ritmo com o robô, não só com o simulador.
 - Escalas das fases e ouro dos monstros ficam iguais em `index.html` (STAGES_DB/ENEMIES_DB) e `balanceamento.html` (DEFAULTS); mude os dois juntos.
 
+## 3e. Estrutura atual (2026-11-18, fim do dia)
+
+- 5 fases por ato (X-1..X-5), chefe na X-5; tutorial: irmã em 1-2, pai cai e Monge em 1-5 (câmera lenta `SLOWMO` no golpe final, depois a escolha de vocação). Indicador `dot-sub-1..5`.
+- Vida/mortes continuam entre fases do ato; `startStage` só cura/revive em X-1 ou após derrota (`freshStart`). O simulador faz o mesmo (`hpFrac`, `freshNext`).
+- `BAL_VERSION` (jogo) = `DEFAULTS.version` (painel); balanceamento salvo com outra versão é ignorado.
+- Itens de duas mãos (`twoHanded`): Cajado do Santo, Orbe do Exorcista, Bandagens, Cajado do Necromante. `fixTwoHanded`, `autoEquipClassWeapon`. Cajado/orbe só aparecem no sprite se equipados.
+- Equipamento inicial: Roupa/Botas de Pano (todos), Espada Velha + Broquel de Madeira (pai), Arco de Caça (filha), Cajado (herói) + Orbe na bolsa.
+- Visual: `hpBarY(ent)` por tipo de monstro, `BEAR_SIZE` 1.31, coroa + anel vermelho nos `isBoss`, rastro de golpe por `trailRecord`/`drawWeaponTrails` (ponta da espada e punho do Monge).
+- Robô tem vigia anti-travamento (4 s parado → `startStage`).
+- Ritmo após 5 fases (robô, escala Atos 2-5 ×0.8): Monge ~29, Santo ~38, Exorcista ~77 min. Pendente: equilibrar Exorcista e garantir ≥30 min no Monge.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
