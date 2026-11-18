@@ -459,7 +459,7 @@
       </div>
 
       <!-- Top-Center: Act Roman + Sub-stage Progress Dots (●---●---○) + World Map Icon -->
-      <button id="btn-open-map" class="glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
+      <button id="btn-open-map" class="absolute left-1/2 -translate-x-1/2 glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
         <span id="lbl-act-roman" class="ui-h2 text-amber-300">I</span>
         <div class="flex items-center">
           <span id="dot-sub-1" class="w-2.5 h-2.5 rounded-full bg-red-500 border border-red-200 shadow-[0_0_8px_#ef4444]"></span>
@@ -1764,7 +1764,7 @@
             const isMonk = this.isHealer && state.stance === 'MONK';
             const col = this.faction === 'UNDEAD' ? '#f43f5e' : (this.isHealer ? SKILLS_DB[state.stance].color : '#ffffff');
             if (kind === 'ATTACK') {
-              if (!isArcher && this.faction !== 'UNDEAD') { // monstros não geram slash
+              if (false) { // auto ataque: o rastro agora segue a arma (drawWeaponTrails)
                 slashArcs.push({
                   x: this.x + 15 * this.facing,
                   y: this.y - (isMonk ? 27 : 20),
@@ -1810,7 +1810,9 @@
         if (this.faction === 'UNDEAD') this.hitReact = isCrit ? 1.0 : 0.8; // animação de take hit dos monstros
         this.hitstopTimer = 0.04;
         const pushDir = this.faction === 'UNDEAD' ? 1 : -1;
-        this.knockbackVx = pushDir * (isCrit ? 125 : 65) * (this.isBoss ? 0.4 : 1.0);
+        // aliados recuam bem menos (vários monstros pequenos batendo rápido empurravam o boneco para trás); mini slimes não empurram
+        const allyKb = this.faction === 'ALLY' ? (attacker && attacker.rig === 'MINI_CORRUPTED_SLIME' ? 0 : 0.3) : 1;
+        this.knockbackVx = pushDir * (isCrit ? 125 : 65) * (this.isBoss ? 0.4 : 1.0) * allyKb;
 
         // som do golpe conforme a arma de quem bateu
         const atkIsSword = attacker && attacker.faction === 'ALLY' && attacker.rig === 'TANK';
@@ -1828,7 +1830,7 @@
           spawnBloodParticles(this.x, this.y - 16, bl[0], bl[1], bCount, pushDir);
         }
         const isHumanRig = !(this.rig.includes('SLIME') || this.rig.includes('WOLF') || this.rig.includes('BEAR'));
-        const barTop = isHumanRig ? (this.isBoss ? -62 : -49) : (this.isBoss ? -52 : -41);
+        const barTop = hpBarY(this);
         spawnFloatingText(this.x + (Math.random() * 14 - 7), this.y + barTop - 14, isCrit ? `-${finalDmg}!` : `-${finalDmg}`, isCrit ? '#ef4444' : '#f87171', true);
 
         if (this.hp <= 0 && !this.isDead) {
@@ -1855,7 +1857,7 @@
         shockwaveRings.push({ x: this.x, y: this.y - 12, color: '#dcfce7', maxR: 28, ttl: 0.36, maxTtl: 0.36 });
         spawnParticles(this.x, this.y - 18, '#86efac', 8, 0);
         const isHumanRig = !(this.rig.includes('SLIME') || this.rig.includes('WOLF') || this.rig.includes('BEAR'));
-        const barTop = isHumanRig ? (this.isBoss ? -62 : -49) : (this.isBoss ? -52 : -41);
+        const barTop = hpBarY(this);
         spawnFloatingText(this.x + (Math.random() * 10 - 5), this.y + barTop - 14, `+${healed}`, '#4ade80', true);
         return healed;
       }
@@ -2352,7 +2354,8 @@
       }
 
       // Contagem rápida de 1 em 1 (com escala na fonte ao aumentar)
-      const targetGold = state.gold - state.pendingGold;
+      if (state.pendingGold > state.gold) state.pendingGold = Math.max(0, state.gold); // gastou com ouro ainda voando: nunca negativo
+      const targetGold = Math.max(0, state.gold - state.pendingGold);
       if (state.dispGold !== targetGold) {
         if (state.dispGold < targetGold) {
           state.goldTickTimer += dt;
@@ -2371,7 +2374,8 @@
         state.goldTickTimer = 0;
       }
 
-      const targetDpe = state.dpe - state.pendingDpe;
+      if (state.pendingDpe > state.dpe) state.pendingDpe = Math.max(0, state.dpe);
+      const targetDpe = Math.max(0, state.dpe - state.pendingDpe);
       if (state.dispDpe !== targetDpe) {
         if (state.dispDpe < targetDpe) {
           state.dpeTickTimer += dt;
@@ -2925,12 +2929,41 @@
     }
 
     // ---- Rastro de movimento: guarda uma cópia do estado de desenho do herói neste instante ----
+    // ---- Rastro do golpe: segue a ponta da arma / o punho (pontos em pixels da tela) ----
+    const TRAIL_LIFE = 0.13;
+    function trailRecord(g, ent, lx, ly) {
+      if (g !== ctx || ent._ghost || !ent.anim || ent.anim.kind !== 'ATTACK' || ent.faction !== 'ALLY') return;
+      const p = g.getTransform().transformPoint(new DOMPoint(lx, ly));
+      const now = performance.now() / 1000, tr = ent._trail || (ent._trail = []);
+      const last = tr[tr.length - 1];
+      if (last && Math.hypot(last.x - p.x, last.y - p.y) < 1.5 && now - last.t < 0.03) return;
+      tr.push({ x: p.x, y: p.y, t: now });
+      if (tr.length > 24) tr.shift();
+    }
+    function drawWeaponTrails() {
+      const now = performance.now() / 1000;
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      const px = Math.max(1, canvas.width / 640);
+      for (const s of [0, 1, 2]) {
+        const a = partySlots[s]; if (!a || !a._trail) continue;
+        a._trail = a._trail.filter(p => now - p.t < TRAIL_LIFE);
+        const tr = a._trail; if (tr.length < 2) continue;
+        const col = a.isHealer ? ((SKILLS_DB[state.stance] && SKILLS_DB[state.stance].color) || '#ffffff') : '#e0f2fe';
+        for (let i = 1; i < tr.length; i++) {
+          const k = i / (tr.length - 1), life = 1 - (now - tr[i].t) / TRAIL_LIFE;
+          ctx.strokeStyle = col; ctx.globalAlpha = Math.max(0, 0.75 * k * life);
+          ctx.lineWidth = px * (1 + 4 * k);
+          ctx.beginPath(); ctx.moveTo(tr[i - 1].x, tr[i - 1].y); ctx.lineTo(tr[i].x, tr[i].y); ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
     function pushGhost(a) {
       if (afterimages.length > 40) afterimages.splice(0, afterimages.length - 36);
       const ent = Object.assign({}, a, {
         anim: a.anim ? Object.assign({}, a.anim) : null,
         _armPrev: Object.assign({}, a._armPrev), _armLag: Object.assign({}, a._armLag),
-        hurtFlash: 0, levelUpAura: 0, healAura: 0
+        hurtFlash: 0, levelUpAura: 0, healAura: 0, _ghost: true, _trail: null
       });
       const col = a.isHealer ? ((SKILLS_DB[state.stance] && SKILLS_DB[state.stance].color) || '#ffffff') : '#e0f2fe';
       afterimages.push({
@@ -3700,6 +3733,7 @@
       }
 
       for (const ent of list) drawEntity(ent);
+      drawWeaponTrails();
 
       // primeiro plano (arbustos na borda de baixo, na frente dos personagens)
       scnDraw(ctx, 5, 5);
@@ -3883,13 +3917,16 @@
       ctx.beginPath();
       ctx.ellipse(0, 1, ent.isBoss ? 22 : 14, 4, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      if (ent.faction === 'ALLY' && state.selectedSlot === ent.slotIndex && !ent.isDead) {
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.ellipse(0, 1, 16, 4.5, 0, 0, Math.PI * 2);
-        ctx.stroke();
+      // Alfas/chefes: anel vermelho pulsando aos pés
+      if (ent.isBoss && ent.faction !== 'ALLY' && !ent.isDead) {
+        const pul = 0.55 + Math.sin(performance.now() / 260) * 0.25;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        const rr = ctx.createRadialGradient(0, 1, 4, 0, 1, 34);
+        rr.addColorStop(0, `rgba(239,68,68,${0.35 * pul})`); rr.addColorStop(1, 'rgba(239,68,68,0)');
+        ctx.fillStyle = rr; ctx.beginPath(); ctx.ellipse(0, 1, 34, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(252,165,165,${0.75 * pul})`; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.ellipse(0, 1, 26, 6, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
       }
 
       // Aura dourada e estrelas/setas de melhoria (Level Up / Atributo)
@@ -3953,9 +3990,14 @@
         const isHumanRig = !(ent.rig.includes('SLIME') || ent.rig.includes('WOLF') || ent.rig.includes('BEAR'));
         const barW = ent.isBoss ? 42 : 28;
         const isWolfRig = ent.rig.includes('WOLF');
-        const barY = isHumanRig ? (ent.isBoss ? -62 : -49) : (isWolfRig ? (ent.isBoss ? -82 : -56) : (ent.isBoss ? -58 : -41));
+        const barY = hpBarY(ent);
         ctx.fillStyle = 'rgba(10, 12, 18, 0.88)';
         ctx.fillRect(-barW * 0.5, barY, barW, 4);
+        if (ent.isBoss && ent.faction !== 'ALLY') { // coroa do alfa acima da barra
+          const cy = barY - 3;
+          cPoly(ctx, [[-6, cy], [6, cy], [7, cy - 7], [3.5, cy - 3.5], [0, cy - 8.5], [-3.5, cy - 3.5], [-7, cy - 7]], '#facc15');
+          cCircle(ctx, 0, cy - 8.5, 1.3, '#fef08a', false);
+        }
         const ratio = Math.max(0, Math.min(1, ent.hp / ent.maxHp));
         ctx.fillStyle = ent.faction === 'ALLY' ? '#4ade80' : (ent.isCursedSister ? '#c084fc' : '#f43f5e');
         ctx.fillRect(-barW * 0.5, barY, barW * ratio, 4);
@@ -4513,6 +4555,7 @@
         g.rotate(handAngle + Math.PI / 2 + wrist + sw[3]); // sw[3]: a lâmina da arte já vem inclinada
         g.scale(K * sw[4], K * sw[4]);
         rigPart(g, sw[0], sw[1], sw[2]);
+        trailRecord(g, ent, 0, -sw[2] * 0.92); // ponta da lâmina
       };
 
       // braço: ombro -> antebraço/mão. `held` desenha o que a mão segura (em unidades do jogo)
@@ -4575,6 +4618,7 @@
         g.translate(elbow[0], elbow[1]);
         g.rotate(bend);
         { const pj = JT(g, chestKey + '.pulso' + side, 0, 64); g.translate(pj[0], pj[1]); } // pulso: onde a mão se prende
+        if (isMonk && ent.anim && Math.abs(a - (side === 'L' ? rest.armF : rest.armB)) > 0.3) trailRecord(g, ent, 0, 14); // punho do soco
         const drawFore = () => {
           // mão: a arte vem inclinada (pulso no canto de cima à direita, dedos embaixo à esquerda);
           // gira para alinhar com o antebraço e prende pelo pulso
@@ -4745,12 +4789,23 @@
       }
     };
 
+    const BEAR_SIZE = 1.31; // arte do urso é mais baixa que a do lobo (43 x 47 px): 1,31 deixa o urso 20% mais alto
+    // altura da barra de vida (topo do sprite medido - 8 px), por tipo de monstro
+    function hpBarY(ent) {
+      const r = ent.rig || '';
+      if (r.includes('BEAR')) return ent.isBoss ? -92 : -64;
+      if (r.includes('WOLF')) return ent.isBoss ? -80 : -56;
+      if (r === 'MINI_CORRUPTED_SLIME') return -30;
+      if (r.includes('SLIME')) return ent.isBoss ? -65 : -39;
+      if (r === 'ZOMBIE_MAGE_BOSS') return -75;
+      return ent.isBoss ? -62 : -49;
+    }
     function drawSpriteBeast(g, ent) {
       const rk = ent.rig.includes('BEAR') ? 'BEAR' : 'WOLF';
       const R = BEAST_RIGS[rk];
       const T = ent.animTime || 0, moving = !!ent.isMoving;
       const pose = computePose(ent.anim);
-      const s = ent.isBoss ? 1.5 : 1; // alfa = 150% do monstro normal
+      const s = (ent.isBoss ? 1.5 : 1) * (rk === 'BEAR' ? BEAR_SIZE : 1); // alfa = 150% do normal; urso 20% mais alto que o lobo
       const ph = Math.sin(T * 2.0);
       const bob = moving ? -Math.abs(ph) * 1.6 : Math.sin(T * 1.2) * 0.3;
       const sq = Math.max(0.6, pose.sq + Math.sin(T * 1.2) * 0.015);
