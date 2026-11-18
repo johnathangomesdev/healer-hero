@@ -5511,10 +5511,14 @@
       refreshAllUI();
     }
     // DPE total gasto nas habilidades (mesma fórmula de custo da árvore)
+    // Passiva compartilhada: o nível evoluído numa classe continua valendo ao trocar de classe
+    function sharePassiveLevel(lvl) {
+      for (const st of Object.keys(state.skillLevels)) state.skillLevels[st][1] = Math.max(state.skillLevels[st][1] || 1, lvl);
+    }
     function talentSpentDpe() {
       let total = 0;
       for (const st of Object.keys(state.skillLevels)) {
-        for (const slot of [1, 2, 3]) {
+        for (const slot of (st === Object.keys(state.skillLevels)[0] ? [1, 2, 3] : [2, 3])) { // passiva é compartilhada: conta 1 vez
           const lvl = state.skillLevels[st][slot] || 1;
           for (let l = 1; l < lvl; l++) total += Math.round((slot === 1 ? BAL.cost1 : slot === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, l - 1));
         }
@@ -5658,6 +5662,7 @@
             if (state.dpe >= cost) {
               state.dpe -= cost;
               state.skillLevels[st][slot] = lvl + 1;
+              if (slot === 1) sharePassiveLevel(lvl + 1); // a passiva vale para todas as classes
               sfx.play('LEVEL_UP');
               refreshAllUI();
             } else {
@@ -6709,6 +6714,7 @@
         migrateOldInventory(data.ownedItems);
         state.formation = Array.isArray(data.formation) && data.formation.length === 3 ? data.formation : [2, 1, 0];
         state.skillLevels = data.skillLevels || state.skillLevels;
+        sharePassiveLevel(Math.max(...Object.values(state.skillLevels).map(x => x[1] || 1))); // saves antigos
         state.slotClassTags = data.slotClassTags || { 0: 'TANK', 1: 'ARCHER', 2: state.stance };
         state.attrResets = data.attrResets || 0;
         state.talentResets = data.talentResets || 0;
@@ -7135,7 +7141,7 @@
         const opts = [1, 2, 3].filter(s => isSkillNodeUnlocked(st, s)).sort((a, b) => cost(a) - cost(b));
         const s = opts[0], c = cost(s);
         if (state.dpe < c) break;
-        state.dpe -= c; state.skillLevels[st][s]++;
+        state.dpe -= c; state.skillLevels[st][s]++; if (s === 1) sharePassiveLevel(state.skillLevels[st][1]);
       }
     }
     function robotEquipAll() {
