@@ -1807,6 +1807,8 @@
         const barTop = isHumanRig ? (this.isBoss ? -62 : -49) : (this.isBoss ? -52 : -41);
         spawnFloatingText(this.x + (Math.random() * 14 - 7), this.y + barTop - 14, isCrit ? `-${finalDmg}!` : `-${finalDmg}`, isCrit ? '#ef4444' : '#f87171', true);
 
+        // Tutorial (Ato I): o time não pode cair — fica com 1 de HP e continua lutando
+        if (this.hp <= 0 && this.faction === 'ALLY' && !state.tutorialCompleted && !this.isDead) this.hp = 1;
         if (this.hp <= 0 && !this.isDead) {
           this.isDead = true;
           this.anim = null;
