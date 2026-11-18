@@ -200,9 +200,9 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 const DEFAULTS = {
   general: { targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
-  progression: { expBase: 60, expGrowth: 1.32, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
+  progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
   skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
-  items: { dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
+  items: { tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
     tierMult: { COMMON: 1, UNCOMMON: 1.3, RARE: 1.7, MYTHIC: 2.2, LEGENDARY: 3, DIVINE: 4 },
     combineCost: { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 },
     combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
@@ -222,35 +222,36 @@ const DEFAULTS = {
     { id: 'FATHER_WRAPS', name: 'Bandagens do Pai', slot: 'RIGHT_HAND', tier: 'UNCOMMON', classes: 'MONK,TANK', vit: 12, pow: 10, def: 4, spd: 0.1, pool: true },
     { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', slot: 'LEFT_HAND', tier: 'MYTHIC', classes: 'TANK,MONK', vit: 15, pow: 4, def: 12, spd: -0.02, pool: false },
     { id: 'CRIMSON_WRAPS', name: 'Bandagens Carmesim', slot: 'RIGHT_HAND', tier: 'RARE', classes: 'MONK', vit: 8, pow: 14, def: 3, spd: 0.12, pool: false },
-    { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', slot: 'CHEST', tier: 'LEGENDARY', classes: 'TANK,MONK,SAINT,EXORCIST', vit: 35, pow: 22, def: 18, spd: 0.05, pool: false },
+    { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', slot: 'CHEST', tier: 'LEGENDARY', classes: 'TANK', vit: 35, pow: 22, def: 18, spd: 0.05, pool: false },
     { id: 'NECRO_MANTLE_SS', name: 'Cajado do Necromante', slot: 'RIGHT_HAND', tier: 'DIVINE', classes: 'EXORCIST,SAINT', vit: 80, pow: 85, def: 42, spd: 0.5, pool: false }
   ],
   enemies: [
-    { id: 'CORRUPTED_SLIME', name: 'Slime Corrompido', vit: 22, pow: 12, def: 5, spd: 0.9, speed: 52, range: 40, gold: 18, dpe: 6, exp: 32, splits: true, boss: false },
-    { id: 'MINI_CORRUPTED_SLIME', name: 'Mini Slime', vit: 10, pow: 8, def: 2, spd: 1.05, speed: 64, range: 35, gold: 8, dpe: 3, exp: 14, splits: false, boss: false },
-    { id: 'SLIME_ALPHA', name: 'Alfa das Slimes', vit: 110, pow: 32, def: 16, spd: 0.95, speed: 58, range: 48, gold: 95, dpe: 25, exp: 180, splits: true, boss: true },
-    { id: 'ZOMBIE_WOLF', name: 'Lobo Sombrio', vit: 28, pow: 18, def: 4, spd: 1.25, speed: 98, range: 42, gold: 24, dpe: 7, exp: 40, splits: false, boss: false },
-    { id: 'ALPHA_DEMON_WOLF', name: 'Lobo Alfa', vit: 145, pow: 40, def: 14, spd: 1.15, speed: 105, range: 52, gold: 135, dpe: 35, exp: 250, splits: false, boss: true },
-    { id: 'CORRUPTED_BEAR', name: 'Urso Feroz', vit: 65, pow: 28, def: 16, spd: 0.85, speed: 72, range: 46, gold: 36, dpe: 11, exp: 68, splits: false, boss: false },
-    { id: 'BEAR_ALPHA', name: 'Alfa dos Ursos', vit: 240, pow: 55, def: 28, spd: 0.9, speed: 78, range: 55, gold: 180, dpe: 45, exp: 340, splits: false, boss: true },
-    { id: 'ZOMBIE_MAGE_BOSS', name: 'Necromante', vit: 320, pow: 68, def: 32, spd: 0.95, speed: 45, range: 250, gold: 350, dpe: 80, exp: 650, splits: false, boss: true }
+    { id: 'CORRUPTED_SLIME', name: 'Slime Corrompido', vit: 22, pow: 12, def: 5, spd: 0.9, speed: 52, range: 40, gold: 11, dpe: 6, exp: 32, splits: true, boss: false },
+    { id: 'MINI_CORRUPTED_SLIME', name: 'Mini Slime', vit: 10, pow: 8, def: 2, spd: 1.05, speed: 64, range: 35, gold: 5, dpe: 3, exp: 14, splits: false, boss: false },
+    { id: 'SLIME_ALPHA', name: 'Alfa das Slimes', vit: 110, pow: 32, def: 16, spd: 0.95, speed: 58, range: 48, gold: 56, dpe: 25, exp: 180, splits: true, boss: true },
+    { id: 'TUTORIAL_WOLF', name: 'Lobo Faminto (tutorial)', vit: 16, pow: 10, def: 2, spd: 1.05, speed: 90, range: 42, gold: 8, dpe: 4, exp: 30, splits: false, boss: false },
+    { id: 'ZOMBIE_WOLF', name: 'Lobo Sombrio', vit: 28, pow: 18, def: 4, spd: 1.25, speed: 98, range: 42, gold: 14, dpe: 7, exp: 40, splits: false, boss: false },
+    { id: 'ALPHA_DEMON_WOLF', name: 'Lobo Alfa', vit: 145, pow: 40, def: 14, spd: 1.15, speed: 105, range: 52, gold: 80, dpe: 35, exp: 250, splits: false, boss: true },
+    { id: 'CORRUPTED_BEAR', name: 'Urso Feroz', vit: 65, pow: 28, def: 16, spd: 0.85, speed: 72, range: 46, gold: 21, dpe: 11, exp: 68, splits: false, boss: false },
+    { id: 'BEAR_ALPHA', name: 'Alfa dos Ursos', vit: 240, pow: 55, def: 28, spd: 0.9, speed: 78, range: 55, gold: 107, dpe: 45, exp: 340, splits: false, boss: true },
+    { id: 'ZOMBIE_MAGE_BOSS', name: 'Necromante', vit: 320, pow: 68, def: 32, spd: 0.95, speed: 45, range: 250, gold: 208, dpe: 80, exp: 650, splits: false, boss: true }
   ],
   stages: [
     { id: '1-1', scale: 1.0, waves: 'CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
-    { id: '1-2', scale: 1.1, waves: 'ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
-    { id: '1-3', scale: 1.25, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
-    { id: '2-1', scale: 1.4, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
-    { id: '2-2', scale: 1.55, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
-    { id: '2-3', scale: 1.75, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | SLIME_ALPHA', drop: 'SLIME_ALPHA:CRIMSON_WRAPS' },
-    { id: '3-1', scale: 1.9, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
-    { id: '3-2', scale: 2.05, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
-    { id: '3-3', scale: 2.25, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
-    { id: '4-1', scale: 2.4, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
-    { id: '4-2', scale: 2.6, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
-    { id: '4-3', scale: 2.85, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | BEAR_ALPHA', drop: 'BEAR_ALPHA:IRON_BUCKLER' },
-    { id: '5-1', scale: 3.1, waves: 'CORRUPTED_SLIME,CORRUPTED_BEAR | ZOMBIE_WOLF,CORRUPTED_BEAR,CORRUPTED_SLIME', drop: '' },
-    { id: '5-2', scale: 3.4, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
-    { id: '5-3', scale: 3.8, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_MAGE_BOSS', drop: 'ZOMBIE_MAGE_BOSS:NECRO_MANTLE_SS' }
+    { id: '1-2', scale: 1.1, waves: 'TUTORIAL_WOLF | TUTORIAL_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '1-3', scale: 1.25, waves: 'TUTORIAL_WOLF,TUTORIAL_WOLF | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '2-1', scale: 4.8, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-2', scale: 5.33, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-3', scale: 6.02, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | SLIME_ALPHA', drop: 'SLIME_ALPHA:CRIMSON_WRAPS' },
+    { id: '3-1', scale: 8.03, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '3-2', scale: 8.66, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
+    { id: '3-3', scale: 9.5, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '4-1', scale: 8.21, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '4-2', scale: 8.89, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '4-3', scale: 9.76, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | BEAR_ALPHA', drop: 'BEAR_ALPHA:IRON_BUCKLER' },
+    { id: '5-1', scale: 8.18, waves: 'CORRUPTED_SLIME,CORRUPTED_BEAR | ZOMBIE_WOLF,CORRUPTED_BEAR,CORRUPTED_SLIME', drop: '' },
+    { id: '5-2', scale: 8.98, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
+    { id: '5-3', scale: 10.03, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_MAGE_BOSS', drop: 'ZOMBIE_MAGE_BOSS:NECRO_MANTLE_SS' }
   ],
   mercs: [
     { id: 'VANGUARD_WARRIOR', name: 'Guerreiro Vanguarda', role: 'TANK', cost: 95, vit: 38, pow: 16, def: 15, spd: 0.88, unlock: '2-1', gear: 'KNIGHT_SWORD,KNIGHT_PLATE,IRON_BUCKLER,KNIGHT_GREAVES', active: true },
@@ -345,6 +346,9 @@ function simulate(P, seed) {
   function itemScore(inst, role) { const w = ST.weights[role === 'HERO' ? 'HERO' : role]; const b = bonus(inst); return b.vit * w.vit + b.pow * w.pow + b.def * w.def + b.spd * w.spd; }
   const compat = (inst, a) => itemsById[inst.id].classes.split(',').map(x => x.trim()).includes(classOf(a));
   function giveItem(id, tier) { S.inv.push(newItem(id, tier)); S.owned.add(id); S.drops++; }
+  // comum até Raro, alfa até Mítico, Lendário só do chefe final; cada tier é tierDecay× mais raro
+  const dropCap = key => key === 'ZOMBIE_MAGE_BOSS' ? 4 : (enemiesById[key] && enemiesById[key].boss) ? 3 : 2;
+  function rollTier(cap) { let tot = 0; const w = []; for (let k = 0; k <= cap; k++) { w.push(Math.pow(IT.tierDecay, k)); tot += w[k]; } let r = rnd() * tot; for (let k = 0; k <= cap; k++) { r -= w[k]; if (r <= 0) return TIERS[k]; } return 'COMMON'; }
   function equipAll() {
     for (const i of S.inv) i.owner = null;
     for (const s of [2, 0, 1]) {
@@ -384,7 +388,7 @@ function simulate(P, seed) {
       stage.waves[w].forEach((k, idx) => enemies.push(mkEnemy(k, stage.scale, enemiesById[k].boss ? 545 : 505 + idx * 46)));
       if (w === 0 && S.tutorial && stage.id === '1-2') {
         const h = P.hero.sister; const e = mkEnemy('ZOMBIE_WOLF', 1, 455);
-        Object.assign(e, { key: 'SISTER', boss: false, hp: Math.round(G.hpBase + h.vit * G.hpPerVit), maxHp: Math.round(G.hpBase + h.vit * G.hpPerVit), pow: h.pow, def: h.def, spd: h.spd, sister: true, gold: 12, dpe: 4, exp: 20 });
+        Object.assign(e, { key: 'SISTER', boss: false, hp: Math.round(G.hpBase + h.vit * G.hpPerVit), maxHp: Math.round(G.hpBase + h.vit * G.hpPerVit), pow: h.pow, def: h.def, spd: h.spd, sister: true, gold: 7, dpe: 4, exp: 20 });
         enemies.push(e);
       }
       let wt = 0;
@@ -402,12 +406,12 @@ function simulate(P, seed) {
         if (e.splits && e.alive > 4.5) { enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x - 16)); enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x + 16)); }
         // drops de item
         if (e.sister) giveItem('EMERALD_CLOAK');
-        else if (stage.drops[e.key]) giveItem(stage.drops[e.key]);
+        else if (stage.drops[e.key]) { const it = itemsById[stage.drops[e.key]]; const c = Math.min(TIERS.indexOf(it.tier), e.key === 'ZOMBIE_MAGE_BOSS' ? 5 : dropCap(e.key)); giveItem(it.id, TIERS[c]); }
         else if (stage.id === '1-1' && !S.owned.has('WOODEN_ROSARY') && rnd() < 0.7) giveItem('WOODEN_ROSARY');
         else if (stage.id === '2-1' && !S.owned.has('PILGRIM_SANDALS') && rnd() < 0.6) giveItem('PILGRIM_SANDALS');
         else if (!S.tutorial && rnd() < IT.dropChance) {
           const pool = P.itemList.filter(i => i.pool).map(i => i.id);
-          if (pool.length) { const fresh = pool.filter(id => !S.owned.has(id)); const list = fresh.length ? fresh : pool; giveItem(list[Math.floor(rnd() * list.length)]); }
+          if (pool.length) { const fresh = pool.filter(id => !S.owned.has(id)); const list = fresh.length ? fresh : pool; giveItem(list[Math.floor(rnd() * list.length)], rollTier(dropCap(e.key))); }
         }
       }
       function hit(e, raw, holy, forceCrit, byHero) {
@@ -834,7 +838,7 @@ function renderTabs() {
     <div class="group-title">Fórmulas de combate</div><div class="fields">${fld('general.critChance', 'Chance de crítico')}${fld('general.critMult', 'Multiplicador do crítico')}${fld('general.defMit', 'Defesa: redução por ponto')}${fld('general.hpBase', 'HP base')}${fld('general.hpPerVit', 'HP por VIT')}</div>`;
   else if (activeTab === 'prog') b.innerHTML = `<div class="fields">${fld('progression.expBase', 'EXP para o nível 2')}${fld('progression.expGrowth', 'Crescimento da EXP por nível (×)')}${fld('progression.ptsPerLevel', 'Pontos por nível', 1)}${fld('progression.vitPerPt', 'VIT por ponto')}${fld('progression.powPerPt', 'POW por ponto')}${fld('progression.defPerPt', 'DEF por ponto')}${fld('progression.spdPerPt', 'SPD por ponto')}</div>${expTable()}`;
   else if (activeTab === 'skills') b.innerHTML = `<div class="fields">${fld('skills.cost1', 'Custo Lv2 da passiva (DPE)')}${fld('skills.cost2', 'Custo Lv2 da ativa (DPE)')}${fld('skills.cost3', 'Custo Lv2 da ultimate (DPE)')}${fld('skills.costGrowth', 'Crescimento do custo por nível (×)')}${fld('skills.passBase', 'Força da passiva no Lv1 (× POW)')}${fld('skills.sk2Base', 'Força da ativa no Lv1 (× POW)')}${fld('skills.ultBase', 'Força da ultimate no Lv1 (× POW)')}${fld('skills.perLevel', 'Força extra por nível (× POW)')}${fld('skills.cd2', 'Recarga da ativa (s)')}${fld('skills.cd3', 'Recarga da ultimate (s)')}</div>`;
-  else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
+  else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.tierDecay', 'Queda por tier acima de Comum (×)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
     ${tierFields('tierMult', 'Multiplicador de status por tier', 'any')}${tierFields('combineCost', 'Custo de combinar 3 itens (ouro)', 'any')}${tierFields('combineUp', 'Chance de subir de tier ao combinar (0–1)', 'any')}${tierFields('refineBase', 'Custo base do refino (× nível do refino)', 'any')}`;
   else if (activeTab === 'lista') b.innerHTML = `<p class="sub" style="margin-bottom:8px">“No sorteio” marca os itens que podem cair aleatoriamente dos monstros depois do tutorial. Classes: SAINT, EXORCIST, MONK, TANK, ARCHER.</p>` + tableEditor('itemList', [
     { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'slot', label: 'Espaço', type: 'select', opts: SLOTS.map(s => [s, { HEAD: 'Cabeça', CHEST: 'Peito', RIGHT_HAND: 'Mão dir.', LEFT_HAND: 'Mão esq.', FEET: 'Pés' }[s]]) },

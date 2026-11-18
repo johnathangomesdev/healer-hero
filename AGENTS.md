@@ -67,6 +67,14 @@
 - Estratégia lida de `hh_balance_game_v1` (ou o rascunho `hh_balance_params_v1`) ao ligar o robô. Se mudar a lógica do simulador, mude aqui também.
 - Teste headless: trocar `setTimeout` por fila manual e chamar `updateSimulation(0.05)` + `robotTick(0.05)` em laço (20 min de jogo → chega ao Ato 5 sem derrotas com os valores padrão).
 
+## 3d. Regras de drop, tutorial e classes (2026-11-18)
+
+- Tier do drop aleatório: `rollDropTier(dropTierCap(entity))`. Comum até Raro, alfas (boss:true) até Mítico, Lendário só do Necromante; peso de cada tier = `BAL.tierDecay^k` (padrão 0.3). Drops fixos de alfa são limitados com `capTier` (a Armadura da Alvorada cai Mítica do Lobo Alfa). O drop guarda `d.tier`.
+- Tutorial usa `TUTORIAL_WOLF` (Lobo Faminto, mais fraco, rig ZOMBIE_WOLF) em 1-2/1-3.
+- Peitorais travados por classe: MONK_ROBE→MONK, KNIGHT_PLATE e GOLDEN_ARMOR→TANK, ELVEN_TUNIC→ARCHER; sem peitoral = roupa de aldeão. Santo/Exorcista ainda não têm peitoral próprio.
+- Ritmo: meta de ≥30 min jogando perfeito. Medido com o Modo Robô no jogo real (headless): Monge ~41, Exorcista ~44, Santo ~53 min. O simulador do painel NÃO bate com o jogo real (erra por classe); valide mudanças de ritmo com o robô, não só com o simulador.
+- Escalas das fases e ouro dos monstros ficam iguais em `index.html` (STAGES_DB/ENEMIES_DB) e `balanceamento.html` (DEFAULTS); mude os dois juntos.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
