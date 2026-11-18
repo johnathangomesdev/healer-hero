@@ -1317,7 +1317,7 @@
     const STAGES_DB = {
       '1-1': { act: 1, sub: 1, sky: 'SUNSET', next: '1-2', scale: 1.0, waves: [['CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
       '1-2': { act: 1, sub: 2, sky: 'DUSK', next: '1-3', scale: 1.1, event: 'SISTER_ZOMBIE', waves: [['TUTORIAL_WOLF'], ['TUTORIAL_WOLF', 'CORRUPTED_SLIME']] },
-      '1-3': { act: 1, sub: 3, sky: 'BLOOD', next: '2-1', scale: 1.25, event: 'FATHER_FALL', waves: [['TUTORIAL_WOLF', 'TUTORIAL_WOLF'], ['ALPHA_DEMON_WOLF']] },
+      '1-3': { act: 1, sub: 3, sky: 'BLOOD', next: '2-1', scale: 1.0, event: 'FATHER_FALL', waves: [['TUTORIAL_WOLF', 'TUTORIAL_WOLF'], ['ALPHA_DEMON_WOLF']] },
       '2-1': { act: 2, sub: 1, sky: 'SWAMP', next: '2-2', scale: 4.8, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
       '2-2': { act: 2, sub: 2, sky: 'SWAMP', next: '2-3', scale: 5.33, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'ZOMBIE_WOLF'], ['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME']] },
       '2-3': { act: 2, sub: 3, sky: 'SWAMP', next: '3-1', scale: 6.02, waves: [['CORRUPTED_SLIME', 'CORRUPTED_SLIME', 'CORRUPTED_SLIME'], ['SLIME_ALPHA']] },
@@ -1807,8 +1807,6 @@
         const barTop = isHumanRig ? (this.isBoss ? -62 : -49) : (this.isBoss ? -52 : -41);
         spawnFloatingText(this.x + (Math.random() * 14 - 7), this.y + barTop - 14, isCrit ? `-${finalDmg}!` : `-${finalDmg}`, isCrit ? '#ef4444' : '#f87171', true);
 
-        // Tutorial (Ato I): o time não pode cair — fica com 1 de HP e continua lutando
-        if (this.hp <= 0 && this.faction === 'ALLY' && !state.tutorialCompleted && !this.isDead) this.hp = 1;
         if (this.hp <= 0 && !this.isDead) {
           this.isDead = true;
           this.anim = null;
