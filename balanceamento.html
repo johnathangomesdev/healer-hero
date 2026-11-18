@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" href="icons/icon-32.png">
+<title>Balanceamento Healer Hero</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: uma bancada de trabalho — resultado da simulação em cima, parâmetros editáveis embaixo, em abas */
+:root {
+  --bg: #f6f4ef; --panel: #ffffff; --panel-2: #efece4; --line: #dcd7cb;
+  --fg: #1d1a16; --fg-2: #57514a; --muted: #8a8378;
+  --accent: #b7791f; --accent-ink: #ffffff;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --ref: #898781;
+  --good: #0ca30c; --warn: #b7791f; --crit: #d03b3b;
+  --good-bg: #e3f5e3; --warn-bg: #fbefd9; --crit-bg: #fbe3e3;
+  --grid: #e7e3d9; --axis: #c3bdb0;
+  --f-display: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --f-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121016; --panel: #1b1820; --panel-2: #24202b; --line: #34303c;
+  --fg: #f0ece4; --fg-2: #c5bfb3; --muted: #8f897f;
+  --accent: #f0b440; --accent-ink: #1b1209;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --ref: #8f897f;
+  --good: #34c759; --warn: #f0b440; --crit: #ef5b5b;
+  --good-bg: #15301c; --warn-bg: #33270f; --crit-bg: #3a1717;
+  --grid: #2a2631; --axis: #403b48; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #121016; --panel: #1b1820; --panel-2: #24202b; --line: #34303c;
+  --fg: #f0ece4; --fg-2: #c5bfb3; --muted: #8f897f;
+  --accent: #f0b440; --accent-ink: #1b1209;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --ref: #8f897f;
+  --good: #34c759; --warn: #f0b440; --crit: #ef5b5b;
+  --good-bg: #15301c; --warn-bg: #33270f; --crit-bg: #3a1717;
+  --grid: #2a2631; --axis: #403b48; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; letter-spacing: .3px; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(24px, 4vw, 34px); }
+h2 { font-size: 20px; }
+h3 { font-size: 16px; }
+.sub { color: var(--fg-2); max-width: 75ch; margin: 4px 0 0; }
+.num { font-variant-numeric: tabular-nums; }
+header.top { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-end; justify-content: space-between; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.ctl { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--fg-2); }
+.ctl input, .ctl select { width: 96px; }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+input[type="number"] { font-variant-numeric: tabular-nums; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 7px 12px; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.note { font-size: 12.5px; color: var(--fg-2); background: var(--panel-2); border-radius: 8px; padding: 10px 12px; }
+/* resumo */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 2px; }
+.tile .k { font-size: 12px; color: var(--fg-2); text-transform: uppercase; letter-spacing: .6px; }
+.tile .v { font-family: var(--f-display); font-size: 30px; line-height: 1.1; }
+.tile .d { font-size: 12.5px; color: var(--fg-2); }
+.tile.hero .v { font-size: 40px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.chip.good { background: var(--good-bg); color: var(--good); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.crit { background: var(--crit-bg); color: var(--crit); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 14px; }
+.chart { position: relative; width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18); white-space: nowrap; z-index: 5; }
+.chart .tip b { font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--fg-2); margin: 4px 0 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.legend i.dash { background: repeating-linear-gradient(90deg, var(--ref) 0 4px, transparent 4px 7px); }
+.diag { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.diag li { display: flex; gap: 10px; align-items: flex-start; }
+.diag li .chip { flex: none; margin-top: 1px; }
+/* tabelas */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { background: var(--panel-2); color: var(--fg-2); font-weight: 600; position: sticky; top: 0; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+tr.lose td { background: var(--crit-bg); }
+.tbl-scroll { max-height: 460px; overflow: auto; }
+td input[type="number"] { width: 74px; padding: 3px 5px; }
+td input[type="text"] { width: 100%; min-width: 220px; padding: 3px 5px; }
+td input.w-sm { min-width: 90px; width: 110px; }
+td select { padding: 3px 5px; }
+/* abas de parâmetros */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+.tabs button { padding: 6px 11px; font-size: 13px; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 18px; }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; min-width: 0; }
+.field span { color: var(--fg-2); font-size: 13px; }
+.field input, .field select { width: 96px; flex: none; }
+.group-title { margin: 16px 0 8px; font-weight: 700; font-size: 13px; color: var(--fg-2); text-transform: uppercase; letter-spacing: .6px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+textarea { width: 100%; min-height: 160px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.tier { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 2px; vertical-align: middle; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Balanceamento Healer Hero</h1>
+      <p class="sub">Simula a demo inteira com um jogador que joga “certo”: distribui pontos, evolui as skills, equipa o melhor item, combina e refina, e contrata mercenários. Mude qualquer número nas abas de parâmetros e a simulação roda de novo na hora.</p>
+    </div>
+    <div class="controls">
+      <label class="ctl">Classe final<select id="c-stance"><option value="SAINT">Santo</option><option value="EXORCIST">Exorcista</option><option value="MONK">Monge</option></select></label>
+      <label class="ctl">Meta (min)<input id="c-target" type="number" min="5" step="1"></label>
+      <label class="ctl">Simulações<input id="c-runs" type="number" min="1" max="200" step="1"></label>
+      <button class="primary" id="btn-run">Simular de novo</button>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="summary" id="summary"></div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h3>Ritmo da demo</h3>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Fase alcançada (simulação típica)</span><span><i class="dash"></i>Meta por ato</span><span><i style="background:var(--crit);height:8px;width:8px;border-radius:50%"></i>Derrota</span></div>
+      <div class="chart" id="ch-pace"></div>
+    </div>
+    <div class="panel">
+      <h3>Ouro: ganho × gasto (acumulado)</h3>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Ouro ganho</span><span><i style="background:var(--s2)"></i>Ouro gasto</span></div>
+      <div class="chart" id="ch-gold"></div>
+    </div>
+    <div class="panel">
+      <h3>Folga de vida ao terminar cada fase</h3>
+      <div class="legend"><span><i style="background:var(--s3);height:8px"></i>% de HP que sobrou no time</span><span><i style="background:var(--crit);height:8px"></i>Derrota</span></div>
+      <div class="chart" id="ch-hp"></div>
+    </div>
+    <div class="panel">
+      <h3>Diagnóstico</h3>
+      <ul class="diag" id="diag"></ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Tempo por ato</h2>
+    <p class="sub" style="margin-bottom:10px">Mediana de todas as simulações. A meta de cada ato é editável na aba Geral.</p>
+    <div class="tbl-wrap"><table id="tbl-acts"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Linha do tempo (simulação típica)</h2>
+    <p class="sub" style="margin-bottom:10px">Cada linha é uma tentativa de fase, com o estado do time ao terminar. Linhas vermelhas são derrotas: o jogador repete o ato para farmar e tenta de novo.</p>
+    <div class="tbl-wrap tbl-scroll"><table id="tbl-time"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Parâmetros</h2>
+    <p class="sub" style="margin-bottom:12px">Os valores iniciais são os do jogo hoje. As alterações ficam salvas neste navegador.</p>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div id="tab-body"></div>
+    <div class="row-actions">
+      <button id="btn-reset">Restaurar valores do jogo</button>
+      <button id="btn-export">Copiar parâmetros (JSON)</button>
+      <button id="btn-import-toggle">Colar parâmetros</button>
+    </div>
+    <div id="import-box" hidden style="margin-top:10px">
+      <textarea id="import-text" placeholder="Cole aqui o JSON de parâmetros"></textarea>
+      <div class="row-actions"><button class="primary" id="btn-import">Aplicar</button><span id="import-msg" class="sub"></span></div>
+    </div>
+  </section>
+
+  <p class="note">Como o modelo funciona: o combate é simulado em passos de 0,05 s com as mesmas fórmulas do jogo (dano, crítico médio de 22% × 1,65, defesa × 0,62, cura, passivas a cada 3 ataques, skills com recarga de 6 s e 14 s, divisão das slimes e invocações do Necromante). Não entram as animações, o recuo dos golpes e o tempo que o jogador passa nos menus. Por isso existe o <b>fator de tempo real</b> (aba Geral): jogue o Ato 1 marcando o tempo, compare com a coluna “Simulado” e ajuste o fator até bater. Drops de item, combinar e refinar são sorteados; por isso a simulação roda várias vezes e mostra a mediana.</p>
+</div>
+
+<script>
+// ============================================================================
+// PARÂMETROS PADRÃO (valores atuais do jogo)
+// ============================================================================
+const TIERS = ['COMMON', 'UNCOMMON', 'RARE', 'MYTHIC', 'LEGENDARY', 'DIVINE'];
+const TIER_PT = { COMMON: 'Comum', UNCOMMON: 'Incomum', RARE: 'Raro', MYTHIC: 'Mítico', LEGENDARY: 'Lendário', DIVINE: 'Divino' };
+const TIER_COL = { COMMON: '#9ca3af', UNCOMMON: '#4ade80', RARE: '#60a5fa', MYTHIC: '#c084fc', LEGENDARY: '#facc15', DIVINE: '#fde68a' };
+const STANCE_PT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
+const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
+
+const DEFAULTS = {
+  general: { targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
+    waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
+  progression: { expBase: 60, expGrowth: 1.32, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
+  skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
+  items: { dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
+    tierMult: { COMMON: 1, UNCOMMON: 1.3, RARE: 1.7, MYTHIC: 2.2, LEGENDARY: 3, DIVINE: 4 },
+    combineCost: { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 },
+    combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
+    refineBase: { COMMON: 40, UNCOMMON: 100, RARE: 250, MYTHIC: 600, LEGENDARY: 1400, DIVINE: 3000 } },
+  itemList: [
+    { id: 'WOODEN_ROSARY', name: 'Rosário de Madeira', slot: 'HEAD', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK', vit: 5, pow: 3, def: 1, spd: 0, pool: false },
+    { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', slot: 'HEAD', tier: 'RARE', classes: 'SAINT,EXORCIST,ARCHER', vit: 10, pow: 12, def: 3, spd: 0.05, pool: true },
+    { id: 'MONK_ROBE', name: 'Manto do Monge', slot: 'CHEST', tier: 'UNCOMMON', classes: 'MONK', vit: 14, pow: 10, def: 5, spd: 0.08, pool: true },
+    { id: 'KNIGHT_PLATE', name: 'Couraça do Vanguarda', slot: 'CHEST', tier: 'UNCOMMON', classes: 'TANK', vit: 20, pow: 6, def: 12, spd: -0.03, pool: true },
+    { id: 'KNIGHT_GREAVES', name: 'Grevas do Vanguarda', slot: 'FEET', tier: 'COMMON', classes: 'TANK', vit: 8, pow: 2, def: 6, spd: 0, pool: true },
+    { id: 'KNIGHT_SWORD', name: 'Espada do Vanguarda', slot: 'RIGHT_HAND', tier: 'UNCOMMON', classes: 'TANK', vit: 4, pow: 14, def: 2, spd: 0.04, pool: true },
+    { id: 'ELVEN_TUNIC', name: 'Túnica Élfica', slot: 'CHEST', tier: 'UNCOMMON', classes: 'ARCHER', vit: 10, pow: 10, def: 4, spd: 0.08, pool: true },
+    { id: 'ELVEN_BOOTS', name: 'Botas Élficas', slot: 'FEET', tier: 'COMMON', classes: 'ARCHER', vit: 5, pow: 4, def: 2, spd: 0.1, pool: true },
+    { id: 'ELVEN_BOW', name: 'Arco Élfico', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'ARCHER', vit: 2, pow: 12, def: 0, spd: 0.08, pool: false },
+    { id: 'ELVEN_QUIVER', name: 'Aljava de Flechas', slot: 'LEFT_HAND', tier: 'COMMON', classes: 'ARCHER', vit: 0, pow: 6, def: 0, spd: 0.06, pool: false },
+    { id: 'PILGRIM_SANDALS', name: 'Sandálias do Peregrino', slot: 'FEET', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK', vit: 4, pow: 2, def: 2, spd: 0.08, pool: true },
+    { id: 'FATHER_WRAPS', name: 'Bandagens do Pai', slot: 'RIGHT_HAND', tier: 'UNCOMMON', classes: 'MONK,TANK', vit: 12, pow: 10, def: 4, spd: 0.1, pool: true },
+    { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', slot: 'LEFT_HAND', tier: 'MYTHIC', classes: 'TANK,MONK', vit: 15, pow: 4, def: 12, spd: -0.02, pool: false },
+    { id: 'CRIMSON_WRAPS', name: 'Bandagens Carmesim', slot: 'RIGHT_HAND', tier: 'RARE', classes: 'MONK', vit: 8, pow: 14, def: 3, spd: 0.12, pool: false },
+    { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', slot: 'CHEST', tier: 'LEGENDARY', classes: 'TANK,MONK,SAINT,EXORCIST', vit: 35, pow: 22, def: 18, spd: 0.05, pool: false },
+    { id: 'NECRO_MANTLE_SS', name: 'Cajado do Necromante', slot: 'RIGHT_HAND', tier: 'DIVINE', classes: 'EXORCIST,SAINT', vit: 80, pow: 85, def: 42, spd: 0.5, pool: false }
+  ],
+  enemies: [
+    { id: 'CORRUPTED_SLIME', name: 'Slime Corrompido', vit: 22, pow: 12, def: 5, spd: 0.9, speed: 52, range: 40, gold: 18, dpe: 6, exp: 32, splits: true, boss: false },
+    { id: 'MINI_CORRUPTED_SLIME', name: 'Mini Slime', vit: 10, pow: 8, def: 2, spd: 1.05, speed: 64, range: 35, gold: 8, dpe: 3, exp: 14, splits: false, boss: false },
+    { id: 'SLIME_ALPHA', name: 'Alfa das Slimes', vit: 110, pow: 32, def: 16, spd: 0.95, speed: 58, range: 48, gold: 95, dpe: 25, exp: 180, splits: true, boss: true },
+    { id: 'ZOMBIE_WOLF', name: 'Lobo Sombrio', vit: 28, pow: 18, def: 4, spd: 1.25, speed: 98, range: 42, gold: 24, dpe: 7, exp: 40, splits: false, boss: false },
+    { id: 'ALPHA_DEMON_WOLF', name: 'Lobo Alfa', vit: 145, pow: 40, def: 14, spd: 1.15, speed: 105, range: 52, gold: 135, dpe: 35, exp: 250, splits: false, boss: true },
+    { id: 'CORRUPTED_BEAR', name: 'Urso Feroz', vit: 65, pow: 28, def: 16, spd: 0.85, speed: 72, range: 46, gold: 36, dpe: 11, exp: 68, splits: false, boss: false },
+    { id: 'BEAR_ALPHA', name: 'Alfa dos Ursos', vit: 240, pow: 55, def: 28, spd: 0.9, speed: 78, range: 55, gold: 180, dpe: 45, exp: 340, splits: false, boss: true },
+    { id: 'ZOMBIE_MAGE_BOSS', name: 'Necromante', vit: 320, pow: 68, def: 32, spd: 0.95, speed: 45, range: 250, gold: 350, dpe: 80, exp: 650, splits: false, boss: true }
+  ],
+  stages: [
+    { id: '1-1', scale: 1.0, waves: 'CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '1-2', scale: 1.1, waves: 'ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '1-3', scale: 1.25, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '2-1', scale: 1.4, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-2', scale: 1.55, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,ZOMBIE_WOLF | CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME', drop: '' },
+    { id: '2-3', scale: 1.75, waves: 'CORRUPTED_SLIME,CORRUPTED_SLIME,CORRUPTED_SLIME | SLIME_ALPHA', drop: 'SLIME_ALPHA:CRIMSON_WRAPS' },
+    { id: '3-1', scale: 1.9, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF | ZOMBIE_WOLF,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '3-2', scale: 2.05, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_WOLF,ZOMBIE_WOLF,ZOMBIE_WOLF', drop: '' },
+    { id: '3-3', scale: 2.25, waves: 'ZOMBIE_WOLF,ZOMBIE_WOLF,CORRUPTED_SLIME | ALPHA_DEMON_WOLF', drop: 'ALPHA_DEMON_WOLF:GOLDEN_ARMOR' },
+    { id: '4-1', scale: 2.4, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_SLIME,ZOMBIE_WOLF', drop: '' },
+    { id: '4-2', scale: 2.6, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME', drop: '' },
+    { id: '4-3', scale: 2.85, waves: 'CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF | BEAR_ALPHA', drop: 'BEAR_ALPHA:IRON_BUCKLER' },
+    { id: '5-1', scale: 3.1, waves: 'CORRUPTED_SLIME,CORRUPTED_BEAR | ZOMBIE_WOLF,CORRUPTED_BEAR,CORRUPTED_SLIME', drop: '' },
+    { id: '5-2', scale: 3.4, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,ZOMBIE_WOLF | CORRUPTED_BEAR,CORRUPTED_BEAR,ZOMBIE_WOLF', drop: '' },
+    { id: '5-3', scale: 3.8, waves: 'CORRUPTED_BEAR,ZOMBIE_WOLF,CORRUPTED_SLIME | ZOMBIE_MAGE_BOSS', drop: 'ZOMBIE_MAGE_BOSS:NECRO_MANTLE_SS' }
+  ],
+  mercs: [
+    { id: 'VANGUARD_WARRIOR', name: 'Guerreiro Vanguarda', role: 'TANK', cost: 95, vit: 38, pow: 16, def: 15, spd: 0.88, unlock: '2-1', gear: 'KNIGHT_SWORD,KNIGHT_PLATE,IRON_BUCKLER,KNIGHT_GREAVES', active: true },
+    { id: 'ELVEN_ARCHER', name: 'Arqueira Élfica', role: 'ARCHER', cost: 125, vit: 22, pow: 24, def: 6, spd: 1.35, unlock: '2-1', gear: 'ELVEN_BOW,ELVEN_BOOTS,ELVEN_QUIVER,EMERALD_CLOAK', active: true },
+    { id: 'TEMPLAR', name: 'Templário (sugestão)', role: 'TANK', cost: 650, vit: 70, pow: 28, def: 26, spd: 0.92, unlock: '3-1', gear: '', active: false },
+    { id: 'SHADOW_HUNTRESS', name: 'Caçadora Sombria (sugestão)', role: 'ARCHER', cost: 900, vit: 40, pow: 46, def: 12, spd: 1.45, unlock: '4-1', gear: '', active: false }
+  ],
+  hero: { vit: 16, pow: 18, def: 6, spd: 1.15, fatherBonusVit: 25,
+    daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.9 }, sister: { vit: 22, pow: 10, def: 4, spd: 1.25 } },
+  strategy: { stance: 'SAINT', farmOnLoss: true, saveForMerc: true, doCombine: true, doRefine: true, replaceRatio: 1.15, maxStageRuns: 400,
+    alloc: {
+      SAINT: { vit: 30, pow: 50, def: 20, spd: 0 }, EXORCIST: { vit: 25, pow: 60, def: 15, spd: 0 }, MONK: { vit: 35, pow: 40, def: 25, spd: 0 },
+      TANK: { vit: 40, pow: 20, def: 40, spd: 0 }, ARCHER: { vit: 20, pow: 60, def: 0, spd: 20 } },
+    weights: { HERO: { vit: 1, pow: 1.6, def: 1, spd: 40 }, TANK: { vit: 1.4, pow: 0.6, def: 1.6, spd: 10 }, ARCHER: { vit: 0.8, pow: 1.6, def: 0.5, spd: 45 } } }
+};
+
+const clone = o => JSON.parse(JSON.stringify(o));
+const STORE_KEY = 'hh_balance_params_v1';
+let P = clone(DEFAULTS);
+try { const raw = localStorage.getItem(STORE_KEY); if (raw) P = mergeDeep(clone(DEFAULTS), JSON.parse(raw)); } catch (e) {}
+function mergeDeep(base, over) {
+  if (Array.isArray(base)) return Array.isArray(over) ? over : base;
+  if (base && typeof base === 'object') {
+    for (const k of Object.keys(over || {})) base[k] = (k in base) ? mergeDeep(base[k], over[k]) : over[k];
+    return base;
+  }
+  return over === undefined ? base : over;
+}
+function saveParams() { try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) {} }
+
+// ============================================================================
+// SIMULADOR
+// ============================================================================
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const SLOTS = ['HEAD', 'CHEST', 'RIGHT_HAND', 'LEFT_HAND', 'FEET'];
+const POS_X = { 2: 90, 1: 150, 0: 215 };
+
+function simulate(P, seed) {
+  const rnd = mulberry32(seed);
+  const G = P.general, PR = P.progression, SK = P.skills, IT = P.items, ST = P.strategy;
+  const critExp = 1 + G.critChance * (G.critMult - 1);
+  const collect = G.collectPct / 100;
+  const itemsById = Object.fromEntries(P.itemList.map(i => [i.id, i]));
+  const enemiesById = Object.fromEntries(P.enemies.map(e => [e.id, e]));
+  const order = P.stages.map(s => s.id);
+  const stageIdx = id => order.indexOf(id);
+  const parseWaves = s => String(s).split('|').map(w => w.split(',').map(x => x.trim()).filter(x => enemiesById[x]));
+  const stages = P.stages.map(s => {
+    const drops = {};
+    String(s.drop || '').split(',').forEach(p => { const [en, it] = p.split(':').map(x => (x || '').trim()); if (en && itemsById[it]) drops[en] = it; });
+    return { id: s.id, act: +s.id.split('-')[0], sub: +s.id.split('-')[1], scale: +s.scale, waves: parseWaves(s.waves), drops };
+  });
+  const S = { t: G.tutorialSec, gold: 0, dpe: G.startDpe, goldEarned: 0, goldSpent: 0, dpeEarned: 0, dpeSpent: 0,
+    inv: [], tabs: 1, stance: 'SAINT', skill: { 1: 1, 2: 1, 3: 1 }, party: { 0: null, 1: null, 2: null },
+    tutorial: true, defeats: 0, combines: 0, combineUps: 0, refines: 0, refineFails: 0, discarded: 0, hires: 0, drops: 0,
+    rows: [], furthest: 0, uid: 1, owned: new Set(), stuck: false, finished: false, actEnd: {} };
+
+  // ---------- heróis ----------
+  function mkAlly(name, role, stats, slot) {
+    return { name, role, slot, base: { ...stats }, alloc: { vit: 0, pow: 0, def: 0, spd: 0 }, bonusVit: 0, level: 1, exp: 0, maxExp: PR.expBase, pts: 0, eq: { vit: 0, pow: 0, def: 0, spd: 0 } };
+  }
+  const vitOf = a => a.base.vit + a.alloc.vit * PR.vitPerPt + a.bonusVit + a.eq.vit;
+  const powOf = a => a.base.pow + a.alloc.pow * PR.powPerPt + a.eq.pow;
+  const defOf = a => a.base.def + a.alloc.def * PR.defPerPt + a.eq.def;
+  const spdOf = (a, buff = 0) => Math.max(0.35, Math.min(3.5, a.base.spd + a.alloc.spd * PR.spdPerPt + a.eq.spd + buff));
+  const hpOf = a => Math.round(G.hpBase + vitOf(a) * G.hpPerVit);
+  const powerOf = a => Math.sqrt(hpOf(a) * Math.max(1, powOf(a)) * spdOf(a));
+  const classOf = a => a.role === 'HERO' ? S.stance : a.role;
+  function spendPoints(a) {
+    const prof = a.role === 'HERO' ? ST.alloc[S.stance] : ST.alloc[a.role];
+    const tot = (prof.vit + prof.pow + prof.def + prof.spd) || 1;
+    while (a.pts > 0) {
+      const spent = a.alloc.vit + a.alloc.pow + a.alloc.def + a.alloc.spd + 1;
+      let best = 'pow', gap = -1e9;
+      for (const k of ['vit', 'pow', 'def', 'spd']) { const g = prof[k] / tot * spent - a.alloc[k]; if (prof[k] > 0 && g > gap) { gap = g; best = k; } }
+      a.alloc[best]++; a.pts--;
+    }
+  }
+  function addExp(a, amt) {
+    a.exp += amt; let up = false;
+    while (a.exp >= a.maxExp) { a.exp -= a.maxExp; a.level++; a.pts += PR.ptsPerLevel; a.maxExp = Math.round(a.maxExp * PR.expGrowth); up = true; }
+    if (up) spendPoints(a);
+    return up;
+  }
+
+  // ---------- itens ----------
+  function newItem(id, tier) { const b = itemsById[id]; return { uid: S.uid++, id, tier: tier || b.tier, plus: 0, owner: null }; }
+  function bonus(inst) {
+    const b = itemsById[inst.id]; const m = (IT.tierMult[inst.tier] / IT.tierMult[b.tier]) * (1 + IT.refinePct * inst.plus);
+    return { vit: b.vit * m, pow: b.pow * m, def: b.def * m, spd: b.spd * m };
+  }
+  function itemScore(inst, role) { const w = ST.weights[role === 'HERO' ? 'HERO' : role]; const b = bonus(inst); return b.vit * w.vit + b.pow * w.pow + b.def * w.def + b.spd * w.spd; }
+  const compat = (inst, a) => itemsById[inst.id].classes.split(',').map(x => x.trim()).includes(classOf(a));
+  function giveItem(id, tier) { S.inv.push(newItem(id, tier)); S.owned.add(id); S.drops++; }
+  function equipAll() {
+    for (const i of S.inv) i.owner = null;
+    for (const s of [2, 0, 1]) {
+      const a = S.party[s]; if (!a) continue;
+      a.eq = { vit: 0, pow: 0, def: 0, spd: 0 };
+      for (const slot of SLOTS) {
+        let best = null, bs = 0;
+        for (const i of S.inv) if (i.owner === null && itemsById[i.id].slot === slot && compat(i, a)) { const sc = itemScore(i, a.role); if (sc > bs) { bs = sc; best = i; } }
+        if (best) { best.owner = s; const b = bonus(best); for (const k in a.eq) a.eq[k] += b[k]; }
+      }
+    }
+  }
+  const bagItems = () => S.inv.filter(i => i.owner === null);
+
+  // ---------- combate ----------
+  function mkEnemy(key, scale, x) {
+    const d = enemiesById[key];
+    const vit = Math.round(d.vit * scale);
+    return { key, boss: d.boss, splits: d.splits, hp: Math.round(G.hpBase + vit * G.hpPerVit), maxHp: Math.round(G.hpBase + vit * G.hpPerVit),
+      pow: Math.round(d.pow * scale), def: Math.round(d.def * scale), spd: d.spd, speed: d.speed, range: d.range, x,
+      gold: Math.round(d.gold * scale), dpe: Math.round(d.dpe * scale), exp: Math.round(d.exp * scale), at: 0, alive: 0, dead: false, sister: false, summonT: 8 };
+  }
+  function runStage(stage, preDrops) {
+    const units = [];
+    for (const s of [0, 1, 2]) {
+      const a = S.party[s]; if (!a) continue;
+      const isHero = a.role === 'HERO';
+      units.push({ a, slot: s, isHero, hp: hpOf(a), maxHp: hpOf(a), x: (isHero && S.tutorial && stage.id === '1-3') ? 190 : POS_X[s],
+        melee: a.role === 'TANK' || (isHero && S.stance === 'MONK'), mspd: isHero ? 150 : 120, at: 0.4, buff: 0, buffT: 0, counter: 0 });
+    }
+    const cd = { 2: 0, 3: 0 };
+    let t = 0; const dt = 0.05;
+    for (const id of preDrops) giveItem(id);
+    if (preDrops.length) equipAll();
+    for (let w = 0; w < stage.waves.length; w++) {
+      const enemies = [];
+      stage.waves[w].forEach((k, idx) => enemies.push(mkEnemy(k, stage.scale, enemiesById[k].boss ? 545 : 505 + idx * 46)));
+      if (w === 0 && S.tutorial && stage.id === '1-2') {
+        const h = P.hero.sister; const e = mkEnemy('ZOMBIE_WOLF', 1, 455);
+        Object.assign(e, { key: 'SISTER', boss: false, hp: Math.round(G.hpBase + h.vit * G.hpPerVit), maxHp: Math.round(G.hpBase + h.vit * G.hpPerVit), pow: h.pow, def: h.def, spd: h.spd, sister: true, gold: 12, dpe: 4, exp: 20 });
+        enemies.push(e);
+      }
+      let wt = 0;
+      const living = () => enemies.filter(e => !e.dead);
+      const allies = () => units.filter(u => u.hp > 0);
+      function onKill(e, holyByHero) {
+        e.dead = true;
+        const g = Math.round(e.gold * collect), d = Math.round(e.dpe * collect);
+        S.gold += g; S.goldEarned += g; S.dpe += d; S.dpeEarned += d;
+        for (const u of units) { if (addExp(u.a, e.exp)) { u.maxHp = hpOf(u.a); if (u.hp > 0) u.hp = u.maxHp; } }
+        if (holyByHero && S.stance === 'EXORCIST') {
+          const h = units.find(u => u.isHero);
+          if (h && h.hp > 0) { const m = SK.passBase + (S.skill[1] - 1) * SK.perLevel; for (const o of living()) if (Math.abs(o.x - e.x) <= 105) hit(o, powOf(h.a) * m, true, false, true); }
+        }
+        if (e.splits && e.alive > 4.5) { enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x - 16)); enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x + 16)); }
+        // drops de item
+        if (e.sister) giveItem('EMERALD_CLOAK');
+        else if (stage.drops[e.key]) giveItem(stage.drops[e.key]);
+        else if (stage.id === '1-1' && !S.owned.has('WOODEN_ROSARY') && rnd() < 0.7) giveItem('WOODEN_ROSARY');
+        else if (stage.id === '2-1' && !S.owned.has('PILGRIM_SANDALS') && rnd() < 0.6) giveItem('PILGRIM_SANDALS');
+        else if (!S.tutorial && rnd() < IT.dropChance) {
+          const pool = P.itemList.filter(i => i.pool).map(i => i.id);
+          if (pool.length) { const fresh = pool.filter(id => !S.owned.has(id)); const list = fresh.length ? fresh : pool; giveItem(list[Math.floor(rnd() * list.length)]); }
+        }
+      }
+      function hit(e, raw, holy, forceCrit, byHero) {
+        if (e.dead) return;
+        let dmg = raw * (forceCrit ? G.critMult : critExp);
+        if (e.key.includes('SLIME') && !holy) dmg *= 0.8;
+        const fin = Math.max(2, Math.round(dmg - (holy ? 0 : e.def * G.defMit)));
+        e.hp -= fin;
+        if (e.hp <= 0) onKill(e, holy && byHero);
+      }
+      function heal(u, amt, buff) {
+        if (u.hp <= 0) return; const miss = u.maxHp - u.hp; if (miss <= 0.5) return;
+        u.hp = Math.min(u.maxHp, u.hp + Math.round(amt)); if (buff > 0) { u.buff = buff; u.buffT = 4.5; }
+      }
+      const mostInjured = () => { let b = null, lo = 0.995; for (const u of allies()) { const r = u.hp / u.maxHp; if (r < lo) { lo = r; b = u; } } return b; };
+      while (true) {
+        let en = living(); const al = allies();
+        if (!en.length) break;
+        if (!al.length) return { win: false, time: t + wt, hpPct: 0 };
+        if (wt > 240) return { win: false, time: t + wt, hpPct: 0, timeout: true };
+        en.sort((a, b) => a.x - b.x); const tgt = en[0];
+        for (const u of al) {
+          if (u.buffT > 0) { u.buffT -= dt; if (u.buffT <= 0) u.buff = 0; }
+          const tg = living().sort((a, b) => a.x - b.x)[0]; if (!tg) break;
+          if (u.melee) {
+            const tx = Math.max(100, Math.min(550, tg.x - (u.isHero ? 34 : 38 + u.slot * 8)));
+            const dist = tx - u.x; u.x += Math.sign(dist) * Math.min(Math.abs(dist), u.mspd * dt);
+            if (Math.abs(tg.x - u.x) > 64) continue;
+          }
+          u.at += dt * spdOf(u.a, u.buff);
+          if (u.at < 1) continue;
+          u.at = 0;
+          const a = u.a, pow = powOf(a);
+          if (!u.isHero) { hit(tg, pow * 1.15, false, false, false); continue; }
+          const pM = SK.passBase + (S.skill[1] - 1) * SK.perLevel;
+          u.counter++; const third = u.counter >= 3; if (third) u.counter = 0;
+          if (S.stance === 'SAINT') { hit(tg, pow * 1.15 + 8, true, false, true); if (third) { const inj = mostInjured(); if (inj) heal(inj, pow * pM, 0.2); } }
+          else if (S.stance === 'EXORCIST') { const tx0 = tg.x; hit(tg, pow * 1.35 + 10, true, false, true); if (third) for (const o of living()) if (Math.abs(o.x - tx0) <= 105) hit(o, pow * pM, true, false, true); }
+          else { hit(tg, pow * 1.18 + vitOf(a) * 0.35 + 9, true, false, true); if (third) heal(u, pow * pM, 0.15); }
+        }
+        // skills ativas (conjuração automática)
+        const hero = units.find(u => u.isHero && u.hp > 0);
+        cd[2] -= dt; cd[3] -= dt;
+        if (hero && living().length) {
+          const cast = slot => {
+            const m = (slot === 2 ? SK.sk2Base : SK.ultBase) + (S.skill[slot] - 1) * SK.perLevel; const pow = powOf(hero.a);
+            const en2 = living().sort((a, b) => a.x - b.x);
+            if (S.stance === 'SAINT') {
+              const inj = mostInjured(); if (!inj) return false;
+              if (slot === 2) heal(inj, pow * m, 0.25); else for (const u of allies()) heal(u, pow * m * 0.85, 0.3);
+            } else if (slot === 2) {
+              hit(en2[0], S.stance === 'MONK' ? (pow + vitOf(hero.a) * 0.4) * m : pow * m, true, true, true);
+            } else { for (const e of en2) hit(e, pow * m * 0.85, true, true, true); }
+            return true;
+          };
+          if (cd[3] <= 0 && cast(3)) cd[3] = SK.cd3; else if (cd[2] <= 0 && cast(2)) cd[2] = SK.cd2;
+        }
+        // inimigos
+        const al2 = allies();
+        if (al2.length) {
+          const front = al2.reduce((b, c) => (c.x > b.x ? c : b), al2[0]);
+          for (const e of living()) {
+            e.alive += dt;
+            if (e.key === 'ZOMBIE_MAGE_BOSS') { e.summonT -= dt; if (e.summonT <= 0) { e.summonT = 8; if (living().length < 5) enemies.push(mkEnemy(rnd() < 0.5 ? 'CORRUPTED_SLIME' : 'ZOMBIE_WOLF', 1.2, e.x - 45)); } }
+            if (e.x - front.x > e.range && !e.sister) { e.x -= e.speed * dt; continue; }
+            e.at += dt * e.spd;
+            if (e.at >= 1) { e.at = 0; front.hp -= Math.max(2, Math.round(e.pow * critExp - defOf(front.a) * G.defMit)); }
+          }
+        }
+        wt += dt;
+      }
+      t += wt + (w < stage.waves.length - 1 ? G.waveGap : (stage.sub < 3 ? G.stageGap : 0));
+    }
+    const al = units.filter(u => u.hp > 0);
+    const hpPct = units.length ? al.reduce((s, u) => s + u.hp, 0) / units.reduce((s, u) => s + u.maxHp, 0) * 100 : 0;
+    return { win: true, time: t, hpPct };
+  }
+
+  // ---------- gestão entre fases (o jogador "certo") ----------
+  function skillCost(slot) { const base = slot === 1 ? SK.cost1 : slot === 2 ? SK.cost2 : SK.cost3; return Math.round(base * Math.pow(SK.costGrowth, S.skill[slot] - 1)); }
+  function spendDpe() {
+    if (S.tutorial) return; // guarda o DPE para a classe definitiva
+    while (true) {
+      const opts = [1, 2, 3].filter(s => s === 1 || S.skill[s - 1] >= 2);
+      opts.sort((a, b) => skillCost(a) - skillCost(b));
+      const s = opts[0]; const c = skillCost(s);
+      if (S.dpe < c) break;
+      S.dpe -= c; S.dpeSpent += c; S.skill[s]++;
+    }
+  }
+  function pay(c) { S.gold -= c; S.goldSpent += c; }
+  function mercPower(m) { return Math.sqrt((G.hpBase + m.vit * G.hpPerVit) * m.pow * m.spd); }
+  function availableMercs() { return P.mercs.filter(m => m.active && stageIdx(m.unlock) <= S.furthest && ![0, 1].some(s => S.party[s] && S.party[s].mercId === m.id)); }
+  function hire(m, slot) {
+    pay(m.cost); S.hires++;
+    const a = mkAlly(m.name, m.role, { vit: m.vit, pow: m.pow, def: m.def, spd: m.spd }, slot); a.mercId = m.id;
+    S.party[slot] = a;
+    String(m.gear || '').split(',').map(x => x.trim()).filter(id => itemsById[id]).forEach(id => { S.inv.push(newItem(id, 'COMMON')); });
+  }
+  function manageMercs() {
+    if (S.tutorial) return 0;
+    let reserve = 0;
+    for (let guard = 0; guard < 4; guard++) {
+      const av = availableMercs(); if (!av.length) break;
+      const free = [0, 1].find(s => !S.party[s]);
+      if (free !== undefined) {
+        const afford = av.filter(m => m.cost <= S.gold).sort((a, b) => mercPower(b) - mercPower(a));
+        if (afford.length) { hire(afford[0], free); continue; }
+        reserve = Math.min(...av.map(m => m.cost)); break;
+      }
+      // troca o mercenário mais fraco por um bem mais forte
+      const weakest = [0, 1].map(s => S.party[s]).sort((a, b) => powerOf(a) - powerOf(b))[0];
+      const better = av.filter(m => mercPower(m) > powerOf(weakest) * ST.replaceRatio).sort((a, b) => mercPower(b) - mercPower(a));
+      if (!better.length) break;
+      if (better[0].cost <= S.gold) { hire(better[0], weakest.slot); continue; }
+      if (ST.saveForMerc) reserve = better[0].cost;
+      break;
+    }
+    return reserve;
+  }
+  function manageItems(reserve) {
+    equipAll();
+    if (ST.doCombine) {
+      for (let guard = 0; guard < 50; guard++) {
+        let did = false;
+        for (const tier of TIERS) {
+          if (IT.combineUp[tier] <= 0 && tier === 'DIVINE') continue;
+          const bag = bagItems().filter(i => i.tier === tier);
+          const cost = IT.combineCost[tier];
+          if (bag.length >= 3 && S.gold - cost >= reserve) {
+            bag.sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
+            const three = bag.slice(0, 3); pay(cost); S.combines++;
+            const pick = three[Math.floor(rnd() * 3)];
+            const up = rnd() < IT.combineUp[tier];
+            if (up) S.combineUps++;
+            S.inv = S.inv.filter(i => !three.includes(i));
+            S.inv.push({ uid: S.uid++, id: pick.id, tier: up ? TIERS[Math.min(5, TIERS.indexOf(tier) + 1)] : tier, plus: 0, owner: null });
+            equipAll(); did = true; break;
+          }
+        }
+        if (!did) break;
+      }
+    }
+    // bolsa cheia: compra aba ou descarta o pior
+    while (bagItems().length > S.tabs * IT.bagPerTab) {
+      const c = IT.tabCosts[S.tabs - 1];
+      if (S.tabs <= IT.tabCosts.length && c !== undefined && S.gold - c >= reserve) { pay(c); S.tabs++; continue; }
+      const bag = bagItems().sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
+      S.inv = S.inv.filter(i => i !== bag[0]); S.discarded++;
+    }
+    if (ST.doRefine) {
+      for (let guard = 0; guard < 200; guard++) {
+        let best = null, bv = 0;
+        for (const i of S.inv) {
+          if (i.owner === null || i.plus >= IT.refineMax) continue;
+          const c = IT.refineBase[i.tier] * (i.plus + 1);
+          if (S.gold - c < reserve) continue;
+          const role = S.party[i.owner].role;
+          const gain = itemScore({ ...i, plus: i.plus + 1 }, role) - itemScore(i, role);
+          const v = gain / c; if (v > bv) { bv = v; best = i; }
+        }
+        if (!best) break;
+        const c = IT.refineBase[best.tier] * (best.plus + 1); pay(c);
+        if (rnd() < Math.max(0.15, 0.95 - best.plus * 0.08)) { best.plus++; S.refines++; } else S.refineFails++;
+      }
+      equipAll();
+    }
+  }
+  function manage() { spendDpe(); const reserve = manageMercs(); manageItems(reserve); }
+
+  // ---------- roteiro ----------
+  S.party[2] = mkAlly('Herói', 'HERO', { vit: P.hero.vit, pow: P.hero.pow, def: P.hero.def, spd: P.hero.spd }, 2);
+  S.party[1] = mkAlly('Filha', 'ARCHER', P.hero.daughter, 1);
+  S.party[0] = mkAlly('Pai', 'TANK', P.hero.father, 0);
+  let idx = 0, runs = 0, streak = 0;
+  while (idx < stages.length && runs < ST.maxStageRuns) {
+    const stage = stages[idx]; runs++;
+    const pre = [];
+    if (S.tutorial) {
+      if (stage.id === '1-1') S.stance = 'SAINT';
+      if (stage.id === '1-2') { S.stance = 'EXORCIST'; S.party[1] = null; }
+      if (stage.id === '1-3') { S.stance = 'MONK'; S.party[0] = null; S.party[1] = null; S.party[2].bonusVit = Math.max(S.party[2].bonusVit, P.hero.fatherBonusVit); if (!S.owned.has('FATHER_WRAPS')) pre.push('FATHER_WRAPS'); }
+      equipAll();
+    }
+    const r = runStage(stage, pre);
+    S.t += r.time * G.timeFactor;
+    S.furthest = Math.max(S.furthest, idx);
+    const last = idx === stages.length - 1;
+    if (r.win) {
+      streak = 0;
+      if (stage.sub === 3) S.t += G.actEndSec + G.menuSecPerAct;
+      if (S.tutorial && stage.id === '1-3') {
+        S.tutorial = false; S.party[0] = null; S.party[1] = null;
+        if (S.gold < 95) { S.goldEarned += 115 - S.gold; S.gold = 115; }
+        S.stance = ST.stance; S.furthest = Math.max(S.furthest, idx + 1);
+      }
+    } else { S.defeats++; streak++; }
+    manage();
+    const mercs = [0, 1].map(s => S.party[s]).filter(Boolean);
+    S.rows.push({ t: S.t, stage: stage.id, act: stage.act, win: r.win, dur: r.time * G.timeFactor, hpPct: r.hpPct, heroLv: S.party[2].level,
+      mercs: mercs.map(m => `${m.name.replace(' (sugestão)', '')} Nv${m.level}`).join(' · ') || '—', gold: S.gold, goldEarned: S.goldEarned, goldSpent: S.goldSpent,
+      dpe: S.dpe, dpeEarned: S.dpeEarned, skills: `${S.skill[1]}/${S.skill[2]}/${S.skill[3]}`,
+      equipped: S.inv.filter(i => i.owner !== null).map(i => ({ tier: i.tier, plus: i.plus })), stance: S.stance });
+    if (r.win) {
+      if (stage.sub === 3) S.actEnd[stage.act] = S.t;
+      if (last) { S.finished = true; break; }
+      idx++;
+    } else {
+      if (streak > 25) { S.stuck = true; break; }
+      if (!S.tutorial && ST.farmOnLoss && stage.sub > 1) idx = stages.findIndex(s => s.act === stage.act && s.sub === 1);
+    }
+  }
+  if (!S.finished && !S.stuck) S.stuck = true;
+  const hero = S.party[2];
+  return { total: S.t / 60, finished: S.finished, stuck: S.stuck, stuckAt: S.rows.length ? S.rows[S.rows.length - 1].stage : '', defeats: S.defeats, rows: S.rows,
+    heroLv: hero.level, gold: S.gold, goldEarned: S.goldEarned, goldSpent: S.goldSpent, dpe: S.dpe, dpeEarned: S.dpeEarned, dpeSpent: S.dpeSpent,
+    combines: S.combines, combineUps: S.combineUps, refines: S.refines, refineFails: S.refineFails, discarded: S.discarded, hires: S.hires, drops: S.drops,
+    skills: { ...S.skill }, actEnd: S.actEnd, stance: S.stance };
+}
+
+// ============================================================================
+// RESULTADOS
+// ============================================================================
+const fmtMin = m => { const mm = Math.floor(m), ss = Math.round((m - mm) * 60); return `${mm}:${String(ss === 60 ? 59 : ss).padStart(2, '0')}`; };
+const medianRaw = arr => { const a = [...arr].sort((x, y) => x - y); const n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : 0; };
+// mediana de contagens sai inteira; a de tempo (minutos) continua com fração
+const median = arr => { const m = medianRaw(arr); return arr.every(Number.isInteger) ? Math.round(m) : m; };
+const pct = (arr, p) => { const a = [...arr].sort((x, y) => x - y); return a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : 0; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function runAll() {
+  P.strategy.stance = document.getElementById('c-stance').value;
+  const n = Math.max(1, Math.min(200, Math.round(P.general.runs)));
+  const res = [];
+  for (let i = 0; i < n; i++) res.push(simulate(P, 1000 + i * 7919));
+  const totals = res.map(r => r.total);
+  const med = median(totals);
+  const rep = res.reduce((b, r) => Math.abs(r.total - med) < Math.abs(b.total - med) ? r : b, res[0]);
+  render(res, rep);
+}
+
+function chipHtml(kind, text) { const ic = { good: '✔', warn: '▲', crit: '✖' }[kind]; return `<span class="chip ${kind}">${ic} ${text}</span>`; }
+
+function render(res, rep) {
+  const G = P.general;
+  const totals = res.map(r => r.total), finishedPct = res.filter(r => r.finished).length / res.length * 100;
+  const med = median(totals), lo = pct(totals, 0.1), hi = pct(totals, 0.9);
+  const diff = med - G.targetMin;
+  const timeKind = Math.abs(diff) <= G.targetMin * 0.1 ? 'good' : Math.abs(diff) <= G.targetMin * 0.25 ? 'warn' : 'crit';
+  const defMed = median(res.map(r => r.defeats));
+  const goldLeftPct = median(res.map(r => r.goldEarned ? r.gold / r.goldEarned * 100 : 0));
+  const sum = document.getElementById('summary');
+  sum.innerHTML = `
+    <div class="tile hero"><span class="k">Duração da demo</span><span class="v num">${fmtMin(med)}</span>
+      <span class="d">${chipHtml(timeKind, (diff >= 0 ? '+' : '') + diff.toFixed(1) + ' min da meta')}</span>
+      <span class="d num">80% das simulações entre ${fmtMin(lo)} e ${fmtMin(hi)}</span></div>
+    <div class="tile"><span class="k">Terminaram a demo</span><span class="v num">${finishedPct.toFixed(0)}%</span>
+      <span class="d">${finishedPct < 100 ? chipHtml('crit', 'algumas travaram em ' + esc(res.find(r => !r.finished)?.stuckAt || '?')) : chipHtml('good', 'todas venceram o Necromante')}</span></div>
+    <div class="tile"><span class="k">Derrotas</span><span class="v num">${defMed}</span><span class="d">mediana por partida</span></div>
+    <div class="tile"><span class="k">Nível final do herói</span><span class="v num">${median(res.map(r => r.heroLv))}</span><span class="d">skills ${rep.skills[1]}/${rep.skills[2]}/${rep.skills[3]} (${STANCE_PT[rep.stance]})</span></div>
+    <div class="tile"><span class="k">Ouro sobrando no fim</span><span class="v num">${goldLeftPct.toFixed(0)}%</span><span class="d num">${Math.round(median(res.map(r => r.gold)))} de ${Math.round(median(res.map(r => r.goldEarned)))} ganhos</span></div>
+    <div class="tile"><span class="k">Craft</span><span class="v num">${median(res.map(r => r.combines))} / ${median(res.map(r => r.refines))}</span><span class="d">combinações / refinos (mediana)</span></div>`;
+
+  // diagnóstico
+  const D = [];
+  if (timeKind === 'good') D.push(['good', `A demo dura ${fmtMin(med)}, perto da meta de ${G.targetMin} min.`]);
+  else if (diff < 0) D.push([timeKind, `A demo está curta: ${fmtMin(med)} contra a meta de ${G.targetMin} min. Para alongar, deixe os monstros mais fortes (escala das fases) ou reduza ouro, DPE e EXP, para o jogador precisar repetir atos.`]);
+  else D.push([timeKind, `A demo está longa: ${fmtMin(med)} contra a meta de ${G.targetMin} min. Reduza a escala das fases mais difíceis ou aumente as recompensas.`]);
+  if (finishedPct < 100) D.push(['crit', `${(100 - finishedPct).toFixed(0)}% das partidas travam (mais de 25 derrotas seguidas). Essa fase está difícil demais para o que o jogador consegue juntar.`]);
+  const drops = median(res.map(r => r.drops)), comb = median(res.map(r => r.combines));
+  if (comb < 3) D.push(['warn', `Quase não sobra item para combinar: ${drops} itens caem na partida e só ${comb} combinações acontecem. Aumente a chance de drop (aba Itens) para o craft fazer parte do jogo.`]);
+  else D.push(['good', `O craft está sendo usado: ${comb} combinações e ${median(res.map(r => r.refines))} refinos por partida.`]);
+  if (goldLeftPct > 25) D.push(['warn', `Sobra ${goldLeftPct.toFixed(0)}% do ouro no fim. Ou os custos estão baratos, ou falta onde gastar (mercenários melhores, refino mais caro).`]);
+  const dpeLeft = median(res.map(r => r.dpe));
+  if (dpeLeft > 150) D.push(['warn', `Sobram ${dpeLeft} de DPE no fim. Os níveis de skill estão baratos para o tanto de DPE que cai.`]);
+  const disc = median(res.map(r => r.discarded));
+  if (disc > 0) D.push(['warn', `A bolsa enche e ${disc} itens são descartados por partida.`]);
+  const actsD = [1, 2, 3, 4, 5].map(a => median(res.map(r => actDur(r, a))));
+  actsD.forEach((d, i) => { const tg = G.actTargets[i]; if (d && tg && d < tg * 0.6) D.push(['warn', `O Ato ${i + 1} passa rápido demais (${fmtMin(d)} contra ${tg} min de meta).`]); });
+  document.getElementById('diag').innerHTML = D.map(([k, t]) => `<li>${chipHtml(k, { good: 'ok', warn: 'atenção', crit: 'problema' }[k])}<span>${esc(t)}</span></li>`).join('');
+
+  // tabela por ato
+  let cum = 0, cumT = 0;
+  const actRows = [1, 2, 3, 4, 5].map((a, i) => {
+    const d = actsD[i]; cum += d; cumT += G.actTargets[i] || 0;
+    const tg = G.actTargets[i] || 0; const dd = d - tg;
+    const k = !d ? 'crit' : Math.abs(dd) <= tg * 0.15 ? 'good' : Math.abs(dd) <= tg * 0.35 ? 'warn' : 'crit';
+    const defs = median(res.map(r => r.rows.filter(x => x.act === a && !x.win).length));
+    return `<tr><td>Ato ${a}${a === 1 ? ' (tutorial)' : ''}</td><td class="r">${tg ? fmtMin(tg) : '—'}</td><td class="r">${d ? fmtMin(d) : '—'}</td><td class="r">${d ? (dd >= 0 ? '+' : '') + dd.toFixed(1) : '—'}</td><td class="r">${defs}</td><td class="r">${fmtMin(cum)} / ${fmtMin(cumT)}</td><td>${chipHtml(k, k === 'good' ? 'na meta' : (dd < 0 ? 'curto' : 'longo'))}</td></tr>`;
+  }).join('');
+  document.getElementById('tbl-acts').innerHTML = `<thead><tr><th>Ato</th><th class="r">Meta</th><th class="r">Simulado</th><th class="r">Diferença (min)</th><th class="r">Derrotas</th><th class="r">Acumulado / meta</th><th>Situação</th></tr></thead><tbody>${actRows}</tbody>`;
+
+  // linha do tempo
+  document.getElementById('tbl-time').innerHTML = `<thead><tr><th class="r">#</th><th class="r">Minuto</th><th>Fase</th><th>Resultado</th><th class="r">Duração</th><th class="r">HP sobrando</th><th class="r">Nv herói</th><th>Mercenários</th><th class="r">Ouro</th><th class="r">Ganho total</th><th class="r">Gasto total</th><th class="r">DPE</th><th>Skills</th><th>Itens equipados</th></tr></thead><tbody>` +
+    rep.rows.map((r, i) => `<tr class="${r.win ? '' : 'lose'}"><td class="r">${i + 1}</td><td class="r">${fmtMin(r.t / 60)}</td><td>${r.stage}</td><td>${r.win ? '✔ vitória' : '✖ derrota'}</td><td class="r">${Math.round(r.dur)} s</td><td class="r">${r.win ? r.hpPct.toFixed(0) + '%' : '—'}</td><td class="r">${r.heroLv}</td><td>${esc(r.mercs)}</td><td class="r">${Math.round(r.gold)}</td><td class="r">${Math.round(r.goldEarned)}</td><td class="r">${Math.round(r.goldSpent)}</td><td class="r">${Math.round(r.dpe)}</td><td>${r.skills}</td><td>${tierSummary(r.equipped)}</td></tr>`).join('') + '</tbody>';
+
+  drawPace(rep);
+  drawGold(rep);
+  drawHp(rep);
+}
+function actDur(r, a) { const end = r.actEnd[a]; if (!end) return 0; const prev = a === 1 ? 0 : r.actEnd[a - 1] || 0; return (end - prev) / 60; }
+function tierSummary(eq) {
+  const c = {}; let plus = 0; eq.forEach(e => { c[e.tier] = (c[e.tier] || 0) + 1; plus += e.plus; });
+  return TIERS.filter(t => c[t]).map(t => `<span title="${TIER_PT[t]}"><span class="tier" style="background:${TIER_COL[t]}"></span>${c[t]} ${TIER_PT[t]}</span>`).join(' ') + (plus ? ` · +${plus} refino` : '') || '—';
+}
+
+// ============================================================================
+// GRÁFICOS (SVG)
+// ============================================================================
+const W = 560, H = 250, M = { l: 44, r: 14, t: 12, b: 34 };
+function minuteAxis(maxMin) { const step = maxMin <= 10 ? 1 : maxMin <= 40 ? 5 : 10; const xMax = Math.max(step, Math.ceil(maxMin / step) * step); return { xMax, ticks: xMax / step }; }
+function niceMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+function axes(xMax, yMax, xFmt, yFmt, yTicks = 5, xTicks = 6, yLabels = null) {
+  const sx = x => M.l + x / xMax * (W - M.l - M.r), sy = y => H - M.b - y / yMax * (H - M.t - M.b);
+  let g = '';
+  for (let i = 0; i <= yTicks; i++) { const v = yMax / yTicks * i; const y = sy(v); g += `<line x1="${M.l}" x2="${W - M.r}" y1="${y}" y2="${y}" style="stroke:var(--grid)" stroke-width="1"/><text x="${M.l - 6}" y="${y + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${yLabels ? (yLabels[i] ?? '') : yFmt(v)}</text>`; }
+  for (let i = 0; i <= xTicks; i++) { const v = xMax / xTicks * i; const x = sx(v); g += `<text x="${x}" y="${H - M.b + 16}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${xFmt(v)}</text>`; }
+  g += `<line x1="${M.l}" x2="${W - M.r}" y1="${sy(0)}" y2="${sy(0)}" style="stroke:var(--axis)" stroke-width="1"/>`;
+  return { sx, sy, g };
+}
+function attachHover(host, svg, xs, sx, html) {
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; host.appendChild(tip);
+  const line = svg.querySelector('.xhair');
+  const move = ev => {
+    const r = svg.getBoundingClientRect(); const px = (ev.clientX - r.left) / r.width * W;
+    let bi = 0, bd = 1e9; xs.forEach((x, i) => { const d = Math.abs(sx(x) - px); if (d < bd) { bd = d; bi = i; } });
+    const x = sx(xs[bi]); if (line) { line.setAttribute('x1', x); line.setAttribute('x2', x); line.style.opacity = 1; }
+    tip.innerHTML = html(bi); tip.hidden = false;
+    const hr = host.getBoundingClientRect(); let left = ev.clientX - hr.left + 12; if (left + tip.offsetWidth > hr.width) left = ev.clientX - hr.left - tip.offsetWidth - 12;
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = Math.max(0, ev.clientY - hr.top - 10) + 'px';
+  };
+  svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', () => { tip.hidden = true; if (line) line.style.opacity = 0; });
+}
+function drawPace(rep) {
+  const host = document.getElementById('ch-pace');
+  const order = P.stages.map(s => s.id), nS = order.length;
+  const pts = [[0, 0]]; rep.rows.forEach(r => pts.push([r.t / 60, r.win ? order.indexOf(r.stage) + 1 : order.indexOf(r.stage)]));
+  const tg = [[0, 0]]; let acc = 0; P.general.actTargets.forEach((m, i) => { acc += m; tg.push([acc, Math.min(nS, (i + 1) * 3)]); });
+  const xa = minuteAxis(Math.max(acc, pts[pts.length - 1][0]));
+  const labels = ['início', '1-3', '2-3', '3-3', '4-3', '5-3'];
+  const { sx, sy, g } = axes(xa.xMax, nS, v => Math.round(v) + 'm', v => v, 5, xa.ticks, labels);
+  let d = ''; pts.forEach(([x, y], i) => { d += i ? `H${sx(x).toFixed(1)}V${sy(y).toFixed(1)}` : `M${sx(x).toFixed(1)} ${sy(y).toFixed(1)}`; });
+  const td = tg.map(([x, y], i) => `${i ? 'L' : 'M'}${sx(x).toFixed(1)} ${sy(y).toFixed(1)}`).join('');
+  const losses = rep.rows.filter(r => !r.win).map(r => `<circle cx="${sx(r.t / 60)}" cy="${sy(order.indexOf(r.stage) + 0.5)}" r="4.5" style="fill:var(--crit);stroke:var(--panel)" stroke-width="2"/>`).join('');
+  const end = pts[pts.length - 1];
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Fase alcançada por minuto"><g>${g}</g>
+    <path d="${td}" fill="none" style="stroke:var(--ref)" stroke-width="2" stroke-dasharray="5 4"/>
+    <path d="${d}" fill="none" style="stroke:var(--s1)" stroke-width="2.2" stroke-linejoin="round"/>${losses}
+    <circle cx="${sx(end[0])}" cy="${sy(end[1])}" r="5" style="fill:var(--s1);stroke:var(--panel)" stroke-width="2"/>
+    <text x="${Math.min(W - M.r - 4, sx(end[0]) + 8)}" y="${sy(end[1]) + 14}" font-size="12" font-weight="700" text-anchor="${sx(end[0]) > W - 90 ? 'end' : 'start'}" style="fill:var(--fg)">${fmtMin(end[0])}</text>
+    <line class="xhair" y1="${M.t}" y2="${H - M.b}" style="stroke:var(--muted);opacity:0" stroke-width="1"/>
+    <text x="${W - M.r}" y="${H - 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">minutos de jogo</text></svg>`;
+  const xs = rep.rows.map(r => r.t / 60);
+  attachHover(host, host.querySelector('svg'), xs, sx, i => { const r = rep.rows[i]; return `<b>${fmtMin(r.t / 60)}</b> · fase ${r.stage}<br>${r.win ? '✔ vitória' : '✖ derrota'} em ${Math.round(r.dur)} s<br>Herói Nv${r.heroLv} · skills ${r.skills}`; });
+}
+function drawGold(rep) {
+  const host = document.getElementById('ch-gold');
+  const rows = [{ t: 0, goldEarned: 0, goldSpent: 0, gold: 0 }, ...rep.rows];
+  const xa = minuteAxis(rows[rows.length - 1].t / 60), yMax = niceMax(Math.max(...rows.map(r => r.goldEarned)) * 1.05);
+  const { sx, sy, g } = axes(xa.xMax, yMax, v => Math.round(v) + 'm', v => v >= 1000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'k' : Math.round(v), 5, xa.ticks);
+  const path = k => rows.map((r, i) => `${i ? 'L' : 'M'}${sx(r.t / 60).toFixed(1)} ${sy(r[k]).toFixed(1)}`).join('');
+  const last = rows[rows.length - 1];
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ouro ganho e gasto por minuto"><g>${g}</g>
+    <path d="${path('goldEarned')} L${sx(last.t / 60)} ${sy(0)} L${sx(0)} ${sy(0)}Z" style="fill:var(--s1);opacity:.08"/>
+    <path d="${path('goldEarned')}" fill="none" style="stroke:var(--s1)" stroke-width="2"/>
+    <path d="${path('goldSpent')}" fill="none" style="stroke:var(--s2)" stroke-width="2"/>
+    <circle cx="${sx(last.t / 60)}" cy="${sy(last.goldEarned)}" r="4.5" style="fill:var(--s1);stroke:var(--panel)" stroke-width="2"/>
+    <circle cx="${sx(last.t / 60)}" cy="${sy(last.goldSpent)}" r="4.5" style="fill:var(--s2);stroke:var(--panel)" stroke-width="2"/>
+    <line class="xhair" y1="${M.t}" y2="${H - M.b}" style="stroke:var(--muted);opacity:0" stroke-width="1"/>
+    <text x="${W - M.r}" y="${H - 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">minutos de jogo</text></svg>`;
+  attachHover(host, host.querySelector('svg'), rows.map(r => r.t / 60), sx, i => { const r = rows[i]; return `<b>${fmtMin(r.t / 60)}</b>${r.stage ? ' · fase ' + r.stage : ''}<br><span style="color:var(--s1)">●</span> Ganho: <b>${Math.round(r.goldEarned)}</b><br><span style="color:var(--s2)">●</span> Gasto: <b>${Math.round(r.goldSpent)}</b><br>Saldo: ${Math.round(r.gold)}`; });
+}
+function drawHp(rep) {
+  const host = document.getElementById('ch-hp');
+  const rows = rep.rows, n = rows.length;
+  const { sx, sy, g } = axes(Math.max(1, n), 100, () => '', v => Math.round(v) + '%', 4, 0);
+  const bw = Math.max(2, (W - M.l - M.r) / Math.max(1, n) - 2);
+  const bars = rows.map((r, i) => {
+    const x = M.l + i * (W - M.l - M.r) / n + 1;
+    if (!r.win) return `<rect x="${x}" y="${sy(100)}" width="${bw}" height="${sy(0) - sy(100)}" rx="2" style="fill:var(--crit);opacity:.22"/><rect x="${x}" y="${sy(6)}" width="${bw}" height="${sy(0) - sy(6)}" rx="2" style="fill:var(--crit)"/>`;
+    const h = Math.max(2, sy(0) - sy(r.hpPct));
+    return `<rect x="${x}" y="${sy(0) - h}" width="${bw}" height="${h}" rx="${Math.min(4, bw / 2)}" style="fill:var(--s3)"/>`;
+  }).join('');
+  let actLbl = ''; let prevAct = 0;
+  rows.forEach((r, i) => { if (r.act !== prevAct) { prevAct = r.act; const x = M.l + i * (W - M.l - M.r) / n; actLbl += `<line x1="${x}" x2="${x}" y1="${M.t}" y2="${H - M.b}" style="stroke:var(--axis)" stroke-dasharray="2 3"/><text x="${x + 3}" y="${H - M.b + 16}" font-size="11" style="fill:var(--muted)">Ato ${r.act}</text>`; } });
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="HP restante por fase"><g>${g}</g>${actLbl}${bars}
+    <line class="xhair" y1="${M.t}" y2="${H - M.b}" style="stroke:var(--muted);opacity:0" stroke-width="1"/></svg>`;
+  const xs = rows.map((r, i) => i + 0.5);
+  attachHover(host, host.querySelector('svg'), xs, v => M.l + v * (W - M.l - M.r) / n, i => { const r = rows[i]; return `<b>Fase ${r.stage}</b> · ${fmtMin(r.t / 60)}<br>${r.win ? `✔ sobrou <b>${r.hpPct.toFixed(0)}%</b> do HP` : '✖ derrota'}<br>Herói Nv${r.heroLv}`; });
+}
+
+// ============================================================================
+// EDITOR DE PARÂMETROS
+// ============================================================================
+const TABS = [
+  ['geral', 'Geral'], ['prog', 'Nível & atributos'], ['skills', 'Skills'], ['itens', 'Itens & craft'], ['lista', 'Lista de itens'],
+  ['inimigos', 'Monstros'], ['fases', 'Fases'], ['mercs', 'Mercenários'], ['herois', 'Família (tutorial)'], ['estrategia', 'Estratégia do jogador']
+];
+let activeTab = 'geral';
+try { activeTab = localStorage.getItem('hh_balance_tab') || 'geral'; } catch (e) {}
+function fld(path, label, step = 'any') { const v = getPath(path); return `<label class="field"><span>${label}</span><input type="number" step="${step}" data-path="${path}" value="${v}"></label>`; }
+function getPath(p) { return p.split('.').reduce((o, k) => o[k], P); }
+function setPath(p, v) { const ks = p.split('.'); const last = ks.pop(); const o = ks.reduce((o, k) => o[k], P); o[last] = v; }
+function tableEditor(arrPath, cols) {
+  const arr = getPath(arrPath);
+  return `<div class="tbl-wrap"><table><thead><tr>${cols.map(c => `<th${c.type === 'num' ? ' class="r"' : ''}>${c.label}</th>`).join('')}<th></th></tr></thead><tbody>` +
+    arr.map((row, i) => `<tr>${cols.map(c => {
+      const p = `${arrPath}.${i}.${c.key}`; const v = row[c.key];
+      if (c.type === 'num') return `<td class="r"><input type="number" step="any" data-path="${p}" value="${v}"></td>`;
+      if (c.type === 'bool') return `<td><input type="checkbox" data-path="${p}" ${v ? 'checked' : ''} aria-label="${c.label}"></td>`;
+      if (c.type === 'select') return `<td><select data-path="${p}">${c.opts.map(o => `<option value="${o[0]}" ${o[0] === v ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></td>`;
+      return `<td><input type="text" class="${c.sm ? 'w-sm' : ''}" data-path="${p}" value="${esc(v)}"></td>`;
+    }).join('')}<td><button data-del="${arrPath}.${i}" title="Remover linha" aria-label="Remover linha">✕</button></td></tr>`).join('') +
+    `</tbody></table></div><div class="row-actions"><button data-add="${arrPath}">+ Adicionar linha</button></div>`;
+}
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map(([k, l]) => `<button role="tab" aria-selected="${k === activeTab}" data-tab="${k}">${l}</button>`).join('');
+  const b = document.getElementById('tab-body');
+  const tierFields = (obj, label, step) => `<div class="group-title">${label}</div><div class="fields">${TIERS.map(t => fld(`items.${obj}.${t}`, TIER_PT[t], step)).join('')}</div>`;
+  const stageOpts = P.stages.map(s => [s.id, s.id]);
+  if (activeTab === 'geral') b.innerHTML = `<div class="fields">${fld('general.targetMin', 'Meta da demo (min)')}${fld('general.runs', 'Simulações por rodada', 1)}${fld('general.timeFactor', 'Fator de tempo real')}${fld('general.collectPct', '% dos drops coletados')}${fld('general.startDpe', 'DPE inicial')}${fld('general.tutorialSec', 'Tempo de diálogos do tutorial (s)')}${fld('general.menuSecPerAct', 'Tempo em menus por ato (s)')}${fld('general.actEndSec', 'Tela de vitória por ato (s)')}${fld('general.waveGap', 'Transição entre ondas (s)')}${fld('general.stageGap', 'Transição entre fases (s)')}</div>
+    <div class="group-title">Meta de tempo por ato (min)</div><div class="fields">${[0, 1, 2, 3, 4].map(i => fld(`general.actTargets.${i}`, `Ato ${i + 1}`)).join('')}</div>
+    <div class="group-title">Fórmulas de combate</div><div class="fields">${fld('general.critChance', 'Chance de crítico')}${fld('general.critMult', 'Multiplicador do crítico')}${fld('general.defMit', 'Defesa: redução por ponto')}${fld('general.hpBase', 'HP base')}${fld('general.hpPerVit', 'HP por VIT')}</div>`;
+  else if (activeTab === 'prog') b.innerHTML = `<div class="fields">${fld('progression.expBase', 'EXP para o nível 2')}${fld('progression.expGrowth', 'Crescimento da EXP por nível (×)')}${fld('progression.ptsPerLevel', 'Pontos por nível', 1)}${fld('progression.vitPerPt', 'VIT por ponto')}${fld('progression.powPerPt', 'POW por ponto')}${fld('progression.defPerPt', 'DEF por ponto')}${fld('progression.spdPerPt', 'SPD por ponto')}</div>${expTable()}`;
+  else if (activeTab === 'skills') b.innerHTML = `<div class="fields">${fld('skills.cost1', 'Custo Lv2 da passiva (DPE)')}${fld('skills.cost2', 'Custo Lv2 da ativa (DPE)')}${fld('skills.cost3', 'Custo Lv2 da ultimate (DPE)')}${fld('skills.costGrowth', 'Crescimento do custo por nível (×)')}${fld('skills.passBase', 'Força da passiva no Lv1 (× POW)')}${fld('skills.sk2Base', 'Força da ativa no Lv1 (× POW)')}${fld('skills.ultBase', 'Força da ultimate no Lv1 (× POW)')}${fld('skills.perLevel', 'Força extra por nível (× POW)')}${fld('skills.cd2', 'Recarga da ativa (s)')}${fld('skills.cd3', 'Recarga da ultimate (s)')}</div>`;
+  else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
+    ${tierFields('tierMult', 'Multiplicador de status por tier', 'any')}${tierFields('combineCost', 'Custo de combinar 3 itens (ouro)', 'any')}${tierFields('combineUp', 'Chance de subir de tier ao combinar (0–1)', 'any')}${tierFields('refineBase', 'Custo base do refino (× nível do refino)', 'any')}`;
+  else if (activeTab === 'lista') b.innerHTML = `<p class="sub" style="margin-bottom:8px">“No sorteio” marca os itens que podem cair aleatoriamente dos monstros depois do tutorial. Classes: SAINT, EXORCIST, MONK, TANK, ARCHER.</p>` + tableEditor('itemList', [
+    { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'slot', label: 'Espaço', type: 'select', opts: SLOTS.map(s => [s, { HEAD: 'Cabeça', CHEST: 'Peito', RIGHT_HAND: 'Mão dir.', LEFT_HAND: 'Mão esq.', FEET: 'Pés' }[s]]) },
+    { key: 'tier', label: 'Tier', type: 'select', opts: TIERS.map(t => [t, TIER_PT[t]]) }, { key: 'classes', label: 'Classes', sm: true },
+    { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'pool', label: 'No sorteio', type: 'bool' }]);
+  else if (activeTab === 'inimigos') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Status no nível 1. Cada fase multiplica VIT, POW, DEF, ouro, DPE e EXP pela escala da fase (velocidade de ataque não escala).</p>` + tableEditor('enemies', [
+    { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'Ataques/s', type: 'num' },
+    { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]);
+  else if (activeTab === 'fases') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Ondas separadas por <b>|</b>, monstros por vírgula, usando o ID do monstro. Drop fixo no formato <b>ID_DO_MONSTRO:ID_DO_ITEM</b>.</p>` + tableEditor('stages', [
+    { key: 'id', label: 'Fase', sm: true }, { key: 'scale', label: 'Escala', type: 'num' }, { key: 'waves', label: 'Ondas' }, { key: 'drop', label: 'Drop fixo' }]) + stageTable();
+  else if (activeTab === 'mercs') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Mercenários entram sempre no nível 1. As duas linhas “sugestão” não existem no jogo: ative para testar mercenários mais fortes liberados em fases mais adiante. Equipamento inicial: IDs de itens, que entram no tier Comum.</p>` + tableEditor('mercs', [
+    { key: 'active', label: 'Ativo', type: 'bool' }, { key: 'name', label: 'Nome', sm: true }, { key: 'role', label: 'Função', type: 'select', opts: [['TANK', 'Tanque'], ['ARCHER', 'Arqueiro']] }, { key: 'cost', label: 'Preço', type: 'num' },
+    { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'unlock', label: 'Liberado em', type: 'select', opts: stageOpts }, { key: 'gear', label: 'Equipamento inicial' }]);
+  else if (activeTab === 'herois') b.innerHTML = `<div class="group-title">Herói</div><div class="fields">${['vit', 'pow', 'def', 'spd'].map(k => fld('hero.' + k, k.toUpperCase())).join('')}${fld('hero.fatherBonusVit', 'VIT extra ao perder o pai (1-3)')}</div>
+    <div class="group-title">Filha (1-1)</div><div class="fields">${['vit', 'pow', 'def', 'spd'].map(k => fld('hero.daughter.' + k, k.toUpperCase())).join('')}</div>
+    <div class="group-title">Pai (1-1 e 1-2)</div><div class="fields">${['vit', 'pow', 'def', 'spd'].map(k => fld('hero.father.' + k, k.toUpperCase())).join('')}</div>
+    <div class="group-title">Irmã infectada (inimiga em 1-2)</div><div class="fields">${['vit', 'pow', 'def', 'spd'].map(k => fld('hero.sister.' + k, k.toUpperCase())).join('')}</div>`;
+  else if (activeTab === 'estrategia') {
+    const allocRow = k => `<tr><td>${{ SAINT: 'Herói Santo', EXORCIST: 'Herói Exorcista', MONK: 'Herói Monge', TANK: 'Tanque', ARCHER: 'Arqueiro' }[k]}</td>${['vit', 'pow', 'def', 'spd'].map(s => `<td class="r"><input type="number" step="1" data-path="strategy.alloc.${k}.${s}" value="${P.strategy.alloc[k][s]}"></td>`).join('')}</tr>`;
+    const wRow = k => `<tr><td>${{ HERO: 'Herói', TANK: 'Tanque', ARCHER: 'Arqueiro' }[k]}</td>${['vit', 'pow', 'def', 'spd'].map(s => `<td class="r"><input type="number" step="any" data-path="strategy.weights.${k}.${s}" value="${P.strategy.weights[k][s]}"></td>`).join('')}</tr>`;
+    b.innerHTML = `<div class="fields">
+      <label class="field"><span>Repetir o ato quando perde</span><input type="checkbox" data-path="strategy.farmOnLoss" ${P.strategy.farmOnLoss ? 'checked' : ''}></label>
+      <label class="field"><span>Guardar ouro para mercenário melhor</span><input type="checkbox" data-path="strategy.saveForMerc" ${P.strategy.saveForMerc ? 'checked' : ''}></label>
+      <label class="field"><span>Combinar itens</span><input type="checkbox" data-path="strategy.doCombine" ${P.strategy.doCombine ? 'checked' : ''}></label>
+      <label class="field"><span>Refinar itens</span><input type="checkbox" data-path="strategy.doRefine" ${P.strategy.doRefine ? 'checked' : ''}></label>
+      ${fld('strategy.replaceRatio', 'Troca mercenário se o novo for (× mais forte)')}${fld('strategy.maxStageRuns', 'Limite de tentativas de fase', 1)}</div>
+      <div class="group-title">Como cada um distribui os pontos (proporção)</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Quem</th><th class="r">VIT</th><th class="r">POW</th><th class="r">DEF</th><th class="r">SPD</th></tr></thead><tbody>${['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'].map(allocRow).join('')}</tbody></table></div>
+      <div class="group-title">Peso de cada status ao escolher o melhor item</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Quem</th><th class="r">VIT</th><th class="r">POW</th><th class="r">DEF</th><th class="r">SPD</th></tr></thead><tbody>${['HERO', 'TANK', 'ARCHER'].map(wRow).join('')}</tbody></table></div>
+      <p class="sub" style="margin-top:8px">O jogador simulado sempre: gasta os pontos na hora pela proporção acima, guarda o DPE no tutorial e depois compra o nível de skill mais barato liberado, equipa o melhor item de cada espaço, combina 3 itens repetidos do mesmo tier quando sobra ouro, refina o item com melhor ganho por ouro e contrata o mercenário mais forte que puder pagar.</p>`;
+  }
+}
+function expTable() {
+  let need = P.progression.expBase, acc = 0, cells = '';
+  for (let lv = 2; lv <= 21; lv++) { acc += need; cells += `<tr><td>Nv ${lv}</td><td class="r">${Math.round(need)}</td><td class="r">${Math.round(acc)}</td></tr>`; need = Math.round(need * P.progression.expGrowth); }
+  return `<div class="group-title">Curva de EXP resultante</div><div class="tbl-wrap tbl-scroll" style="max-height:260px"><table><thead><tr><th>Nível</th><th class="r">EXP do nível</th><th class="r">EXP acumulada</th></tr></thead><tbody>${cells}</tbody></table></div>`;
+}
+function stageTable() {
+  const E = Object.fromEntries(P.enemies.map(e => [e.id, e]));
+  let cg = 0, cd = 0, cx = 0;
+  const rows = P.stages.map(s => {
+    let g = 0, d = 0, x = 0, hp = 0;
+    String(s.waves).split('|').forEach(w => w.split(',').map(k => k.trim()).forEach(k => { const e = E[k]; if (!e) return; g += Math.round(e.gold * s.scale); d += Math.round(e.dpe * s.scale); x += Math.round(e.exp * s.scale); hp += Math.round(P.general.hpBase + Math.round(e.vit * s.scale) * P.general.hpPerVit); }));
+    cg += g; cd += d; cx += x;
+    return `<tr><td>${esc(s.id)}</td><td class="r">${hp}</td><td class="r">${g}</td><td class="r">${d}</td><td class="r">${x}</td><td class="r">${cg}</td><td class="r">${cd}</td><td class="r">${cx}</td></tr>`;
+  }).join('');
+  return `<div class="group-title">Recompensa de uma passada (sem mini slimes nem invocações)</div><div class="tbl-wrap"><table><thead><tr><th>Fase</th><th class="r">HP total dos monstros</th><th class="r">Ouro</th><th class="r">DPE</th><th class="r">EXP</th><th class="r">Ouro acum.</th><th class="r">DPE acum.</th><th class="r">EXP acum.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+let timer = null;
+function schedule() { clearTimeout(timer); timer = setTimeout(() => { saveParams(); runAll(); }, 250); }
+document.getElementById('tab-body').addEventListener('change', ev => {
+  const el = ev.target; const p = el.dataset.path; if (!p) return;
+  const cur = getPath(p);
+  let v = el.type === 'checkbox' ? el.checked : el.value;
+  if (el.type === 'number') { v = parseFloat(v); if (!Number.isFinite(v)) return; }
+  else if (typeof cur === 'number' && el.tagName === 'SELECT') v = parseFloat(v);
+  setPath(p, v);
+  syncTop();
+  if (activeTab === 'prog' || activeTab === 'fases') { const y = window.scrollY; renderTabs(); window.scrollTo(0, y); }
+  schedule();
+});
+document.getElementById('tab-body').addEventListener('click', ev => {
+  const add = ev.target.closest('[data-add]'), del = ev.target.closest('[data-del]');
+  if (add) { const arr = getPath(add.dataset.add); arr.push(clone(arr[arr.length - 1] || {})); renderTabs(); schedule(); }
+  if (del) { const ks = del.dataset.del.split('.'); const i = +ks.pop(); getPath(ks.join('.')).splice(i, 1); renderTabs(); schedule(); }
+});
+document.getElementById('tabs').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-tab]'); if (!b) return; activeTab = b.dataset.tab;
+  try { localStorage.setItem('hh_balance_tab', activeTab); } catch (e) {}
+  renderTabs();
+});
+function syncTop() {
+  document.getElementById('c-stance').value = P.strategy.stance;
+  document.getElementById('c-target').value = P.general.targetMin;
+  document.getElementById('c-runs').value = P.general.runs;
+}
+document.getElementById('c-stance').addEventListener('change', e => { P.strategy.stance = e.target.value; schedule(); });
+document.getElementById('c-target').addEventListener('change', e => { const v = parseFloat(e.target.value); if (v > 0) { P.general.targetMin = v; renderTabs(); schedule(); } });
+document.getElementById('c-runs').addEventListener('change', e => { const v = parseInt(e.target.value, 10); if (v > 0) { P.general.runs = v; renderTabs(); schedule(); } });
+document.getElementById('btn-run').addEventListener('click', () => runAll());
+document.getElementById('btn-reset').addEventListener('click', () => { P = clone(DEFAULTS); saveParams(); syncTop(); renderTabs(); runAll(); });
+document.getElementById('btn-export').addEventListener('click', async ev => {
+  const txt = JSON.stringify(P, null, 2); const btn = ev.currentTarget;
+  try { await navigator.clipboard.writeText(txt); btn.textContent = 'Copiado!'; }
+  catch (e) { document.getElementById('import-box').hidden = false; const ta = document.getElementById('import-text'); ta.value = txt; ta.select(); btn.textContent = 'Selecionado: copie com Ctrl+C'; }
+  setTimeout(() => { btn.textContent = 'Copiar parâmetros (JSON)'; }, 2200);
+});
+document.getElementById('btn-import-toggle').addEventListener('click', () => { const b = document.getElementById('import-box'); b.hidden = !b.hidden; });
+document.getElementById('btn-import').addEventListener('click', () => {
+  const msg = document.getElementById('import-msg');
+  try { P = mergeDeep(clone(DEFAULTS), JSON.parse(document.getElementById('import-text').value)); saveParams(); syncTop(); renderTabs(); runAll(); msg.textContent = 'Parâmetros aplicados.'; }
+  catch (e) { msg.textContent = 'Não consegui ler esse JSON. Confira se copiou o texto inteiro.'; }
+});
+
+syncTop();
+renderTabs();
+runAll();
+</script>
+
+</body>
+</html>
