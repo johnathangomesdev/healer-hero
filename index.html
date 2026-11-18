@@ -1184,19 +1184,20 @@
     // =========================================================================
     const ITEMS_DB = {
       // equipamento inicial de todo personagem: a própria roupa de aldeão (não muda o sprite)
-      CLOTH_SHIRT: { id: 'CLOTH_SHIRT', name: 'Roupa de Pano', rank: 'C', slot: 'CHEST', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 3, pow: 0, def: 1, spd: 0 }, color: '#a8a29e' },
+      CLOTH_SHIRT: { id: 'CLOTH_SHIRT', name: 'Roupa de Pano', rank: 'C', slot: 'CHEST', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER', 'PALADIN'], bonuses: { vit: 3, pow: 0, def: 1, spd: 0 }, color: '#a8a29e' },
       SAINT_STAFF: { id: 'SAINT_STAFF', name: 'Cajado do Santo', rank: 'C', slot: 'RIGHT_HAND', twoHanded: true, classes: ['SAINT'], bonuses: { vit: 1, pow: 4, def: 0, spd: 0 }, color: '#facc15' },
       EXORCIST_ORB: { id: 'EXORCIST_ORB', name: 'Orbe do Exorcista', rank: 'C', slot: 'RIGHT_HAND', twoHanded: true, classes: ['EXORCIST'], bonuses: { vit: 0, pow: 5, def: 0, spd: 0 }, color: '#38bdf8' },
+      PALADIN_MACE: { id: 'PALADIN_MACE', name: 'Clava do Paladino', rank: 'B', slot: 'RIGHT_HAND', classes: ['PALADIN'], bonuses: { vit: 6, pow: 10, def: 3, spd: 0 }, color: '#fde68a' },
       OLD_SWORD: { id: 'OLD_SWORD', name: 'Espada Velha', rank: 'C', slot: 'RIGHT_HAND', classes: ['TANK'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0 }, color: '#cbd5e1' },
-      WOOD_BUCKLER: { id: 'WOOD_BUCKLER', name: 'Broquel de Madeira', rank: 'C', slot: 'LEFT_HAND', classes: ['TANK'], bonuses: { vit: 1, pow: 0, def: 2, spd: 0 }, color: '#a16207' },
+      WOOD_BUCKLER: { id: 'WOOD_BUCKLER', name: 'Broquel de Madeira', rank: 'C', slot: 'LEFT_HAND', classes: ['TANK', 'PALADIN'], bonuses: { vit: 1, pow: 0, def: 2, spd: 0 }, color: '#a16207' },
       HUNTING_BOW: { id: 'HUNTING_BOW', name: 'Arco de Caça', rank: 'C', slot: 'RIGHT_HAND', classes: ['ARCHER'], bonuses: { vit: 0, pow: 3, def: 0, spd: 0.03 }, color: '#b45309' },
-      CLOTH_BOOTS: { id: 'CLOTH_BOOTS', name: 'Botas de Pano', rank: 'C', slot: 'FEET', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER'], bonuses: { vit: 1, pow: 0, def: 1, spd: 0.03 }, color: '#a8a29e' },
+      CLOTH_BOOTS: { id: 'CLOTH_BOOTS', name: 'Botas de Pano', rank: 'C', slot: 'FEET', classes: ['SAINT', 'EXORCIST', 'MONK', 'TANK', 'ARCHER', 'PALADIN'], bonuses: { vit: 1, pow: 0, def: 1, spd: 0.03 }, color: '#a8a29e' },
       WOODEN_ROSARY: { id: 'WOODEN_ROSARY', name: 'Rosário de Madeira', rank: 'C', slot: 'HEAD', classes: ['SAINT', 'EXORCIST', 'MONK'], bonuses: { vit: 5, pow: 3, def: 1, spd: 0 }, color: '#eab308' },
       EMERALD_CLOAK: { id: 'EMERALD_CLOAK', name: 'Capuz Esmeralda', rank: 'B', slot: 'HEAD', classes: ['ARCHER'], bonuses: { vit: 10, pow: 12, def: 3, spd: 0.05 }, color: '#22c55e' },
       // roupas que trocam o sprite do personagem (ver ITEM_SKIN)
       MONK_ROBE: { id: 'MONK_ROBE', name: 'Manto do Monge', rank: 'B', slot: 'CHEST', classes: ['MONK'], bonuses: { vit: 14, pow: 10, def: 5, spd: 0.08 }, color: '#f59e0b' },
-      KNIGHT_PLATE: { id: 'KNIGHT_PLATE', name: 'Couraça do Vanguarda', rank: 'B', slot: 'CHEST', classes: ['TANK'], bonuses: { vit: 20, pow: 6, def: 12, spd: -0.03 }, color: '#93c5fd' },
-      KNIGHT_GREAVES: { id: 'KNIGHT_GREAVES', name: 'Grevas do Vanguarda', rank: 'C', slot: 'FEET', classes: ['TANK'], bonuses: { vit: 8, pow: 2, def: 6, spd: 0 }, color: '#94a3b8' },
+      KNIGHT_PLATE: { id: 'KNIGHT_PLATE', name: 'Couraça do Vanguarda', rank: 'B', slot: 'CHEST', classes: ['TANK', 'PALADIN'], bonuses: { vit: 20, pow: 6, def: 12, spd: -0.03 }, color: '#93c5fd' },
+      KNIGHT_GREAVES: { id: 'KNIGHT_GREAVES', name: 'Grevas do Vanguarda', rank: 'C', slot: 'FEET', classes: ['TANK', 'PALADIN'], bonuses: { vit: 8, pow: 2, def: 6, spd: 0 }, color: '#94a3b8' },
       KNIGHT_SWORD: { id: 'KNIGHT_SWORD', name: 'Espada do Vanguarda', rank: 'B', slot: 'RIGHT_HAND', classes: ['TANK'], bonuses: { vit: 4, pow: 14, def: 2, spd: 0.04 }, color: '#e2e8f0' },
       ELVEN_TUNIC: { id: 'ELVEN_TUNIC', name: 'Túnica Élfica', rank: 'B', slot: 'CHEST', classes: ['ARCHER'], bonuses: { vit: 10, pow: 10, def: 4, spd: 0.08 }, color: '#4ade80' },
       ELVEN_BOOTS: { id: 'ELVEN_BOOTS', name: 'Botas Élficas', rank: 'C', slot: 'FEET', classes: ['ARCHER'], bonuses: { vit: 5, pow: 4, def: 2, spd: 0.1 }, color: '#86efac' },
@@ -1204,9 +1205,9 @@
       ELVEN_QUIVER: { id: 'ELVEN_QUIVER', name: 'Aljava de Flechas', rank: 'C', slot: 'LEFT_HAND', classes: ['ARCHER'], bonuses: { vit: 0, pow: 6, def: 0, spd: 0.06 }, color: '#d9a35f' },
       PILGRIM_SANDALS: { id: 'PILGRIM_SANDALS', name: 'Sandálias do Peregrino', rank: 'C', slot: 'FEET', classes: ['MONK'], bonuses: { vit: 4, pow: 2, def: 2, spd: 0.08 }, color: '#d97706' },
       FATHER_WRAPS: { id: 'FATHER_WRAPS', name: 'Bandagens do Pai', rank: 'B', slot: 'RIGHT_HAND', twoHanded: true, classes: ['MONK'], bonuses: { vit: 12, pow: 10, def: 4, spd: 0.10 }, color: '#f97316' },
-      IRON_BUCKLER: { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', rank: 'B', slot: 'LEFT_HAND', classes: ['TANK'], bonuses: { vit: 15, pow: 4, def: 12, spd: -0.02 }, color: '#94a3b8' },
+      IRON_BUCKLER: { id: 'IRON_BUCKLER', name: 'Rodela de Ferro', rank: 'B', slot: 'LEFT_HAND', classes: ['TANK', 'PALADIN'], bonuses: { vit: 15, pow: 4, def: 12, spd: -0.02 }, color: '#94a3b8' },
       CRIMSON_WRAPS: { id: 'CRIMSON_WRAPS', name: 'Bandagens Carmesim', rank: 'B', slot: 'RIGHT_HAND', twoHanded: true, classes: ['MONK'], bonuses: { vit: 8, pow: 14, def: 3, spd: 0.12 }, color: '#ef4444' },
-      GOLDEN_ARMOR: { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', rank: 'A', slot: 'CHEST', classes: ['TANK'], bonuses: { vit: 35, pow: 22, def: 18, spd: 0.05 }, color: '#facc15' },
+      GOLDEN_ARMOR: { id: 'GOLDEN_ARMOR', name: 'Armadura da Alvorada', rank: 'A', slot: 'CHEST', classes: ['TANK', 'PALADIN'], bonuses: { vit: 35, pow: 22, def: 18, spd: 0.05 }, color: '#facc15' },
       NECRO_MANTLE_SS: { id: 'NECRO_MANTLE_SS', name: 'Cajado do Necromante', rank: 'SS', slot: 'RIGHT_HAND', twoHanded: true, classes: ['EXORCIST', 'SAINT'], bonuses: { vit: 80, pow: 85, def: 42, spd: 0.50 }, color: '#c084fc' }
     };
 
@@ -1220,7 +1221,7 @@
       DIVINE:    { label: 'Divino',   color: '#fde68a', order: 5, sparkle: true } // dourado com brilhos brancos
     };
     Object.entries({
-      SAINT_STAFF: 'COMMON', EXORCIST_ORB: 'COMMON', CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', OLD_SWORD: 'COMMON', WOOD_BUCKLER: 'COMMON', HUNTING_BOW: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
+      SAINT_STAFF: 'COMMON', EXORCIST_ORB: 'COMMON', PALADIN_MACE: 'UNCOMMON', CLOTH_SHIRT: 'COMMON', CLOTH_BOOTS: 'COMMON', OLD_SWORD: 'COMMON', WOOD_BUCKLER: 'COMMON', HUNTING_BOW: 'COMMON', WOODEN_ROSARY: 'COMMON', PILGRIM_SANDALS: 'COMMON', KNIGHT_GREAVES: 'COMMON', ELVEN_BOOTS: 'COMMON', ELVEN_BOW: 'COMMON', ELVEN_QUIVER: 'COMMON',
       FATHER_WRAPS: 'UNCOMMON', MONK_ROBE: 'UNCOMMON', KNIGHT_PLATE: 'UNCOMMON', KNIGHT_SWORD: 'UNCOMMON', ELVEN_TUNIC: 'UNCOMMON',
       EMERALD_CLOAK: 'RARE', CRIMSON_WRAPS: 'RARE',
       IRON_BUCKLER: 'MYTHIC',
@@ -1269,6 +1270,15 @@
         cost: 95,
         gear: ['KNIGHT_SWORD', 'KNIGHT_PLATE', 'IRON_BUCKLER', 'KNIGHT_GREAVES'], // já vem equipado (tudo Comum)
         stats: { vit: 38, pow: 16, def: 15, spd: 0.88 }
+      },
+      PALADIN: {
+        id: 'PALADIN',
+        name: 'Paladino da Aurora',
+        classLabel: 'Defensor / Curandeiro',
+        rig: 'TANK', classTag: 'PALADIN',
+        cost: 110,
+        gear: ['PALADIN_MACE', 'KNIGHT_PLATE', 'WOOD_BUCKLER', 'KNIGHT_GREAVES'], // clava e escudo (tudo Comum)
+        stats: { vit: 34, pow: 13, def: 14, spd: 0.82 }
       },
       ELVEN_ARCHER: {
         id: 'ELVEN_ARCHER',
@@ -1359,7 +1369,7 @@
     // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
     // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
     // =========================================================================
-    const BAL_VERSION = 5;
+    const BAL_VERSION = 6;
     const BAL = (() => {
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
@@ -2271,6 +2281,70 @@
     // =========================================================================
     // 6. SKILLS ATIVAS E ULTIMATE
     // =========================================================================
+    // ---- Ultimate dos mercenários (1 skill cada, usada sozinha quando carrega) ----
+    const MERC_ULT = {
+      VANGUARD_WARRIOR: { cd: 12, name: 'Espadada Carregada', desc: 'Golpe carregado que acerta todos os monstros perto dele.' },
+      ELVEN_ARCHER: { cd: 13, name: 'Chuva de Flechas', desc: 'Flechas caem do céu sobre todos os monstros.' },
+      PALADIN: { cd: 14, name: 'Luz Restauradora', desc: 'Cura a si mesmo quando está com pouca vida.' }
+    };
+    let arrowRain = [];
+    function tickMercUltimates(dt) {
+      for (const r of arrowRain) { r.t += dt; }
+      arrowRain = arrowRain.filter(r => r.t < r.fall + 0.25);
+      if (state.isDefeated || state.isVictory || state.isScrolling || state.awaitingAct2Lock) return;
+      const enemies = getLivingEnemies();
+      for (const s of [0, 1]) {
+        const a = partySlots[s];
+        if (!a || a.isDead || !a.mercKey || !MERC_ULT[a.mercKey]) continue;
+        const U = MERC_ULT[a.mercKey];
+        if (a.ultCd === undefined) a.ultCd = U.cd * 0.5;
+        a.ultCd -= dt;
+        if (a.ultCd > 0 || a.anim) continue;
+        const pow = a.getPow();
+        if (a.mercKey === 'PALADIN') {
+          if (a.hp / a.maxHp > 0.55) continue;
+          a.ultCd = U.cd;
+          a.triggerAttackAnim(() => {
+            a.receiveHeal(a.maxHp * 0.3 + pow * 1.6, 0);
+            shockwaveRings.push({ x: a.x, y: a.y - 18, color: '#fde68a', maxR: 46, ttl: 0.5, maxTtl: 0.5 });
+            spawnParticles(a.x, a.y - 22, '#fef08a', 16, 0);
+          }, 'ULTIMATE');
+        } else if (!enemies.length) {
+          continue;
+        } else if (a.mercKey === 'ELVEN_ARCHER') {
+          a.ultCd = U.cd;
+          a.triggerAttackAnim(() => {
+            const tg = getLivingEnemies();
+            for (const e of tg) for (let k = 0; k < 5; k++) arrowRain.push({ x: e.x + (Math.random() - 0.5) * 40, t: -k * 0.05 - Math.random() * 0.05, fall: 0.32 });
+            setTimeout(() => { for (const e of tg) if (!e.isDead) e.receiveDamage(pow * 1.7, a, false, false); }, 360);
+          }, 'ULTIMATE');
+        } else {
+          const near = enemies.filter(e => Math.abs(e.x - a.x) <= 95);
+          if (!near.length) continue;
+          a.ultCd = U.cd;
+          a.triggerAttackAnim(() => {
+            for (const e of getLivingEnemies()) if (Math.abs(e.x - a.x) <= 95) e.receiveDamage(pow * 2.3, a, false, true);
+            shockwaveRings.push({ x: a.x + 30 * a.facing, y: a.y - 14, color: '#e0f2fe', maxR: 80, ttl: 0.45, maxTtl: 0.45 });
+            slashArcs.push({ x: a.x + 22 * a.facing, y: a.y - 20, facing: a.facing, uppercut: false, color: '#e0f2fe', ttl: 0.3, maxTtl: 0.3 });
+            triggerShake(3, 0.2);
+          }, 'ULTIMATE');
+        }
+        spawnFloatingText(a.x, a.y - 66, U.name + '!', '#fde047');
+        sfx.play('SKILL');
+      }
+    }
+    function drawArrowRain() {
+      for (const r of arrowRain) {
+        if (r.t < 0) continue;
+        const k = Math.min(1, r.t / r.fall), y = GROUND_Y - 170 + 166 * k;
+        ctx.save(); ctx.translate(r.x + (1 - k) * 18, y); ctx.rotate(Math.PI / 2 + 0.1);
+        ctx.globalAlpha = r.t > r.fall ? Math.max(0, 1 - (r.t - r.fall) / 0.25) : 1;
+        ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(5, 0); ctx.stroke();
+        ctx.fillStyle = '#e5e7eb'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(4, -2.2); ctx.lineTo(4, 2.2); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#f8fafc'; ctx.fillRect(-10, -1.6, 3, 3.2);
+        ctx.restore();
+      }
+    }
     function tryCastHeroSkill(slot) {
       const healer = partySlots[2];
       if (!healer || healer.isDead) return false;
@@ -2433,6 +2507,7 @@
         document.getElementById(`cd-mask-${s}`).style.height = `${Math.round((cd.rem / cd.total) * 100)}%`;
       }
 
+      tickMercUltimates(dt);
       if (state.isAutoSkill && !state.isDefeated && !state.isVictory && !state.awaitingAct2Lock) {
         if (state.cooldowns[3].rem <= 0) tryCastHeroSkill(3);
         else if (state.cooldowns[2].rem <= 0) tryCastHeroSkill(2);
@@ -2929,6 +3004,13 @@
     }
 
     // ---- Rastro de movimento: guarda uma cópia do estado de desenho do herói neste instante ----
+    function drawMaceShape(g) {
+      cPoly(g, [[-1.1, 3], [1.1, 3], [1.1, -9], [-1.1, -9]], '#7c4a1e');
+      cPoly(g, [[-2, 3.5], [2, 3.5], [2, 1.8], [-2, 1.8]], '#a16207');
+      for (let k = 0; k < 6; k++) { const an = k * Math.PI / 3; cPoly(g, [[Math.cos(an) * 3, -12 + Math.sin(an) * 3], [Math.cos(an + 0.3) * 5.3, -12 + Math.sin(an + 0.3) * 5.3], [Math.cos(an + 0.6) * 3, -12 + Math.sin(an + 0.6) * 3]], '#cbd5e1'); }
+      cCircle(g, 0, -12, 3.6, '#e2e8f0');
+      cCircle(g, -1, -13, 1, '#ffffff', false);
+    }
     // ---- Rastro do golpe: segue a ponta da arma / o punho (pontos em pixels da tela) ----
     const TRAIL_LIFE = 0.13;
     function trailRecord(g, ent, lx, ly) {
@@ -3025,6 +3107,7 @@
 
     // ---- Ícone dos itens: as próprias peças dos sprites (com tinta quando a peça é reaproveitada) ----
     const ITEM_ART = {
+      PALADIN_MACE: { draw: g => { g.rotate(0.55); drawMaceShape(g); } },
       SAINT_STAFF: { draw: g => { g.rotate(0.6); cPoly(g, [[-1.3, 9], [1.3, 9], [1.2, -15], [-1.2, -15]], '#eab308'); cPoly(g, [[-4.6, -13.6], [-1.6, -15.6], [-1.6, -17.4], [-3.6, -19.4]], '#fde047'); cPoly(g, [[4.6, -13.6], [1.6, -15.6], [1.6, -17.4], [3.6, -19.4]], '#fde047'); cNgon(g, 0, -18, 3.6, 6, Math.PI / 6, '#fef9c3'); cStar(g, 0, -18, 2.9, '#facc15'); } },
       EXORCIST_ORB: { draw: g => { g.translate(0, -5); g.globalCompositeOperation = 'lighter'; cCircle(g, 0, 0, 11, 'rgba(56,189,248,0.3)', false); g.globalCompositeOperation = 'source-over'; cNgon(g, 0, 0, 6.5, 6, 0.3, '#7dd3fc'); cCircle(g, -1.6, -1.6, 2, '#ffffff', false); } },
       CLOTH_SHIRT: { lib: 'rig', img: 'torso' },
@@ -3734,6 +3817,7 @@
 
       for (const ent of list) drawEntity(ent);
       drawWeaponTrails();
+      drawArrowRain();
 
       // primeiro plano (arbustos na borda de baixo, na frente dos personagens)
       scnDraw(ctx, 5, 5);
@@ -4547,6 +4631,13 @@
       let aR = aB, aL = aF;
       if (isTank) { aR = aF; aL = -0.5 + (pose.armB + 0.25) * 0.3; }
       const heldSword = () => {
+        if (eqSlots.RIGHT_HAND === 'PALADIN_MACE') { // paladino: clava desenhada por código
+          const handAngle = (-aR - 0.34) + (bendCache.R || 0);
+          g.rotate(handAngle + Math.PI / 2 + (pose.wpn - rest.wpn) * 0.3 - 0.25);
+          sprCode(g, 'clava_paladino', () => drawMaceShape(g));
+          trailRecord(g, ent, 0, -13);
+          return;
+        }
         const sw = SK.sword || HUMAN_SKINS.base.sword;
         // espada perpendicular à mão: volta para o referencial do antebraço e gira 90° para a frente.
         // O golpe move a espada junto com o braço; o pulso só acrescenta um pequeno estalo.
@@ -6113,6 +6204,7 @@
               <span class="ui-tiny px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-700">Lv.1</span>
             </div>
             <div class="ui-body text-amber-300">${m.classLabel}</div>
+            ${MERC_ULT[mKey] ? `<div class="ui-tiny text-fuchsia-300" data-tip="<b>${MERC_ULT[mKey].name}</b> (Ultimate)<br>${MERC_ULT[mKey].desc}<br>Recarga: ${MERC_ULT[mKey].cd}s">✦ ${MERC_ULT[mKey].name}</div>` : ""}
             <div class="ui-num text-slate-300 mt-0.5">VIT:${m.stats.vit} POW:${m.stats.pow} DEF:${m.stats.def}</div>
             <div class="flex items-center gap-1 mt-1">${(m.gear || []).filter(id => ITEMS_DB[id]).map(id => instView({ uid: '', id, tier: 'COMMON', plus: 0 })).map(it =>
               `<div class="relative w-6 h-6 rounded-md border bg-slate-900 flex items-center justify-center" style="${tierFrameStyle(it)}" data-tip="${itemTipTitle(it).replace(/"/g, '&quot;')}<br>Vem equipado com o mercenário.">${itemIconHtml(it, 'w-[85%] h-[85%]')}</div>`).join('')}</div>
@@ -6187,7 +6279,7 @@
       merc.exp = 0;
       merc.mercKey = mercKey;
       partySlots[slotIdx] = merc;
-      state.slotClassTags[slotIdx] = m.rig;
+      state.slotClassTags[slotIdx] = m.classTag || m.rig;
       unequipIncompatible(slotIdx);
       giveMercGear(slotIdx, mercKey);
       giveStarterGear(slotIdx); // o que o mercenário não trouxe vem de pano

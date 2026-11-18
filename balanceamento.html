@@ -198,7 +198,7 @@ const STANCE_PT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
 const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
-  version: 5, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  version: 6, // mude junto com BAL_VERSION do jogo quando as regras mudarem
   general: { secondMercMin: 1000, targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
@@ -212,6 +212,7 @@ const DEFAULTS = {
     { id: 'CLOTH_SHIRT', name: 'Roupa de Pano (inicial)', slot: 'CHEST', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK,TANK,ARCHER', vit: 3, pow: 0, def: 1, spd: 0, pool: false },
     { id: 'SAINT_STAFF', name: 'Cajado do Santo (2 mãos)', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'SAINT', vit: 1, pow: 4, def: 0, spd: 0, pool: false },
     { id: 'EXORCIST_ORB', name: 'Orbe do Exorcista (2 mãos)', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'EXORCIST', vit: 0, pow: 5, def: 0, spd: 0, pool: false },
+    { id: 'PALADIN_MACE', name: 'Clava do Paladino', slot: 'RIGHT_HAND', tier: 'UNCOMMON', classes: 'TANK', vit: 6, pow: 10, def: 3, spd: 0, pool: false },
     { id: 'OLD_SWORD', name: 'Espada Velha (pai)', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'TANK', vit: 0, pow: 3, def: 0, spd: 0, pool: false },
     { id: 'WOOD_BUCKLER', name: 'Broquel de Madeira (pai)', slot: 'LEFT_HAND', tier: 'COMMON', classes: 'TANK', vit: 1, pow: 0, def: 2, spd: 0, pool: false },
     { id: 'HUNTING_BOW', name: 'Arco de Caça (filha)', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'ARCHER', vit: 0, pow: 3, def: 0, spd: 0.03, pool: false },
@@ -273,6 +274,7 @@ const DEFAULTS = {
   ],
   mercs: [
     { id: 'VANGUARD_WARRIOR', name: 'Guerreiro Vanguarda', role: 'TANK', cost: 95, vit: 38, pow: 16, def: 15, spd: 0.88, unlock: '2-1', gear: 'KNIGHT_SWORD,KNIGHT_PLATE,IRON_BUCKLER,KNIGHT_GREAVES', active: true },
+    { id: 'PALADIN', name: 'Paladino da Aurora', role: 'TANK', cost: 110, vit: 34, pow: 13, def: 14, spd: 0.82, unlock: '2-1', gear: 'PALADIN_MACE,KNIGHT_PLATE,WOOD_BUCKLER,KNIGHT_GREAVES', active: true },
     { id: 'ELVEN_ARCHER', name: 'Arqueira Élfica', role: 'ARCHER', cost: 125, vit: 22, pow: 24, def: 6, spd: 1.35, unlock: '2-1', gear: 'ELVEN_BOW,ELVEN_BOOTS,ELVEN_QUIVER,EMERALD_CLOAK', active: true },
     { id: 'TEMPLAR', name: 'Templário (sugestão)', role: 'TANK', cost: 650, vit: 70, pow: 28, def: 26, spd: 0.92, unlock: '3-1', gear: '', active: false },
     { id: 'SHADOW_HUNTRESS', name: 'Caçadora Sombria (sugestão)', role: 'ARCHER', cost: 900, vit: 40, pow: 46, def: 12, spd: 1.45, unlock: '4-1', gear: '', active: false }
