@@ -107,6 +107,8 @@
     }
     input, textarea, select { -webkit-user-select: text; user-select: text; }
     .icon-btn.hidden, .menu-btn.hidden { display: none !important; }
+    /* no toque, o arrastar é feito pela ponte touchDragDrop (JS); desliga o arrastar nativo do iOS */
+    @media (pointer: coarse) { [draggable="true"] { -webkit-user-drag: none; } }
 
     .mono {
       font-family: 'JetBrains Mono', monospace;
@@ -5494,6 +5496,7 @@
       if (partySlots[slotIdx]) partySlots[slotIdx].applyEquipmentBonuses();
     }
 
+    const bagLastTap = { uid: null, t: 0 }; // detecção de clique duplo nos itens da bolsa
     function equipItem(slotIdx, uid) {
       const inst = invGet(uid);
       const it = inst && ITEMS_DB[inst.id];
@@ -5641,10 +5644,20 @@
         if (it) {
           cell.style.cssText = tierFrameStyle(it);
           cell.draggable = true;
-          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
+          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
           cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]');
           cell.ondragstart = e => { e.dataTransfer.setData('text/plain', 'bag:' + inst.uid); e.dataTransfer.effectAllowed = 'move'; };
           cell.ondragend = e => askDestroyIfOutside(e, inst);
+          // clique/toque duplo = equipa no personagem selecionado (troca com o que estiver no slot)
+          cell.onclick = () => {
+            const now = performance.now();
+            if (bagLastTap.uid === inst.uid && now - bagLastTap.t < 400) {
+              bagLastTap.uid = null;
+              equipItem(sIdx, inst.uid);
+            } else {
+              bagLastTap.uid = inst.uid; bagLastTap.t = now;
+            }
+          };
         }
         bag.appendChild(cell);
       }
@@ -7257,6 +7270,114 @@
     }
     document.addEventListener('pointerdown', requestWakeLock, { passive: true });
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') requestWakeLock(); });
+
+    // Toque -> Drag & Drop HTML5: no celular o arrastar nativo (draggable/dataTransfer) não dispara com o dedo.
+    // Esta ponte gera dragstart/dragenter/dragover/dragleave/drop/dragend a partir dos eventos de toque,
+    // então bolsa, slots de equipamento, formação e forja funcionam sem mudar seus handlers.
+    // Dentro de listas com rolagem é preciso segurar ~0,2s antes de arrastar (senão é rolagem).
+    (function touchDragDrop() {
+      const HOLD_MS = 220, MOVE_PX = 8;
+      let pend = null, drag = null, suppressClick = false;
+      function makeDT() {
+        const store = {};
+        return {
+          dropEffect: 'none', effectAllowed: 'all',
+          get types() { return Object.keys(store); },
+          setData(t, v) { store[t] = String(v); },
+          getData(t) { return store[t] || ''; },
+          clearData() { for (const k in store) delete store[k]; },
+          setDragImage() {}
+        };
+      }
+      function fire(target, type, dt, x, y) {
+        const ev = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(ev, 'dataTransfer', { value: dt });
+        Object.defineProperty(ev, 'clientX', { value: x });
+        Object.defineProperty(ev, 'clientY', { value: y });
+        target.dispatchEvent(ev);
+        return ev.defaultPrevented;
+      }
+      function inScrollable(el) {
+        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+          const cs = getComputedStyle(p);
+          if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX) &&
+              (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1)) return true;
+        }
+        return false;
+      }
+      function cancelPending() { if (pend) { clearTimeout(pend.timer); pend = null; } }
+      function start(x, y) {
+        const src = pend.el; cancelPending();
+        if (!src.isConnected) return;
+        const dt = makeDT();
+        fire(src, 'dragstart', dt, x, y);
+        // "fantasma" que segue o dedo (mesma escala da HUD)
+        const r = src.getBoundingClientRect();
+        const s = HUD_S > 0 ? HUD_S : 1;
+        const ghost = src.cloneNode(true);
+        ghost.removeAttribute('id');
+        ghost.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+        Object.assign(ghost.style, {
+          position: 'fixed', left: '0', top: '0', margin: '0', zIndex: '10000', opacity: '0.85',
+          width: (r.width / s) + 'px', height: (r.height / s) + 'px',
+          pointerEvents: 'none', transformOrigin: '0 0', filter: 'drop-shadow(0 6px 10px rgba(0,0,0,.6))'
+        });
+        document.body.appendChild(ghost);
+        drag = { src, dt, ghost, s, offX: x - r.left, offY: y - r.top, over: null, accepted: false, x, y };
+        move(x, y);
+      }
+      function move(x, y) {
+        const d = drag; d.x = x; d.y = y;
+        d.ghost.style.transform = `translate(${x - d.offX}px, ${y - d.offY}px) scale(${d.s})`;
+        const t = document.elementFromPoint(x, y);
+        if (t !== d.over) {
+          if (d.over) fire(d.over, 'dragleave', d.dt, x, y);
+          d.over = t;
+          if (t) fire(t, 'dragenter', d.dt, x, y);
+        }
+        d.accepted = t ? fire(t, 'dragover', d.dt, x, y) : false;
+      }
+      function end(cancel) {
+        const d = drag; drag = null;
+        d.ghost.remove();
+        let dropped = false;
+        if (!cancel && d.over && d.accepted) { fire(d.over, 'drop', d.dt, d.x, d.y); dropped = true; }
+        else if (d.over) fire(d.over, 'dragleave', d.dt, d.x, d.y);
+        d.dt.dropEffect = dropped ? 'move' : 'none';
+        fire(d.src, 'dragend', d.dt, cancel ? 0 : d.x, cancel ? 0 : d.y);
+        suppressClick = true; setTimeout(() => { suppressClick = false; }, 400);
+      }
+      document.addEventListener('touchstart', e => {
+        cancelPending();
+        if (drag || e.touches.length !== 1) return;
+        const el = e.target.closest && e.target.closest('[draggable="true"]');
+        if (!el) return;
+        const t = e.touches[0];
+        pend = { el, x: t.clientX, y: t.clientY, hold: inScrollable(el), timer: 0 };
+        if (pend.hold) pend.timer = setTimeout(() => { if (pend) start(pend.x, pend.y); }, HOLD_MS);
+      }, { passive: true });
+      document.addEventListener('touchmove', e => {
+        const t = e.touches[0];
+        if (drag) { e.preventDefault(); move(t.clientX, t.clientY); return; }
+        if (!pend) return;
+        if (pend.hold) {
+          if (Math.hypot(t.clientX - pend.x, t.clientY - pend.y) >= MOVE_PX) cancelPending(); // virou rolagem
+          return;
+        }
+        e.preventDefault();
+        if (Math.hypot(t.clientX - pend.x, t.clientY - pend.y) >= MOVE_PX) start(t.clientX, t.clientY);
+      }, { passive: false });
+      const finish = cancel => e => {
+        cancelPending();
+        if (drag) { if (e.cancelable) e.preventDefault(); end(cancel); }
+      };
+      document.addEventListener('touchend', finish(false), { passive: false });
+      document.addEventListener('touchcancel', finish(true), { passive: false });
+      // depois de arrastar, não deixa o toque virar "clique" no item
+      document.addEventListener('click', e => {
+        if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+      }, true);
+    })();
 
     // Autosave: salva a cada 30s em jogo e sempre que a página vai para segundo plano
     // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
