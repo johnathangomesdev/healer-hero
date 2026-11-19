@@ -86,6 +86,13 @@
 - Robô tem vigia anti-travamento (4 s parado → `startStage`).
 - Ritmo após 5 fases (robô, escala Atos 2-5 ×0.8): Monge ~29, Santo ~38, Exorcista ~77 min. Pendente: equilibrar Exorcista e garantir ≥30 min no Monge.
 
+## 3f. Fragmentos (2026-11-19)
+
+- `state.frags = {COMMON..DIVINE}` (salvo no save; `frags()` cria se faltar). Craft tem 4 modos: Combinar, Refinar, **Quebrar** (`salvageItem`: destrói o item e dá `BAL.fragYield + BAL.fragPerPlus × plus` fragmentos do tier dele), **Trocar** (`tradeFrags`: `BAL.fragTrade` de um tier → 1 do seguinte). Barra `#craft-frags` mostra o saldo.
+- Refinar custa ouro + `refineFragCost(inst)` = `fragRefine × (1 + ⌊plus/2⌋)` fragmentos do tier do item; falha perde os dois.
+- Robô e simulador: bolsa cheia → quebra o pior (não descarta mais); faltando fragmento para refinar → quebra o pior item do mesmo tier na bolsa, depois troca fragmentos de tiers abaixo. Painel: campos na aba Itens.
+- Efeito no simulador (Santo, padrões): 63 → ~85 min, refinos 116 → ~71, combinações 37 → ~6.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.

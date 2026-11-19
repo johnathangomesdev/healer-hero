@@ -204,6 +204,7 @@ const DEFAULTS = {
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
   skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
   items: { tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
+    fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 5,
     tierMult: { COMMON: 1, UNCOMMON: 1.3, RARE: 1.7, MYTHIC: 2.2, LEGENDARY: 3, DIVINE: 4 },
     combineCost: { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 },
     combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
@@ -326,7 +327,7 @@ function simulate(P, seed) {
   });
   const S = { t: G.tutorialSec, gold: 0, dpe: G.startDpe, goldEarned: 0, goldSpent: 0, dpeEarned: 0, dpeSpent: 0,
     inv: [], tabs: 1, stance: 'SAINT', skill: { 1: 1, 2: 1, 3: 1 }, party: { 0: null, 1: null, 2: null },
-    tutorial: true, defeats: 0, combines: 0, combineUps: 0, refines: 0, refineFails: 0, discarded: 0, hires: 0, drops: 0,
+    tutorial: true, defeats: 0, combines: 0, combineUps: 0, refines: 0, refineFails: 0, discarded: 0, hires: 0, drops: 0, frags: { COMMON: 0, UNCOMMON: 0, RARE: 0, MYTHIC: 0, LEGENDARY: 0, DIVINE: 0 }, fragsEarned: 0,
     rows: [], furthest: 0, uid: 1, owned: new Set(), stuck: false, finished: false, actEnd: {} };
 
   // ---------- heróis ----------
@@ -587,8 +588,30 @@ function simulate(P, seed) {
       const c = IT.tabCosts[S.tabs - 1];
       if (S.tabs <= IT.tabCosts.length && c !== undefined && S.gold - c >= reserve) { pay(c); S.tabs++; continue; }
       const bag = bagItems().sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
+      // quebra o pior em fragmentos (igual ao jogo)
+      const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (bag[0].plus || 0)));
+      S.frags[bag[0].tier] += n; S.fragsEarned += n;
       S.inv = S.inv.filter(i => i !== bag[0]); S.discarded++;
     }
+    const fragNeed = i => Math.max(1, Math.round(IT.fragRefine * (1 + Math.floor(i.plus / 2))));
+    const tradeRate = Math.max(1, Math.round(IT.fragTrade));
+    const fragsFor = (tier, need) => { // troca fragmentos dos tiers de baixo, se faltar
+      const k = TIERS.indexOf(tier);
+      // 1º quebra o pior item do mesmo tier que está na bolsa
+      while (S.frags[tier] < need) {
+        const bag = bagItems().filter(i => i.tier === tier).sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
+        if (!bag.length) break;
+        const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (bag[0].plus || 0)));
+        S.frags[tier] += n; S.fragsEarned += n; S.inv = S.inv.filter(i => i !== bag[0]); S.discarded++;
+      }
+      // 2º troca fragmentos dos tiers de baixo
+      for (let g = 0; g < 100 && S.frags[tier] < need; g++) {
+        let j = k - 1; while (j >= 0 && S.frags[TIERS[j]] < tradeRate) j--;
+        if (j < 0) return false;
+        S.frags[TIERS[j]] -= tradeRate; S.frags[TIERS[j + 1]] += 1;
+      }
+      return S.frags[tier] >= need;
+    };
     if (ST.doRefine) {
       for (let guard = 0; guard < 200; guard++) {
         let best = null, bv = 0;
@@ -596,12 +619,13 @@ function simulate(P, seed) {
           if (i.owner === null || i.plus >= IT.refineMax) continue;
           const c = IT.refineBase[i.tier] * (i.plus + 1);
           if (S.gold - c < reserve) continue;
+          if (S.frags[i.tier] < fragNeed(i) && !fragsFor(i.tier, fragNeed(i))) continue;
           const role = S.party[i.owner].role;
           const gain = itemScore({ ...i, plus: i.plus + 1 }, role) - itemScore(i, role);
           const v = gain / c; if (v > bv) { bv = v; best = i; }
         }
         if (!best) break;
-        const c = IT.refineBase[best.tier] * (best.plus + 1); pay(c);
+        const c = IT.refineBase[best.tier] * (best.plus + 1); pay(c); S.frags[best.tier] -= fragNeed(best);
         if (rnd() < Math.max(0.15, 0.95 - best.plus * 0.08)) { best.plus++; S.refines++; } else S.refineFails++;
       }
       equipAll();
@@ -869,7 +893,7 @@ function renderTabs() {
     <div class="group-title">Fórmulas de combate</div><div class="fields">${fld('general.critChance', 'Chance de crítico')}${fld('general.critMult', 'Multiplicador do crítico')}${fld('general.defMit', 'Defesa: redução por ponto')}${fld('general.hpBase', 'HP base')}${fld('general.hpPerVit', 'HP por VIT')}</div>`;
   else if (activeTab === 'prog') b.innerHTML = `<div class="fields">${fld('progression.expBase', 'EXP para o nível 2')}${fld('progression.expGrowth', 'Crescimento da EXP por nível (×)')}${fld('progression.ptsPerLevel', 'Pontos por nível', 1)}${fld('progression.vitPerPt', 'VIT por ponto')}${fld('progression.powPerPt', 'POW por ponto')}${fld('progression.defPerPt', 'DEF por ponto')}${fld('progression.spdPerPt', 'SPD por ponto')}</div>${expTable()}`;
   else if (activeTab === 'skills') b.innerHTML = `<div class="fields">${fld('skills.cost1', 'Custo Lv2 da passiva (DPE)')}${fld('skills.cost2', 'Custo Lv2 da ativa (DPE)')}${fld('skills.cost3', 'Custo Lv2 da ultimate (DPE)')}${fld('skills.costGrowth', 'Crescimento do custo por nível (×)')}${fld('skills.passBase', 'Força da passiva no Lv1 (× POW)')}${fld('skills.sk2Base', 'Força da ativa no Lv1 (× POW)')}${fld('skills.ultBase', 'Força da ultimate no Lv1 (× POW)')}${fld('skills.perLevel', 'Força extra por nível (× POW)')}${fld('skills.cd2', 'Recarga da ativa (s)')}${fld('skills.cd3', 'Recarga da ultimate (s)')}</div>`;
-  else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.tierDecay', 'Queda por tier acima de Comum (×)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
+  else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.tierDecay', 'Queda por tier acima de Comum (×)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${fld('items.fragYield', 'Fragmentos ao quebrar um item', 1)}${fld('items.fragPerPlus', 'Fragmentos extras por nível de refino do item quebrado')}${fld('items.fragRefine', 'Fragmentos por refino (× 1 + nível÷2)')}${fld('items.fragTrade', 'Fragmentos para trocar por 1 do tier acima', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
     ${tierFields('tierMult', 'Multiplicador de status por tier', 'any')}${tierFields('combineCost', 'Custo de combinar 3 itens (ouro)', 'any')}${tierFields('combineUp', 'Chance de subir de tier ao combinar (0–1)', 'any')}${tierFields('refineBase', 'Custo base do refino (× nível do refino)', 'any')}`;
   else if (activeTab === 'lista') b.innerHTML = `<p class="sub" style="margin-bottom:8px">“No sorteio” marca os itens que podem cair aleatoriamente dos monstros depois do tutorial. Classes: SAINT, EXORCIST, MONK, TANK, ARCHER.</p>` + tableEditor('itemList', [
     { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'slot', label: 'Espaço', type: 'select', opts: SLOTS.map(s => [s, { HEAD: 'Cabeça', CHEST: 'Peito', RIGHT_HAND: 'Mão dir.', LEFT_HAND: 'Mão esq.', FEET: 'Pés' }[s]]) },

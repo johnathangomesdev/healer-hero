@@ -539,7 +539,7 @@
       <button data-drawer="4" class="drawer-btn icon-btn w-8 h-8 relative ui-btn" data-tip="<b>Taverna de Mercenários</b><br>Contrate mercenários Lv.1 para preencher sua equipe.">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       </button>
-      <button data-drawer="5" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Craft</b><br>Combine 3 itens do mesmo tier ou refine um equipamento.">
+      <button data-drawer="5" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Craft</b><br>Combine 3 itens do mesmo tier, refine um equipamento (ouro + fragmentos), quebre itens em fragmentos ou troque fragmentos por um tier acima.">
         <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
       </button>
     </div>
@@ -661,8 +661,11 @@
             <div class="flex items-center gap-1">
               <button id="craft-mode-combine" class="icon-btn ui-btn flex-1 py-0.5">⚒ Combinar</button>
               <button id="craft-mode-refine" class="icon-btn ui-btn flex-1 py-0.5">✦ Refinar</button>
+              <button id="craft-mode-salvage" class="icon-btn ui-btn flex-1 py-0.5">✂ Quebrar</button>
+              <button id="craft-mode-trade" class="icon-btn ui-btn flex-1 py-0.5">⇄ Trocar</button>
             </div>
             <div id="craft-body" class="flex-1 flex flex-col items-center justify-center gap-1.5"></div>
+            <div id="craft-frags" class="flex items-center justify-center gap-2 flex-wrap border-t border-slate-700/70 pt-1"></div>
           </div>
         </div>
       </div>
@@ -1374,6 +1377,7 @@
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
+        fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 5,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
@@ -1388,7 +1392,7 @@
         take(P.general, ['secondMercMin', 'critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
         take(P.progression, ['expBase', 'expGrowth', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
         take(P.skills, ['cost1', 'cost2', 'cost3', 'costGrowth', 'passBase', 'sk2Base', 'ultBase', 'perLevel', 'cd2', 'cd3']);
-        take(P.items, ['tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab']);
+        take(P.items, ['tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab', 'fragYield', 'fragPerPlus', 'fragRefine', 'fragTrade']);
         const IT = P.items || {};
         if (Array.isArray(IT.tabCosts)) B.tabCosts = IT.tabCosts.map((v, i) => num(+v, B.tabCosts[i] || 0));
         if (IT.tierMult) for (const t of TIER_KEYS) TIER_MULT[t] = num(IT.tierMult[t], TIER_MULT[t]);
@@ -5434,18 +5438,48 @@
     if (BAL.combineCost) Object.assign(COMBINE_COST, BAL.combineCost);
     if (BAL.combineUp) Object.assign(COMBINE_UP_CHANCE, BAL.combineUp);
     if (BAL.refineBase) Object.assign(REFINE_BASE, BAL.refineBase);
-    const craft = { mode: 'combine', slots: ['', '', ''], refine: '', result: '', resultMsg: '' };
+    const craft = { mode: 'combine', slots: ['', '', ''], refine: '', salvage: '', result: '', resultMsg: '' };
     function refineCost(inst) { return REFINE_BASE[inst.tier] * ((inst.plus || 0) + 1); }
     function refineChance(inst) { return Math.max(0.15, 0.95 - (inst.plus || 0) * 0.08); }
+    // ---- Fragmentos: cada tier tem o seu; vêm de quebrar itens e são gastos no refino ----
+    function fragsInit() { const f = {}; TIER_KEYS.forEach(t => { f[t] = 0; }); return f; }
+    function frags() { if (!state.frags) state.frags = fragsInit(); return state.frags; }
+    function refineFragCost(inst) { return Math.max(1, Math.round(BAL.fragRefine * (1 + Math.floor((inst.plus || 0) / 2)))); }
+    function salvageYield(inst) { return Math.max(1, Math.round(BAL.fragYield + BAL.fragPerPlus * (inst.plus || 0))); }
+    const FRAG_TRADE = () => Math.max(1, Math.round(BAL.fragTrade));
+    function fragIco(tier, cls = 'w-3.5 h-3.5') {
+      const c = ITEM_TIERS[tier].color;
+      return `<svg class="${cls} inline-block shrink-0" viewBox="0 0 16 16"><path d="M8 1.5 13.5 6 10.5 14.5H5.5L2.5 6Z" fill="${c}" stroke="#1b1220" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 1.5 8 14.5M2.5 6 13.5 6" stroke="#1b1220" stroke-width=".8" opacity=".45"/><path d="M5.2 4.6 7 3.2" stroke="#fff" stroke-width="1.1" stroke-linecap="round" opacity=".8"/></svg>`;
+    }
+    function fragLabel(tier, n) { return `<span class="inline-flex items-center gap-0.5">${fragIco(tier)}<b style="color:${ITEM_TIERS[tier].color}">${n}</b></span>`; }
+    function salvageItem(inst) {
+      const n = salvageYield(inst);
+      destroyItem(inst.uid);
+      frags()[inst.tier] += n;
+      return n;
+    }
+    function tradeFrags(tier) { // FRAG_TRADE do tier -> 1 do tier seguinte
+      const i = TIER_KEYS.indexOf(tier), f = frags(), r = FRAG_TRADE();
+      if (i < 0 || i >= TIER_KEYS.length - 1 || f[tier] < r) return false;
+      f[tier] -= r; f[TIER_KEYS[i + 1]] += 1; return true;
+    }
+    function renderCraftFrags() {
+      const host = document.getElementById('craft-frags'); if (!host) return;
+      const f = frags();
+      host.innerHTML = TIER_KEYS.map(t => `<span data-tip="Fragmento ${ITEM_TIERS[t].label}">${fragLabel(t, f[t])}</span>`).join('');
+    }
     // remove das bancadas itens que não existem mais ou foram equipados
     function craftSanitize() {
       const bag = new Set(getBagItems().map(x => x.uid));
       craft.slots = craft.slots.map(u => (bag.has(u) ? u : ''));
       if (!bag.has(craft.refine)) craft.refine = '';
+      if (!bag.has(craft.salvage)) craft.salvage = '';
       if (craft.result && !invGet(craft.result)) craft.result = '';
     }
     function craftPut(uid) {
+      if (craft.mode === 'trade') craft.mode = 'salvage';
       if (craft.mode === 'refine') { craft.refine = uid; craft.result = ''; craft.resultMsg = ''; }
+      else if (craft.mode === 'salvage') { craft.salvage = uid; craft.resultMsg = ''; }
       else {
         if (craft.slots.includes(uid)) return;
         const first = craft.slots.filter(Boolean).map(invGet)[0];
@@ -5467,10 +5501,10 @@
     }
     function renderDrawer5Craft() {
       craftSanitize();
-      document.getElementById('craft-mode-combine').classList.toggle('icon-btn-active', craft.mode === 'combine');
-      document.getElementById('craft-mode-refine').classList.toggle('icon-btn-active', craft.mode === 'refine');
+      for (const m of ['combine', 'refine', 'salvage', 'trade']) document.getElementById('craft-mode-' + m).classList.toggle('icon-btn-active', craft.mode === m);
+      renderCraftFrags();
       // bolsa (sem os itens que já estão na bancada)
-      const used = new Set([...craft.slots, craft.refine].filter(Boolean));
+      const used = new Set([...craft.slots, craft.refine, craft.salvage].filter(Boolean));
       const bagHost = document.getElementById('craft-bag');
       const items = getBagItems().filter(x => !used.has(x.uid))
         .sort((a, b) => ITEM_TIERS[a.tier].order - ITEM_TIERS[b.tier].order || a.id.localeCompare(b.id));
@@ -5531,27 +5565,33 @@
           sfx.play(upgraded ? 'STAGE_CLEAR' : 'LEVEL_UP');
           refreshAllUI();
         };
-      } else {
+      } else if (craft.mode === 'refine') {
         const inst = invGet(craft.refine);
         const v = inst ? instView(inst) : null;
         const maxed = inst && inst.plus >= REFINE_MAX;
-        let info = 'Coloque 1 item para refinar. Cada refino bem-sucedido dá +12% nos status do item.';
+        const fNeed = inst ? refineFragCost(inst) : 0, fHave = inst ? frags()[inst.tier] : 0;
+        let info = `Coloque 1 item para refinar. Cada refino bem-sucedido dá +${Math.round(BAL.refinePct * 100)}% nos status do item.<br>Custa ouro + fragmentos do tier do item.`;
         if (inst) {
           const nxt = instBonuses(Object.assign({}, inst, { plus: inst.plus + 1 }));
           info = maxed ? `<b class="text-amber-300">${v.name}</b> já está no refino máximo (+${REFINE_MAX}).`
             : `<b style="color:${itemTier(v).color}">${v.name}</b> ➜ <b class="text-amber-300">+${inst.plus + 1}</b><br>
                VIT ${v.bonuses.vit}→<b class="text-emerald-300">${nxt.vit}</b> · POW ${v.bonuses.pow}→<b class="text-emerald-300">${nxt.pow}</b> · DEF ${v.bonuses.def}→<b class="text-emerald-300">${nxt.def}</b><br>
-               Chance de sucesso: <b class="text-cyan-300">${Math.round(refineChance(inst) * 100)}%</b> (se falhar, só perde o ouro)`;
+               Chance de sucesso: <b class="text-cyan-300">${Math.round(refineChance(inst) * 100)}%</b> (se falhar, perde o ouro e os fragmentos)
+               ${fHave < fNeed ? `<br><b class="text-rose-300">Faltam fragmentos ${ITEM_TIERS[inst.tier].label}:</b> ${fHave}/${fNeed} — quebre itens desse tier ou troque fragmentos menores.` : ''}`;
         }
+        const can = inst && !maxed && fHave >= fNeed;
         body.innerHTML = `
           ${craftSlotHtml(inst, 'w-14 h-14')}
           <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}${info}</div>
-          <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-amber-400/80 text-amber-300" ${inst && !maxed ? '' : 'disabled'}>✦ Refinar ${inst && !maxed ? `• <span class="text-amber-300">${refineCost(inst)}</span>${COIN_ICO}` : ''}</button>`;
+          <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-amber-400/80 text-amber-300" ${can ? '' : 'disabled'}>✦ Refinar ${inst && !maxed ? `• <span class="text-amber-300">${refineCost(inst)}</span>${COIN_ICO} + ${fragLabel(inst.tier, fNeed)}` : ''}</button>`;
         body.querySelectorAll('.craft-slot[data-uid]').forEach(el => { el.onclick = () => { craft.refine = ''; craft.resultMsg = ''; renderDrawer5Craft(); }; });
         body.querySelectorAll('.craft-slot').forEach(acceptDrop);
         const go = document.getElementById('craft-go');
         if (go) go.onclick = () => {
-          if (!inst || maxed || !payGold(refineCost(inst))) return;
+          if (!inst || maxed) return;
+          if (frags()[inst.tier] < refineFragCost(inst)) { showBanner(`Fragmentos ${ITEM_TIERS[inst.tier].label} insuficientes!`); return; }
+          if (!payGold(refineCost(inst))) return;
+          frags()[inst.tier] -= refineFragCost(inst);
           if (Math.random() < refineChance(inst)) {
             inst.plus = (inst.plus || 0) + 1;
             craft.resultMsg = `<b class="text-emerald-300">✔ Sucesso!</b> ${ITEMS_DB[inst.id].name} agora é <b class="text-amber-300">+${inst.plus}</b>.`;
@@ -5562,10 +5602,58 @@
           }
           refreshAllUI();
         };
+      } else if (craft.mode === 'salvage') {
+        const inst = invGet(craft.salvage);
+        const v = inst ? instView(inst) : null;
+        const n = inst ? salvageYield(inst) : 0;
+        const info = inst
+          ? `Quebrar <b style="color:${itemTier(v).color}">${v.name}</b>${inst.plus ? ` <b class="text-amber-300">+${inst.plus}</b>` : ''} ➜ ${fragLabel(inst.tier, '+' + n)} fragmentos ${ITEM_TIERS[inst.tier].label}<br><span class="text-rose-300">O item é destruído.</span>`
+          : `Coloque 1 item para quebrar. Ele vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por nível de refino).`;
+        body.innerHTML = `
+          ${craftSlotHtml(inst, 'w-14 h-14')}
+          <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}${info}</div>
+          <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-rose-400/80 text-rose-300" ${inst ? '' : 'disabled'}>✂ Quebrar</button>`;
+        body.querySelectorAll('.craft-slot[data-uid]').forEach(el => { el.onclick = () => { craft.salvage = ''; craft.resultMsg = ''; renderDrawer5Craft(); }; });
+        body.querySelectorAll('.craft-slot').forEach(acceptDrop);
+        const go = document.getElementById('craft-go');
+        if (go) go.onclick = () => {
+          if (!inst) return;
+          const tier = inst.tier, name = ITEMS_DB[inst.id].name;
+          const got = salvageItem(inst);
+          craft.salvage = '';
+          craft.resultMsg = `<b class="text-emerald-300">✔</b> ${name} virou ${fragLabel(tier, '+' + got)}`;
+          sfx.play('COIN');
+          refreshAllUI();
+        };
+      } else {
+        const f = frags(), r = FRAG_TRADE();
+        body.innerHTML = `
+          <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}Troque <b>${r}</b> fragmentos de um tier por <b>1</b> do tier seguinte.</div>
+          <div class="flex flex-col gap-1 w-full max-w-[260px]">
+            ${TIER_KEYS.slice(0, -1).map((t, i) => {
+              const nx = TIER_KEYS[i + 1], ok = f[t] >= r, max = Math.floor(f[t] / r);
+              return `<div class="flex items-center gap-1">
+                <span class="flex-1 flex items-center justify-end gap-1 ui-body">${fragLabel(t, r)} <span class="text-slate-500">➜</span> ${fragLabel(nx, 1)}</span>
+                <button class="frag-trade icon-btn ui-btn px-2 py-0.5" data-t="${t}" data-n="1" ${ok ? '' : 'disabled'}>Trocar</button>
+                <button class="frag-trade icon-btn ui-btn px-2 py-0.5" data-t="${t}" data-n="${max}" ${max > 1 ? '' : 'disabled'}>Tudo${max > 1 ? ` (${max})` : ''}</button>
+              </div>`;
+            }).join('')}
+          </div>`;
+        body.querySelectorAll('.frag-trade').forEach(b => {
+          b.onclick = () => {
+            const t = b.dataset.t, want = +b.dataset.n || 1;
+            let done = 0; while (done < want && tradeFrags(t)) done++;
+            if (!done) return;
+            const nx = TIER_KEYS[TIER_KEYS.indexOf(t) + 1];
+            craft.resultMsg = `<b class="text-emerald-300">✔</b> ${fragLabel(t, '-' + done * r)} ➜ ${fragLabel(nx, '+' + done)}`;
+            sfx.play('COIN');
+            renderDrawer5Craft();
+          };
+        });
       }
     }
-    document.getElementById('craft-mode-combine').onclick = () => { craft.mode = 'combine'; craft.resultMsg = ''; craft.result = ''; renderDrawer5Craft(); };
-    document.getElementById('craft-mode-refine').onclick = () => { craft.mode = 'refine'; craft.resultMsg = ''; craft.result = ''; renderDrawer5Craft(); };
+    for (const m of ['combine', 'refine', 'salvage', 'trade'])
+      document.getElementById('craft-mode-' + m).onclick = () => { craft.mode = m; craft.resultMsg = ''; craft.result = ''; renderDrawer5Craft(); };
 
     // DRAWER 0: CARDS DO TIME COM PREVIEW, HP MÁXIMO, EXP E ÍCONES DE SKILLS
     function renderDrawer0Team() {
@@ -6902,6 +6990,7 @@
         tavernUnlocked: state.tavernUnlocked,
         stageId: state.stageId,
         inv: state.inv,
+        frags: frags(),
         formation: state.formation,
         equippedSlots: state.equippedSlots,
         skillLevels: state.skillLevels,
@@ -6961,6 +7050,8 @@
         state.equippedSlots = data.equippedSlots || state.equippedSlots;
         state.inv = Array.isArray(data.inv) ? data.inv : [];
         migrateOldInventory(data.ownedItems);
+        state.frags = fragsInit();
+        if (data.frags) for (const t of TIER_KEYS) state.frags[t] = Math.max(0, Math.floor(+data.frags[t] || 0));
         state.formation = Array.isArray(data.formation) && data.formation.length === 3 ? data.formation : [2, 1, 0];
         state.skillLevels = data.skillLevels || state.skillLevels;
         sharePassiveLevel(Math.max(...Object.values(state.skillLevels).map(x => x[1] || 1))); // saves antigos
@@ -7021,6 +7112,7 @@
       state.pendingDpe = 0;
       flyingDrops = [];
       state.inv = [];
+      state.frags = fragsInit();
       state.formation = [2, 1, 0];
       state.equippedSlots = {
         0: { HEAD: '', CHEST: '', RIGHT_HAND: '', LEFT_HAND: '', FEET: '' },
@@ -7460,9 +7552,25 @@
         if (state.invTabs < 4 && c !== undefined && state.gold - c >= reserve) { state.gold -= c; state.invTabs++; continue; }
         const bag = getBagItems().sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
         if (!bag.length) break;
-        destroyItem(bag[0].uid);
+        salvageItem(bag[0]); // quebra o pior em fragmentos em vez de jogar fora
       }
       if (ROBOT.st.doRefine) {
+        // falta fragmento de um tier: troca fragmentos dos tiers de baixo
+        const robotFragsFor = (tier, need) => {
+          const k = TIER_KEYS.indexOf(tier), f = frags();
+          // 1º quebra o pior item do mesmo tier que está na bolsa; 2º troca fragmentos dos tiers de baixo
+          while (f[tier] < need) {
+            const bag = getBagItems().filter(i => i.tier === tier).sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
+            if (!bag.length) break;
+            salvageItem(bag[0]);
+          }
+          for (let g = 0; g < 100 && f[tier] < need; g++) {
+            let j = k - 1; while (j >= 0 && f[TIER_KEYS[j]] < FRAG_TRADE()) j--;
+            if (j < 0) return false;
+            tradeFrags(TIER_KEYS[j]);
+          }
+          return f[tier] >= need;
+        };
         for (let guard = 0; guard < 200; guard++) {
           let best = null, bv = 0, bs = -1;
           for (const s of [0, 1, 2]) {
@@ -7470,6 +7578,7 @@
             for (const uid of Object.values(state.equippedSlots[s])) {
               const i = invGet(uid); if (!i || (i.plus || 0) >= REFINE_MAX) continue;
               const c = refineCost(i); if (state.gold - c < reserve) continue;
+              if (frags()[i.tier] < refineFragCost(i) && !robotFragsFor(i.tier, refineFragCost(i))) continue;
               const role = robotRole(s);
               const v = (robotScore(Object.assign({}, i, { plus: (i.plus || 0) + 1 }), role) - robotScore(i, role)) / c;
               if (v > bv) { bv = v; best = i; bs = s; }
@@ -7477,6 +7586,7 @@
           }
           if (!best) break;
           state.gold -= refineCost(best);
+          frags()[best.tier] -= refineFragCost(best);
           if (Math.random() < refineChance(best)) best.plus = (best.plus || 0) + 1;
         }
         robotEquipAll();
