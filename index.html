@@ -81,6 +81,9 @@
     }
     #menu-note { top: auto; bottom: 6%; text-align: center; }
     #menu-buttons.hidden, #menu-saves.hidden { display: none; }
+    #hud-root .sys-save-slot { flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 9px; text-align: left; width: 100%; }
+    #hud-root .sys-save-slot small { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 8px; color: #cbd5e1; letter-spacing: 0; text-shadow: none; }
+    #hud-root .sys-save-slot:disabled { opacity: .45; }
     #menu-saves {
       position: absolute; right: 4%; top: 31%; width: clamp(220px, 34%, 440px); padding: 1.2cqh 1.4cqw; border-radius: 0.9em;
       background: rgba(6, 18, 14, 0.94); border: 2px solid rgba(74, 222, 128, 0.6); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
@@ -791,8 +794,15 @@
     <!-- =================================================================== -->
     <div id="modal-system-menu" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-40 p-4">
       <div class="glass-drawer rounded-2xl p-4 w-full max-w-[300px] flex flex-col gap-2 border-2 border-amber-400/80">
-        <div class="text-center ui-h1 text-amber-300 mb-1">MENU DO JOGO</div>
+        <div id="sys-title" class="text-center ui-h1 text-amber-300 mb-1">MENU DO JOGO</div>
 
+        <!-- Escolha do save a carregar (abre no lugar dos botões) -->
+        <div id="sys-saves" class="hidden flex flex-col gap-2">
+          <div id="sys-saves-list" class="flex flex-col gap-2"></div>
+          <button id="btn-sys-saves-back" class="icon-btn py-2 gap-2 ui-btn">Voltar</button>
+        </div>
+
+        <div id="sys-main" class="flex flex-col gap-2">
         <!-- Painel de Configurações Embutido -->
         <div id="system-settings-box" class="bg-slate-950/70 border border-slate-700 rounded-xl p-2.5 flex flex-col gap-2 ui-body">
           <div class="flex items-center justify-between">
@@ -813,10 +823,6 @@
           <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Carregar Progresso
         </button>
-        <button id="btn-sys-autoload" class="icon-btn py-2 gap-2 ui-btn hidden">
-          <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-          <span>Retomar Autosave</span>
-        </button>
         <button id="btn-sys-quit" class="icon-btn py-2 gap-2 text-rose-300 border-rose-500/50 ui-btn">
           <svg class="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Sair para o Menu Principal
@@ -824,6 +830,7 @@
         <button id="btn-sys-resume" class="icon-btn py-2 gap-2 border-amber-400 text-amber-300 mt-1 ui-btn">
           Voltar ao Jogo
         </button>
+        </div>
       </div>
     </div>
 
@@ -7408,13 +7415,7 @@
       document.getElementById('menu-buttons').classList.remove('hidden');
     }
 
-    // Botões "Retomar Autosave": só aparecem quando existe autosave, com o horário dele
-    function syncAutosaveButtons() {
-      const t = saveSlotTime(AUTOSAVE_KEY);
-      const label = 'Retomar Autosave' + (t ? ' (' + fmtSaveTime(t) + ')' : '');
-      const sb = document.getElementById('btn-sys-autoload');
-      if (sb) { sb.classList.toggle('hidden', t === null); const s = sb.querySelector('span'); if (s) s.textContent = label; }
-    }
+    function syncAutosaveButtons() { /* o autosave agora é escolhido na janela de saves */ }
     // Janela "Continuar": lista os saves (manual e automático) com um resumo de cada um
     function saveSummary(key) {
       try {
@@ -7425,25 +7426,26 @@
           cls: d.tutorialCompleted ? (STN[d.stance] || d.stance) : 'Tutorial', gold: d.gold | 0, time: d.playTime ? fmtTime(d.playTime) : '' };
       } catch (_e) { return null; }
     }
-    function openSavePicker() {
-      const host = document.getElementById('menu-saves-list');
+    // monta os botões de save em `host`; `onLoaded` roda depois de carregar
+    function fillSaveSlots(host, btnClass, onLoaded) {
       host.innerHTML = '';
       [[SAVE_KEY, 'Save manual'], [AUTOSAVE_KEY, 'Autosave']].forEach(([key, title]) => {
         const s = saveSummary(key), b = document.createElement('button');
-        b.className = 'save-slot'; b.disabled = !s;
+        b.className = btnClass; b.disabled = !s;
         b.innerHTML = s
           ? `<span>${title} <span style="color:#86efac">· ${fmtSaveTime(s.t)}</span></span>
              <small>Ato ${s.act} <span style="color:${s.diff.color}">${s.diff.name}</span> · ${s.cls} Nv ${s.lvl} · ${s.gold} ouro${s.time ? ' · ' + s.time + ' jogados' : ''}</small>`
           : `<span>${title}</span><small>Vazio</small>`;
-        b.onclick = () => {
-          if (loadSavedGame(key)) {
-            state.inMainMenu = false;
-            document.getElementById('menu-saves').classList.add('hidden');
-            document.getElementById('main-menu').classList.add('hidden');
-            refreshAllUI();
-          }
-        };
+        b.onclick = () => { if (loadSavedGame(key)) onLoaded(); };
         host.appendChild(b);
+      });
+    }
+    function openSavePicker() {
+      fillSaveSlots(document.getElementById('menu-saves-list'), 'save-slot', () => {
+        state.inMainMenu = false;
+        document.getElementById('menu-saves').classList.add('hidden');
+        document.getElementById('main-menu').classList.add('hidden');
+        refreshAllUI();
       });
       document.getElementById('menu-buttons').classList.add('hidden');
       document.getElementById('menu-saves').classList.remove('hidden');
@@ -7452,15 +7454,17 @@
       document.getElementById('menu-saves').classList.add('hidden');
       document.getElementById('menu-buttons').classList.remove('hidden');
     };
-    document.getElementById('btn-sys-autoload').onclick = () => {
-      if (loadSavedGame(AUTOSAVE_KEY)) {
-        document.getElementById('modal-system-menu').classList.add('hidden');
-      }
-    };
+    // menu do jogo: alterna entre os botões e a lista de saves
+    function sysShowSaves(on) {
+      document.getElementById('sys-main').classList.toggle('hidden', on);
+      document.getElementById('sys-saves').classList.toggle('hidden', !on);
+      document.getElementById('sys-title').textContent = on ? 'ESCOLHA O SAVE' : 'MENU DO JOGO';
+    }
+    document.getElementById('btn-sys-saves-back').onclick = () => sysShowSaves(false);
 
     document.getElementById('btn-system-menu').onclick = () => {
       syncSettingsUI();
-      syncAutosaveButtons();
+      sysShowSaves(false);
       document.getElementById('modal-system-menu').classList.remove('hidden');
     };
     document.getElementById('btn-sys-resume').onclick = () => {
@@ -7478,9 +7482,11 @@
       document.getElementById('modal-system-menu').classList.add('hidden');
     };
     document.getElementById('btn-sys-load').onclick = () => {
-      if (loadSavedGame()) {
+      fillSaveSlots(document.getElementById('sys-saves-list'), 'icon-btn ui-btn sys-save-slot', () => {
         document.getElementById('modal-system-menu').classList.add('hidden');
-      }
+        sysShowSaves(false);
+      });
+      sysShowSaves(true);
     };
     document.getElementById('btn-sys-quit').onclick = () => {
       document.getElementById('modal-system-menu').classList.add('hidden');
