@@ -1,8 +1,8 @@
 # Healer Hero — Registro técnico para agentes
 
 - Site (GitHub Pages): https://johnathangomesdev.github.io/healer-hero/
-- Repo: https://github.com/johnathangomesdev/healer-hero (remote `github`, branch `main`; Pages publica a raiz da `main` a cada push)
-- O GitLab antigo (remote `origin`, johndev-group/healer-hero) foi abandonado — não use.
+- Repo: https://github.com/johnathangomesdev/healer-hero (remote `origin`, branch `main`; Pages publica a raiz da `main` a cada push)
+- O GitLab antigo (johndev-group/healer-hero) foi abandonado e o remote dele removido — não use.
 - Arquivo principal: `healer_hero_procedural_idle_rpg_prototype.html` (≈7000 linhas, HTML + CSS + JS em um único arquivo, sem build).
 - Idioma da UI e do usuário: português (BR).
 
