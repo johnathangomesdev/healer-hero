@@ -5891,8 +5891,9 @@
               iconsRow.appendChild(wrap);
             });
           } else {
-            const tag = ally.isRanged ? 'Disparo Preciso (Ativa) • Olho de Águia (Passiva)' : 'Investida Frontal (Ativa) • Vanguarda (Passiva)';
-            iconsRow.innerHTML = `<div class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 ui-num text-slate-300" data-tip="<b>Habilidades de Classe</b><br>${tag}">⚔️ Lv.${ally.level}</div>`;
+            const mu = MERC_ULT[ally.mercKey];
+            const tip = mu ? `<b>${mu.name} (Ultimate)</b><br>${mu.desc}<br><span class='text-slate-400'>Recarga: ${mu.cd}s</span>` : '<b>Sem habilidade</b>';
+            iconsRow.innerHTML = `<div class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 ui-num text-slate-300" data-tip="${tip}">⚔️ Lv.${ally.level}</div>`;
           }
         } else {
           card.innerHTML = `
