@@ -88,11 +88,10 @@
 
 ## 3f. Fragmentos (2026-11-19)
 
-- `state.frags = {COMMON..DIVINE}` (salvo no save; `frags()` cria se faltar). Craft tem 4 modos: Combinar, Refinar, **Quebrar** (`salvageItem`: destrói o item e dá `BAL.fragYield + BAL.fragPerPlus × plus` fragmentos do tier dele), **Trocar** (`tradeFrags`: `BAL.fragTrade` de um tier → 1 do seguinte). Barra `#craft-frags` mostra o saldo.
+- `state.frags = {COMMON..DIVINE}` (salvo no save; `frags()` cria se faltar). Craft tem 3 modos: Combinar, Refinar e **Quebrar/Trocar** (um menu só, duas colunas). Quebrar: o jogador escolhe vários itens da bolsa (`craft.salvage` é lista de uid), qualquer item, sem restrição; `salvageItem` destrói e dá `BAL.fragYield + BAL.fragPerPlus × plus` fragmentos do tier. Trocar: `tradeFrags`, `BAL.fragTrade` (padrão 3) de um tier → 1 do seguinte. Barra `#craft-frags` mostra o saldo.
 - Refinar custa ouro + `refineFragCost(inst)` = `fragRefine × (1 + ⌊plus/2⌋)` fragmentos do tier do item; falha perde os dois.
-- Objetivo do Quebrar: dar uso aos itens de classes que não estão no time. `itemUselessForTeam(id)` (só depois da vocação, `state.isPathLocked`) marca esses itens com o selo ✂ (`USELESS_BADGE`) na bolsa do Inventário e do Craft; o modo Quebrar tem o botão **Todos sem uso**. Robô e simulador quebram esses itens logo no início de cada gestão de itens.
-- Robô e simulador: bolsa cheia → quebra o pior (não descarta mais); faltando fragmento para refinar → quebra o pior item do mesmo tier na bolsa, depois troca fragmentos de tiers abaixo. Painel: campos na aba Itens.
-- Efeito no simulador (Santo, padrões): 63 → ~85 min, refinos 116 → ~71, combinações 37 → ~6.
+- Robô e simulador: só quebram item que ninguém do time usa (`itemUselessForTeam`, depois da vocação), no início de cada gestão de itens; bolsa cheia → quebra o pior em vez de descartar; faltando fragmento para refinar → só troca fragmentos de tiers abaixo. Para o jogador não há selo nem restrição (o uso depende do mercenário que ele vai comprar). Painel: campos na aba Itens.
+- Efeito no simulador (Santo, padrões, troca 3:1): 63 → ~136 min, refinos 116 → ~46, combinações ~35.
 
 ## 4. Como testar
 

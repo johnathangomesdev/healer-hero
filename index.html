@@ -539,7 +539,7 @@
       <button data-drawer="4" class="drawer-btn icon-btn w-8 h-8 relative ui-btn" data-tip="<b>Taverna de Mercenários</b><br>Contrate mercenários Lv.1 para preencher sua equipe.">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       </button>
-      <button data-drawer="5" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Craft</b><br>Combine 3 itens do mesmo tier, refine um equipamento (ouro + fragmentos), quebre itens em fragmentos ou troque fragmentos por um tier acima.">
+      <button data-drawer="5" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Craft</b><br>Combine 3 itens do mesmo tier, refine um equipamento (ouro + fragmentos), quebre itens em fragmentos e troque fragmentos por um tier acima.">
         <svg class="w-4 h-4" viewBox="0 0 24 24"></svg>
       </button>
     </div>
@@ -661,8 +661,7 @@
             <div class="flex items-center gap-1">
               <button id="craft-mode-combine" class="icon-btn ui-btn flex-1 py-0.5">⚒ Combinar</button>
               <button id="craft-mode-refine" class="icon-btn ui-btn flex-1 py-0.5">✦ Refinar</button>
-              <button id="craft-mode-salvage" class="icon-btn ui-btn flex-1 py-0.5">✂ Quebrar</button>
-              <button id="craft-mode-trade" class="icon-btn ui-btn flex-1 py-0.5">⇄ Trocar</button>
+              <button id="craft-mode-salvage" class="icon-btn ui-btn flex-1 py-0.5 whitespace-nowrap">✂ Quebrar/Trocar</button>
             </div>
             <div id="craft-body" class="flex-1 flex flex-col items-center justify-center gap-1.5"></div>
             <div id="craft-frags" class="flex items-center justify-center gap-2 flex-wrap border-t border-slate-700/70 pt-1"></div>
@@ -1377,7 +1376,7 @@
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
-        fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 5,
+        fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 3,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
@@ -5438,7 +5437,7 @@
     if (BAL.combineCost) Object.assign(COMBINE_COST, BAL.combineCost);
     if (BAL.combineUp) Object.assign(COMBINE_UP_CHANCE, BAL.combineUp);
     if (BAL.refineBase) Object.assign(REFINE_BASE, BAL.refineBase);
-    const craft = { mode: 'combine', slots: ['', '', ''], refine: '', salvage: '', result: '', resultMsg: '' };
+    const craft = { mode: 'combine', slots: ['', '', ''], refine: '', salvage: [], result: '', resultMsg: '' };
     function refineCost(inst) { return REFINE_BASE[inst.tier] * ((inst.plus || 0) + 1); }
     function refineChance(inst) { return Math.max(0.15, 0.95 - (inst.plus || 0) * 0.08); }
     // ---- Fragmentos: cada tier tem o seu; vêm de quebrar itens e são gastos no refino ----
@@ -5473,13 +5472,12 @@
       const bag = new Set(getBagItems().map(x => x.uid));
       craft.slots = craft.slots.map(u => (bag.has(u) ? u : ''));
       if (!bag.has(craft.refine)) craft.refine = '';
-      if (!bag.has(craft.salvage)) craft.salvage = '';
+      craft.salvage = craft.salvage.filter(u => bag.has(u));
       if (craft.result && !invGet(craft.result)) craft.result = '';
     }
     function craftPut(uid) {
-      if (craft.mode === 'trade') craft.mode = 'salvage';
       if (craft.mode === 'refine') { craft.refine = uid; craft.result = ''; craft.resultMsg = ''; }
-      else if (craft.mode === 'salvage') { craft.salvage = uid; craft.resultMsg = ''; }
+      else if (craft.mode === 'salvage') { if (!craft.salvage.includes(uid)) craft.salvage.push(uid); craft.resultMsg = ''; }
       else {
         if (craft.slots.includes(uid)) return;
         const first = craft.slots.filter(Boolean).map(invGet)[0];
@@ -5501,17 +5499,17 @@
     }
     function renderDrawer5Craft() {
       craftSanitize();
-      for (const m of ['combine', 'refine', 'salvage', 'trade']) document.getElementById('craft-mode-' + m).classList.toggle('icon-btn-active', craft.mode === m);
+      for (const m of ['combine', 'refine', 'salvage']) document.getElementById('craft-mode-' + m).classList.toggle('icon-btn-active', craft.mode === m);
       renderCraftFrags();
       // bolsa (sem os itens que já estão na bancada)
-      const used = new Set([...craft.slots, craft.refine, craft.salvage].filter(Boolean));
+      const used = new Set([...craft.slots, craft.refine, ...craft.salvage].filter(Boolean));
       const bagHost = document.getElementById('craft-bag');
       const items = getBagItems().filter(x => !used.has(x.uid))
         .sort((a, b) => ITEM_TIERS[a.tier].order - ITEM_TIERS[b.tier].order || a.id.localeCompare(b.id));
       bagHost.innerHTML = items.length ? items.map(inst => {
-        const v = instView(inst), useless = itemUselessForTeam(inst.id);
+        const v = instView(inst);
         return `<div class="relative aspect-square rounded-md border bg-slate-900 flex items-center justify-center cursor-pointer" draggable="true" data-uid="${inst.uid}" style="${tierFrameStyle(v)}"
-          data-tip="${(itemTipTitle(v) + `<br>VIT+${v.bonuses.vit} POW+${v.bonuses.pow} DEF+${v.bonuses.def}${useless ? `<br><span class='text-rose-300'>✂ Ninguém do time usa: bom para quebrar</span>` : ''}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}${useless ? USELESS_BADGE : ''}
+          data-tip="${(itemTipTitle(v) + `<br>VIT+${v.bonuses.vit} POW+${v.bonuses.pow} DEF+${v.bonuses.def}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}
           ${inst.plus ? `<span class="absolute -top-1 -right-1 px-0.5 rounded bg-slate-950 ui-tiny text-amber-300">+${inst.plus}</span>` : ''}</div>`;
       }).join('') : '<div class="col-span-5 ui-body text-slate-500 text-center py-4">Bolsa vazia</div>';
       bagHost.querySelectorAll('[data-uid]').forEach(el => {
@@ -5602,59 +5600,51 @@
           }
           refreshAllUI();
         };
-      } else if (craft.mode === 'salvage') {
-        const inst = invGet(craft.salvage);
-        const v = inst ? instView(inst) : null;
-        const n = inst ? salvageYield(inst) : 0;
-        const info = inst
-          ? `Quebrar <b style="color:${itemTier(v).color}">${v.name}</b>${inst.plus ? ` <b class="text-amber-300">+${inst.plus}</b>` : ''} ➜ ${fragLabel(inst.tier, '+' + n)} fragmentos ${ITEM_TIERS[inst.tier].label}<br><span class="text-rose-300">O item é destruído.</span>`
-          : `Quebre os itens que ninguém do time usa (marcados com <span class="text-rose-300">✂</span>). Cada um vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por nível de refino).`;
-        const useless = getBagItems().filter(i => itemUselessForTeam(i.id));
-        const uGain = {}; useless.forEach(i => { uGain[i.tier] = (uGain[i.tier] || 0) + salvageYield(i); });
+      } else {
+        // QUEBRAR (vários itens de uma vez) + TROCAR fragmentos, no mesmo menu
+        const list = craft.salvage.map(invGet).filter(Boolean);
+        const gain = {}; list.forEach(i => { gain[i.tier] = (gain[i.tier] || 0) + salvageYield(i); });
+        const f = frags(), r = FRAG_TRADE();
+        const sel = list.map(i => craftSlotHtml(i, 'w-9 h-9')).join('') || craftSlotHtml(null, 'w-9 h-9');
         body.innerHTML = `
-          ${craftSlotHtml(inst, 'w-14 h-14')}
-          <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}${info}</div>
-          <div class="flex items-center gap-1.5 flex-wrap justify-center">
-            <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-rose-400/80 text-rose-300" ${inst ? '' : 'disabled'}>✂ Quebrar</button>
-            <button id="craft-salvage-useless" class="icon-btn ui-btn px-3 py-1 gap-1 border-rose-400/80 text-rose-300" ${useless.length ? '' : 'disabled'}
-              data-tip="Quebra de uma vez todos os itens da bolsa que nenhum personagem do time atual consegue equipar.">✂ Todos sem uso (${useless.length})${useless.length ? ' ➜ ' + TIER_KEYS.filter(t => uGain[t]).map(t => fragLabel(t, '+' + uGain[t])).join(' ') : ''}</button>
-          </div>`;
-        const allBtn = document.getElementById('craft-salvage-useless');
-        if (allBtn) allBtn.onclick = () => {
-          const list = getBagItems().filter(i => itemUselessForTeam(i.id));
-          if (!list.length) return;
-          const got = {}; list.forEach(i => { got[i.tier] = (got[i.tier] || 0) + salvageItem(i); });
-          craft.salvage = '';
-          craft.resultMsg = `<b class="text-emerald-300">✔</b> ${list.length} ${list.length === 1 ? 'item quebrado' : 'itens quebrados'}: ${TIER_KEYS.filter(t => got[t]).map(t => fragLabel(t, '+' + got[t])).join(' ')}`;
-          sfx.play('COIN');
-          refreshAllUI();
-        };
-        body.querySelectorAll('.craft-slot[data-uid]').forEach(el => { el.onclick = () => { craft.salvage = ''; craft.resultMsg = ''; renderDrawer5Craft(); }; });
+          <div class="grid grid-cols-2 gap-2 w-full flex-1">
+            <div class="flex flex-col items-center gap-1 border-r border-slate-700/70 pr-2">
+              <div class="ui-h2 text-rose-300">✂ QUEBRAR</div>
+              <div class="flex flex-wrap justify-center gap-1 max-h-[84px] overflow-y-auto">${sel}</div>
+              <div class="ui-body text-slate-300 text-center leading-tight">${list.length
+                ? `${list.length} ${list.length === 1 ? 'item' : 'itens'} ➜ ${TIER_KEYS.filter(t => gain[t]).map(t => fragLabel(t, '+' + gain[t])).join(' ')}<br><span class="text-rose-300">Os itens são destruídos.</span>`
+                : `Clique nos itens da bolsa para escolher. Cada um vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por refino).`}</div>
+              <div class="flex gap-1">
+                <button id="craft-go" class="icon-btn ui-btn px-3 py-0.5 gap-1 whitespace-nowrap border-rose-400/80 text-rose-300" ${list.length ? '' : 'disabled'}>✂ Quebrar${list.length ? ` (${list.length})` : ''}</button>
+                <button id="craft-salv-clear" class="icon-btn ui-btn px-2 py-0.5 whitespace-nowrap" data-tip="Tirar todos da seleção" ${list.length ? '' : 'disabled'}>✕</button>
+              </div>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <div class="ui-h2 text-cyan-300">⇄ TROCAR</div>
+              <div class="ui-tiny text-slate-400 text-center leading-tight"><b>${r}</b> de um tier ➜ <b>1</b> do tier acima</div>
+              ${TIER_KEYS.slice(0, -1).map((t, i) => {
+                const nx = TIER_KEYS[i + 1], max = Math.floor(f[t] / r);
+                return `<div class="flex items-center gap-1 w-full">
+                  <span class="flex-1 flex items-center justify-end gap-1 ui-body">${fragLabel(t, r)} <span class="text-slate-500">➜</span> ${fragLabel(nx, 1)}</span>
+                  <button class="frag-trade icon-btn ui-btn px-1.5 py-0 whitespace-nowrap" data-t="${t}" data-n="1" ${max >= 1 ? '' : 'disabled'}>1×</button>
+                  <button class="frag-trade icon-btn ui-btn px-1.5 py-0 whitespace-nowrap" data-t="${t}" data-n="${max}" ${max > 1 ? `data-tip="Trocar ${max}× (${max * r} ➜ ${max})"` : 'disabled'}>Tudo</button>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+          ${craft.resultMsg ? `<div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg}</div>` : ''}`;
+        body.querySelectorAll('.craft-slot[data-uid]').forEach(el => { el.onclick = () => { craft.salvage = craft.salvage.filter(u => u !== el.dataset.uid); craft.resultMsg = ''; renderDrawer5Craft(); }; });
         body.querySelectorAll('.craft-slot').forEach(acceptDrop);
+        document.getElementById('craft-salv-clear').onclick = () => { craft.salvage = []; craft.resultMsg = ''; renderDrawer5Craft(); };
         const go = document.getElementById('craft-go');
         if (go) go.onclick = () => {
-          if (!inst) return;
-          const tier = inst.tier, name = ITEMS_DB[inst.id].name;
-          const got = salvageItem(inst);
-          craft.salvage = '';
-          craft.resultMsg = `<b class="text-emerald-300">✔</b> ${name} virou ${fragLabel(tier, '+' + got)}`;
+          if (!list.length) return;
+          const got = {}; list.forEach(i => { got[i.tier] = (got[i.tier] || 0) + salvageItem(i); });
+          craft.salvage = [];
+          craft.resultMsg = `<b class="text-emerald-300">✔</b> ${list.length === 1 ? ITEMS_DB[list[0].id].name + ' quebrado' : list.length + ' itens quebrados'}: ${TIER_KEYS.filter(t => got[t]).map(t => fragLabel(t, '+' + got[t])).join(' ')}`;
           sfx.play('COIN');
           refreshAllUI();
         };
-      } else {
-        const f = frags(), r = FRAG_TRADE();
-        body.innerHTML = `
-          <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}Troque <b>${r}</b> fragmentos de um tier por <b>1</b> do tier seguinte.</div>
-          <div class="flex flex-col gap-1 w-full max-w-[260px]">
-            ${TIER_KEYS.slice(0, -1).map((t, i) => {
-              const nx = TIER_KEYS[i + 1], ok = f[t] >= r, max = Math.floor(f[t] / r);
-              return `<div class="flex items-center gap-1">
-                <span class="flex-1 flex items-center justify-end gap-1 ui-body">${fragLabel(t, r)} <span class="text-slate-500">➜</span> ${fragLabel(nx, 1)}</span>
-                <button class="frag-trade icon-btn ui-btn px-2 py-0.5" data-t="${t}" data-n="1" ${ok ? '' : 'disabled'}>Trocar</button>
-                <button class="frag-trade icon-btn ui-btn px-2 py-0.5" data-t="${t}" data-n="${max}" ${max > 1 ? '' : 'disabled'}>Tudo${max > 1 ? ` (${max})` : ''}</button>
-              </div>`;
-            }).join('')}
-          </div>`;
         body.querySelectorAll('.frag-trade').forEach(b => {
           b.onclick = () => {
             const t = b.dataset.t, want = +b.dataset.n || 1;
@@ -5668,7 +5658,7 @@
         });
       }
     }
-    for (const m of ['combine', 'refine', 'salvage', 'trade'])
+    for (const m of ['combine', 'refine', 'salvage'])
       document.getElementById('craft-mode-' + m).onclick = () => { craft.mode = m; craft.resultMsg = ''; craft.result = ''; renderDrawer5Craft(); };
 
     // DRAWER 0: CARDS DO TIME COM PREVIEW, HP MÁXIMO, EXP E ÍCONES DE SKILLS
@@ -5996,10 +5986,9 @@
       const tag = slotIdx === 2 ? state.stance : (state.slotClassTags[slotIdx] || 'TANK');
       return it.classes.includes(tag);
     }
-    // ninguém do time atual consegue equipar → bom para quebrar em fragmentos
-    // (antes de escolher a vocação nada é marcado: o herói ainda pode virar qualquer classe)
+    // ninguém do time atual consegue equipar (só o robô usa: o jogador pode quebrar qualquer item)
+    // (antes de escolher a vocação nada conta: o herói ainda pode virar qualquer classe)
     function itemUselessForTeam(itemId) { return !!state.isPathLocked && ![0, 1, 2].some(s => partySlots[s] && canEquipItem(s, itemId)); }
-    const USELESS_BADGE = `<span class="absolute -bottom-1 -left-1 px-0.5 rounded bg-rose-950/90 border border-rose-500/70 ui-tiny text-rose-300 leading-none pointer-events-none">✂</span>`;
 
     // Arma de duas mãos (cajado, orbe, bandagens): ocupa Mão D. e Mão E. ao mesmo tempo
     function isTwoHanded(uid) { const id = itemIdOf(uid); return !!(id && ITEMS_DB[id].twoHanded); }
@@ -6175,9 +6164,8 @@
         if (it) {
           cell.style.cssText = tierFrameStyle(it);
           cell.draggable = true;
-          const useless = itemUselessForTeam(inst.id);
-          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span>${useless ? '<br><span class="text-rose-300">✂ Ninguém do time usa: quebre no Craft para ganhar fragmentos</span>' : ''}<br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
-          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]') + (useless ? USELESS_BADGE : '');
+          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
+          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]');
           cell.ondragstart = e => { e.dataTransfer.setData('text/plain', 'bag:' + inst.uid); e.dataTransfer.effectAllowed = 'move'; };
           cell.ondragend = e => askDestroyIfOutside(e, inst);
           // clique/toque duplo = equipa no personagem selecionado (troca com o que estiver no slot)
@@ -7581,12 +7569,7 @@
         // falta fragmento de um tier: troca fragmentos dos tiers de baixo
         const robotFragsFor = (tier, need) => {
           const k = TIER_KEYS.indexOf(tier), f = frags();
-          // 1º quebra o pior item do mesmo tier que está na bolsa; 2º troca fragmentos dos tiers de baixo
-          while (f[tier] < need) {
-            const bag = getBagItems().filter(i => i.tier === tier).sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
-            if (!bag.length) break;
-            salvageItem(bag[0]);
-          }
+          // o robô só quebra item sem uso; aqui ele só troca fragmentos dos tiers de baixo
           for (let g = 0; g < 100 && f[tier] < need; g++) {
             let j = k - 1; while (j >= 0 && f[TIER_KEYS[j]] < FRAG_TRADE()) j--;
             if (j < 0) return false;

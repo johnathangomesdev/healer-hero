@@ -204,7 +204,7 @@ const DEFAULTS = {
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
   skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
   items: { tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
-    fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 5,
+    fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 3,
     tierMult: { COMMON: 1, UNCOMMON: 1.3, RARE: 1.7, MYTHIC: 2.2, LEGENDARY: 3, DIVINE: 4 },
     combineCost: { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 },
     combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
@@ -603,14 +603,7 @@ function simulate(P, seed) {
     const tradeRate = Math.max(1, Math.round(IT.fragTrade));
     const fragsFor = (tier, need) => { // troca fragmentos dos tiers de baixo, se faltar
       const k = TIERS.indexOf(tier);
-      // 1º quebra o pior item do mesmo tier que está na bolsa
-      while (S.frags[tier] < need) {
-        const bag = bagItems().filter(i => i.tier === tier).sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
-        if (!bag.length) break;
-        const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (bag[0].plus || 0)));
-        S.frags[tier] += n; S.fragsEarned += n; S.inv = S.inv.filter(i => i !== bag[0]); S.discarded++;
-      }
-      // 2º troca fragmentos dos tiers de baixo
+      // igual ao robô: só quebra item sem uso; aqui só troca fragmentos dos tiers de baixo
       for (let g = 0; g < 100 && S.frags[tier] < need; g++) {
         let j = k - 1; while (j >= 0 && S.frags[TIERS[j]] < tradeRate) j--;
         if (j < 0) return false;
