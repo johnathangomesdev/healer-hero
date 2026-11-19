@@ -562,6 +562,12 @@ function simulate(P, seed) {
   }
   function manageItems(reserve) {
     equipAll();
+    // depois da vocação: item que ninguém do time usa vira fragmento na hora (igual ao robô do jogo)
+    if (!S.tutorial) for (const i of bagItems()) {
+      if ([0, 1, 2].some(s => S.party[s] && compat(i, S.party[s]))) continue;
+      const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (i.plus || 0)));
+      S.frags[i.tier] += n; S.fragsEarned += n; S.inv = S.inv.filter(x => x !== i); S.discarded++;
+    }
     if (ST.doCombine) {
       for (let guard = 0; guard < 50; guard++) {
         let did = false;

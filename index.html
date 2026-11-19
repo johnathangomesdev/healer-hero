@@ -5509,9 +5509,9 @@
       const items = getBagItems().filter(x => !used.has(x.uid))
         .sort((a, b) => ITEM_TIERS[a.tier].order - ITEM_TIERS[b.tier].order || a.id.localeCompare(b.id));
       bagHost.innerHTML = items.length ? items.map(inst => {
-        const v = instView(inst);
+        const v = instView(inst), useless = itemUselessForTeam(inst.id);
         return `<div class="relative aspect-square rounded-md border bg-slate-900 flex items-center justify-center cursor-pointer" draggable="true" data-uid="${inst.uid}" style="${tierFrameStyle(v)}"
-          data-tip="${(itemTipTitle(v) + `<br>VIT+${v.bonuses.vit} POW+${v.bonuses.pow} DEF+${v.bonuses.def}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}
+          data-tip="${(itemTipTitle(v) + `<br>VIT+${v.bonuses.vit} POW+${v.bonuses.pow} DEF+${v.bonuses.def}${useless ? `<br><span class='text-rose-300'>✂ Ninguém do time usa: bom para quebrar</span>` : ''}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}${useless ? USELESS_BADGE : ''}
           ${inst.plus ? `<span class="absolute -top-1 -right-1 px-0.5 rounded bg-slate-950 ui-tiny text-amber-300">+${inst.plus}</span>` : ''}</div>`;
       }).join('') : '<div class="col-span-5 ui-body text-slate-500 text-center py-4">Bolsa vazia</div>';
       bagHost.querySelectorAll('[data-uid]').forEach(el => {
@@ -5608,11 +5608,27 @@
         const n = inst ? salvageYield(inst) : 0;
         const info = inst
           ? `Quebrar <b style="color:${itemTier(v).color}">${v.name}</b>${inst.plus ? ` <b class="text-amber-300">+${inst.plus}</b>` : ''} ➜ ${fragLabel(inst.tier, '+' + n)} fragmentos ${ITEM_TIERS[inst.tier].label}<br><span class="text-rose-300">O item é destruído.</span>`
-          : `Coloque 1 item para quebrar. Ele vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por nível de refino).`;
+          : `Quebre os itens que ninguém do time usa (marcados com <span class="text-rose-300">✂</span>). Cada um vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por nível de refino).`;
+        const useless = getBagItems().filter(i => itemUselessForTeam(i.id));
+        const uGain = {}; useless.forEach(i => { uGain[i.tier] = (uGain[i.tier] || 0) + salvageYield(i); });
         body.innerHTML = `
           ${craftSlotHtml(inst, 'w-14 h-14')}
           <div class="ui-body text-slate-300 text-center leading-tight">${craft.resultMsg ? craft.resultMsg + '<br>' : ''}${info}</div>
-          <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-rose-400/80 text-rose-300" ${inst ? '' : 'disabled'}>✂ Quebrar</button>`;
+          <div class="flex items-center gap-1.5 flex-wrap justify-center">
+            <button id="craft-go" class="icon-btn ui-btn px-4 py-1 gap-1 border-rose-400/80 text-rose-300" ${inst ? '' : 'disabled'}>✂ Quebrar</button>
+            <button id="craft-salvage-useless" class="icon-btn ui-btn px-3 py-1 gap-1 border-rose-400/80 text-rose-300" ${useless.length ? '' : 'disabled'}
+              data-tip="Quebra de uma vez todos os itens da bolsa que nenhum personagem do time atual consegue equipar.">✂ Todos sem uso (${useless.length})${useless.length ? ' ➜ ' + TIER_KEYS.filter(t => uGain[t]).map(t => fragLabel(t, '+' + uGain[t])).join(' ') : ''}</button>
+          </div>`;
+        const allBtn = document.getElementById('craft-salvage-useless');
+        if (allBtn) allBtn.onclick = () => {
+          const list = getBagItems().filter(i => itemUselessForTeam(i.id));
+          if (!list.length) return;
+          const got = {}; list.forEach(i => { got[i.tier] = (got[i.tier] || 0) + salvageItem(i); });
+          craft.salvage = '';
+          craft.resultMsg = `<b class="text-emerald-300">✔</b> ${list.length} ${list.length === 1 ? 'item quebrado' : 'itens quebrados'}: ${TIER_KEYS.filter(t => got[t]).map(t => fragLabel(t, '+' + got[t])).join(' ')}`;
+          sfx.play('COIN');
+          refreshAllUI();
+        };
         body.querySelectorAll('.craft-slot[data-uid]').forEach(el => { el.onclick = () => { craft.salvage = ''; craft.resultMsg = ''; renderDrawer5Craft(); }; });
         body.querySelectorAll('.craft-slot').forEach(acceptDrop);
         const go = document.getElementById('craft-go');
@@ -5980,6 +5996,10 @@
       const tag = slotIdx === 2 ? state.stance : (state.slotClassTags[slotIdx] || 'TANK');
       return it.classes.includes(tag);
     }
+    // ninguém do time atual consegue equipar → bom para quebrar em fragmentos
+    // (antes de escolher a vocação nada é marcado: o herói ainda pode virar qualquer classe)
+    function itemUselessForTeam(itemId) { return !!state.isPathLocked && ![0, 1, 2].some(s => partySlots[s] && canEquipItem(s, itemId)); }
+    const USELESS_BADGE = `<span class="absolute -bottom-1 -left-1 px-0.5 rounded bg-rose-950/90 border border-rose-500/70 ui-tiny text-rose-300 leading-none pointer-events-none">✂</span>`;
 
     // Arma de duas mãos (cajado, orbe, bandagens): ocupa Mão D. e Mão E. ao mesmo tempo
     function isTwoHanded(uid) { const id = itemIdOf(uid); return !!(id && ITEMS_DB[id].twoHanded); }
@@ -6155,8 +6175,9 @@
         if (it) {
           cell.style.cssText = tierFrameStyle(it);
           cell.draggable = true;
-          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
-          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]');
+          const useless = itemUselessForTeam(inst.id);
+          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span>${useless ? '<br><span class="text-rose-300">✂ Ninguém do time usa: quebre no Craft para ganhar fragmentos</span>' : ''}<br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
+          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]') + (useless ? USELESS_BADGE : '');
           cell.ondragstart = e => { e.dataTransfer.setData('text/plain', 'bag:' + inst.uid); e.dataTransfer.effectAllowed = 'move'; };
           cell.ondragend = e => askDestroyIfOutside(e, inst);
           // clique/toque duplo = equipa no personagem selecionado (troca com o que estiver no slot)
@@ -7527,6 +7548,8 @@
     }
     function robotManageItems(reserve) {
       robotEquipAll();
+      // item que ninguém do time usa vira fragmento na hora
+      getBagItems().filter(i => itemUselessForTeam(i.id)).forEach(salvageItem);
       if (ROBOT.st.doCombine) {
         for (let guard = 0; guard < 50; guard++) {
           let did = false;

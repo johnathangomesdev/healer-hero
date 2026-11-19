@@ -90,6 +90,7 @@
 
 - `state.frags = {COMMON..DIVINE}` (salvo no save; `frags()` cria se faltar). Craft tem 4 modos: Combinar, Refinar, **Quebrar** (`salvageItem`: destrói o item e dá `BAL.fragYield + BAL.fragPerPlus × plus` fragmentos do tier dele), **Trocar** (`tradeFrags`: `BAL.fragTrade` de um tier → 1 do seguinte). Barra `#craft-frags` mostra o saldo.
 - Refinar custa ouro + `refineFragCost(inst)` = `fragRefine × (1 + ⌊plus/2⌋)` fragmentos do tier do item; falha perde os dois.
+- Objetivo do Quebrar: dar uso aos itens de classes que não estão no time. `itemUselessForTeam(id)` (só depois da vocação, `state.isPathLocked`) marca esses itens com o selo ✂ (`USELESS_BADGE`) na bolsa do Inventário e do Craft; o modo Quebrar tem o botão **Todos sem uso**. Robô e simulador quebram esses itens logo no início de cada gestão de itens.
 - Robô e simulador: bolsa cheia → quebra o pior (não descarta mais); faltando fragmento para refinar → quebra o pior item do mesmo tier na bolsa, depois troca fragmentos de tiers abaixo. Painel: campos na aba Itens.
 - Efeito no simulador (Santo, padrões): 63 → ~85 min, refinos 116 → ~71, combinações 37 → ~6.
 
