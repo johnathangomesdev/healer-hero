@@ -198,17 +198,18 @@ const STANCE_PT = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
 const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
-  version: 6, // mude junto com BAL_VERSION do jogo quando as regras mudarem
-  general: { secondMercMin: 1000, targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
+  version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  general: { goldMult: 0.7, actBonus: 0.3, secondMercMin: 1000, targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
   skills: { cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14 },
   items: { tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000],
-    fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 3,
+    fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3,
     tierMult: { COMMON: 1, UNCOMMON: 1.3, RARE: 1.7, MYTHIC: 2.2, LEGENDARY: 3, DIVINE: 4 },
-    combineCost: { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 },
+    combineCost: { COMMON: 90, UNCOMMON: 270, RARE: 680, MYTHIC: 1650, LEGENDARY: 3900, DIVINE: 9000 },
     combineUp: { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 },
-    refineBase: { COMMON: 40, UNCOMMON: 100, RARE: 250, MYTHIC: 600, LEGENDARY: 1400, DIVINE: 3000 } },
+    refineBase: { COMMON: 60, UNCOMMON: 150, RARE: 380, MYTHIC: 900, LEGENDARY: 2100, DIVINE: 4500 },
+    salvageCost: { COMMON: 10, UNCOMMON: 30, RARE: 80, MYTHIC: 200, LEGENDARY: 500, DIVINE: 1200 } },
   itemList: [
     { id: 'CLOTH_SHIRT', name: 'Roupa de Pano (inicial)', slot: 'CHEST', tier: 'COMMON', classes: 'SAINT,EXORCIST,MONK,TANK,ARCHER', vit: 3, pow: 0, def: 1, spd: 0, pool: false },
     { id: 'SAINT_STAFF', name: 'Cajado do Santo (2 mãos)', slot: 'RIGHT_HAND', tier: 'COMMON', classes: 'SAINT', vit: 1, pow: 4, def: 0, spd: 0, pool: false },
@@ -390,7 +391,7 @@ function simulate(P, seed) {
     const vit = Math.round(d.vit * scale);
     return { key, boss: d.boss, splits: d.splits, hp: Math.round(G.hpBase + vit * G.hpPerVit), maxHp: Math.round(G.hpBase + vit * G.hpPerVit),
       pow: Math.round(d.pow * scale), def: Math.round(d.def * scale), spd: d.spd, speed: d.speed, range: d.range, x,
-      gold: Math.round(d.gold * scale), dpe: Math.round(d.dpe * scale), exp: Math.round(d.exp * scale), at: 0, alive: 0, dead: false, sister: false, summonT: 8 };
+      gold: Math.max(1, Math.round(d.gold * scale * G.goldMult)), dpe: Math.round(d.dpe * scale), exp: Math.round(d.exp * scale), at: 0, alive: 0, dead: false, sister: false, summonT: 8 };
   }
   function runStage(stage, preDrops) {
     const units = [];
@@ -421,7 +422,7 @@ function simulate(P, seed) {
       function onKill(e, holyByHero) {
         e.dead = true;
         const g = Math.round(e.gold * collect), d = Math.round(e.dpe * collect);
-        S.gold += g; S.goldEarned += g; S.dpe += d; S.dpeEarned += d;
+        S.gold += g; S.goldEarned += g; S.actGold = (S.actGold || 0) + g; S.dpe += d; S.dpeEarned += d;
         for (const u of units) { if (addExp(u.a, e.exp)) { u.maxHp = hpOf(u.a); if (u.hp > 0) u.hp = u.maxHp; } }
         if (holyByHero && S.stance === 'EXORCIST') {
           const h = units.find(u => u.isHero);
@@ -565,6 +566,7 @@ function simulate(P, seed) {
     // depois da vocação: item que ninguém do time usa vira fragmento na hora (igual ao robô do jogo)
     if (!S.tutorial) for (const i of bagItems()) {
       if ([0, 1, 2].some(s => S.party[s] && compat(i, S.party[s]))) continue;
+      const sc = IT.salvageCost[i.tier] || 0; if (S.gold < sc) continue; pay(sc);
       const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (i.plus || 0)));
       S.frags[i.tier] += n; S.fragsEarned += n; S.inv = S.inv.filter(x => x !== i); S.discarded++;
     }
@@ -594,9 +596,13 @@ function simulate(P, seed) {
       const c = IT.tabCosts[S.tabs - 1];
       if (S.tabs <= IT.tabCosts.length && c !== undefined && S.gold - c >= reserve) { pay(c); S.tabs++; continue; }
       const bag = bagItems().sort((a, b) => itemScore(a, 'HERO') - itemScore(b, 'HERO'));
-      // quebra o pior em fragmentos (igual ao jogo)
-      const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (bag[0].plus || 0)));
-      S.frags[bag[0].tier] += n; S.fragsEarned += n;
+      // quebra o pior em fragmentos (igual ao jogo); sem ouro para a quebra, joga fora
+      const sc = IT.salvageCost[bag[0].tier] || 0;
+      if (S.gold >= sc) {
+        pay(sc);
+        const n = Math.max(1, Math.round(IT.fragYield + IT.fragPerPlus * (bag[0].plus || 0)));
+        S.frags[bag[0].tier] += n; S.fragsEarned += n;
+      }
       S.inv = S.inv.filter(i => i !== bag[0]); S.discarded++;
     }
     const fragNeed = i => Math.max(1, Math.round(IT.fragRefine * (1 + Math.floor(i.plus / 2))));
@@ -644,6 +650,7 @@ function simulate(P, seed) {
   while (idx < stages.length && runs < ST.maxStageRuns) {
     const stage = stages[idx]; runs++;
     const pre = [];
+    if (stage.sub === 1) S.actGold = 0; // o prêmio do ato conta só o ouro desta tentativa do ato
     if (S.tutorial) {
       if (stage.id === '1-1') S.stance = 'SAINT';
       if (stage.id === '1-2') { S.stance = 'EXORCIST'; S.party[1] = null; }
@@ -657,6 +664,9 @@ function simulate(P, seed) {
     if (r.win) {
       streak = 0;
       if (stage.sub === 5) S.t += G.actEndSec + G.menuSecPerAct;
+      if (stage.sub === 5 && !(S.tutorial && stage.id === '1-5')) { // prêmio por concluir o ato
+        const b = Math.round((S.actGold || 0) * G.actBonus); S.gold += b; S.goldEarned += b;
+      }
       if (S.tutorial && stage.id === '1-5') {
         S.tutorial = false; S.party[0] = null; S.party[1] = null;
         if (S.gold < 95) { S.goldEarned += 115 - S.gold; S.gold = 115; }
@@ -887,13 +897,13 @@ function renderTabs() {
   const b = document.getElementById('tab-body');
   const tierFields = (obj, label, step) => `<div class="group-title">${label}</div><div class="fields">${TIERS.map(t => fld(`items.${obj}.${t}`, TIER_PT[t], step)).join('')}</div>`;
   const stageOpts = P.stages.map(s => [s.id, s.id]);
-  if (activeTab === 'geral') b.innerHTML = `<div class="fields">${fld('general.targetMin', 'Meta da demo (min)')}${fld('general.runs', 'Simulações por rodada', 1)}${fld('general.timeFactor', 'Fator de tempo real')}${fld('general.collectPct', '% dos drops coletados')}${fld('general.startDpe', 'DPE inicial')}${fld('general.secondMercMin', 'Preço mínimo do 2º mercenário')}${fld('general.tutorialSec', 'Tempo de diálogos do tutorial (s)')}${fld('general.menuSecPerAct', 'Tempo em menus por ato (s)')}${fld('general.actEndSec', 'Tela de vitória por ato (s)')}${fld('general.waveGap', 'Transição entre ondas (s)')}${fld('general.stageGap', 'Transição entre fases (s)')}</div>
+  if (activeTab === 'geral') b.innerHTML = `<div class="fields">${fld('general.targetMin', 'Meta da demo (min)')}${fld('general.runs', 'Simulações por rodada', 1)}${fld('general.timeFactor', 'Fator de tempo real')}${fld('general.collectPct', '% dos drops coletados')}${fld('general.startDpe', 'DPE inicial')}${fld('general.goldMult', 'Multiplicador do ouro dos monstros (0,7 = −30%)')}${fld('general.actBonus', 'Prêmio por concluir o ato (fração do ouro ganho no ato)')}${fld('general.secondMercMin', 'Preço mínimo do 2º mercenário')}${fld('general.tutorialSec', 'Tempo de diálogos do tutorial (s)')}${fld('general.menuSecPerAct', 'Tempo em menus por ato (s)')}${fld('general.actEndSec', 'Tela de vitória por ato (s)')}${fld('general.waveGap', 'Transição entre ondas (s)')}${fld('general.stageGap', 'Transição entre fases (s)')}</div>
     <div class="group-title">Meta de tempo por ato (min)</div><div class="fields">${[0, 1, 2, 3, 4].map(i => fld(`general.actTargets.${i}`, `Ato ${i + 1}`)).join('')}</div>
     <div class="group-title">Fórmulas de combate</div><div class="fields">${fld('general.critChance', 'Chance de crítico')}${fld('general.critMult', 'Multiplicador do crítico')}${fld('general.defMit', 'Defesa: redução por ponto')}${fld('general.hpBase', 'HP base')}${fld('general.hpPerVit', 'HP por VIT')}</div>`;
   else if (activeTab === 'prog') b.innerHTML = `<div class="fields">${fld('progression.expBase', 'EXP para o nível 2')}${fld('progression.expGrowth', 'Crescimento da EXP por nível (×)')}${fld('progression.ptsPerLevel', 'Pontos por nível', 1)}${fld('progression.vitPerPt', 'VIT por ponto')}${fld('progression.powPerPt', 'POW por ponto')}${fld('progression.defPerPt', 'DEF por ponto')}${fld('progression.spdPerPt', 'SPD por ponto')}</div>${expTable()}`;
   else if (activeTab === 'skills') b.innerHTML = `<div class="fields">${fld('skills.cost1', 'Custo Lv2 da passiva (DPE)')}${fld('skills.cost2', 'Custo Lv2 da ativa (DPE)')}${fld('skills.cost3', 'Custo Lv2 da ultimate (DPE)')}${fld('skills.costGrowth', 'Crescimento do custo por nível (×)')}${fld('skills.passBase', 'Força da passiva no Lv1 (× POW)')}${fld('skills.sk2Base', 'Força da ativa no Lv1 (× POW)')}${fld('skills.ultBase', 'Força da ultimate no Lv1 (× POW)')}${fld('skills.perLevel', 'Força extra por nível (× POW)')}${fld('skills.cd2', 'Recarga da ativa (s)')}${fld('skills.cd3', 'Recarga da ultimate (s)')}</div>`;
   else if (activeTab === 'itens') b.innerHTML = `<div class="fields">${fld('items.dropChance', 'Chance de item por monstro (0–1)')}${fld('items.tierDecay', 'Queda por tier acima de Comum (×)')}${fld('items.refinePct', 'Bônus por refino (+%)')}${fld('items.refineMax', 'Refino máximo', 1)}${fld('items.bagPerTab', 'Espaços por aba da bolsa', 1)}${fld('items.fragYield', 'Fragmentos ao quebrar um item', 1)}${fld('items.fragPerPlus', 'Fragmentos extras por nível de refino do item quebrado')}${fld('items.fragRefine', 'Fragmentos por refino (× 1 + nível÷2)')}${fld('items.fragTrade', 'Fragmentos para trocar por 1 do tier acima', 1)}${[0, 1, 2].map(i => fld(`items.tabCosts.${i}`, `Preço da aba ${i + 2}`)).join('')}</div>
-    ${tierFields('tierMult', 'Multiplicador de status por tier', 'any')}${tierFields('combineCost', 'Custo de combinar 3 itens (ouro)', 'any')}${tierFields('combineUp', 'Chance de subir de tier ao combinar (0–1)', 'any')}${tierFields('refineBase', 'Custo base do refino (× nível do refino)', 'any')}`;
+    ${tierFields('tierMult', 'Multiplicador de status por tier', 'any')}${tierFields('combineCost', 'Custo de combinar 3 itens (ouro)', 'any')}${tierFields('combineUp', 'Chance de subir de tier ao combinar (0–1)', 'any')}${tierFields('refineBase', 'Custo base do refino (× nível do refino)', 'any')}${tierFields('salvageCost', 'Custo de quebrar 1 item (ouro)', 'any')}`;
   else if (activeTab === 'lista') b.innerHTML = `<p class="sub" style="margin-bottom:8px">“No sorteio” marca os itens que podem cair aleatoriamente dos monstros depois do tutorial. Classes: SAINT, EXORCIST, MONK, TANK, ARCHER.</p>` + tableEditor('itemList', [
     { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'slot', label: 'Espaço', type: 'select', opts: SLOTS.map(s => [s, { HEAD: 'Cabeça', CHEST: 'Peito', RIGHT_HAND: 'Mão dir.', LEFT_HAND: 'Mão esq.', FEET: 'Pés' }[s]]) },
     { key: 'tier', label: 'Tier', type: 'select', opts: TIERS.map(t => [t, TIER_PT[t]]) }, { key: 'classes', label: 'Classes', sm: true },

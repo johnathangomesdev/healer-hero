@@ -93,6 +93,15 @@
 - Robô e simulador: só quebram item que ninguém do time usa (`itemUselessForTeam`, depois da vocação), no início de cada gestão de itens; bolsa cheia → quebra o pior em vez de descartar; faltando fragmento para refinar → só troca fragmentos de tiers abaixo. Para o jogador não há selo nem restrição (o uso depende do mercenário que ele vai comprar). Painel: campos na aba Itens.
 - Efeito no simulador (Santo, padrões, troca 3:1): 63 → ~136 min, refinos 116 → ~46, combinações ~35.
 
+## 3g. Economia, dificuldades e ranking (2026-11-19)
+
+- Ouro dos monstros × `BAL.goldMult` (0.7). Ao vencer o chefe X-5 (fora do tutorial): prêmio `BAL.actBonus` (0.3) × ouro ganho no ato (`state.chapterEarned.gold`, zera no X-1). Custos: `COMBINE_COST` e `REFINE_BASE` +50%, `SALVAGE_COST` por tier (quebrar custa ouro), `fragYield` 5, `fragPerPlus` 2. `BAL_VERSION` = 7.
+- Dificuldades: `state.cycle` (0 Normal, 1 Difícil, 2 Insano, 3 Infernal, 4+ Infernal II, III…), `DIFFS` / `diffOf(c)` / `curDiff()`. Multiplica stats dos monstros (`stat`), ouro/DPE/EXP, chance de drop, raridade (`decay` × `BAL.tierDecay`) e tiers extras (`cap`, também nos drops fixos dos alfas via `upTier`). Aplicado em `spawnEnemy`, `dropTierCap`, `rollDropTier`.
+- 5-5 tem `next: 'NEXT_CYCLE'`: `startStage('NEXT_CYCLE')` sobe o ciclo e vai para `C1-1`. `C1-1..C1-5` = Ato 1 de ciclo (sem eventos, `ZOMBIE_WOLF` no lugar do lobo do tutorial, escala 3.2→3.8, `start: 'C1-1'`). Use sempre `actStartId(cfg)` em vez de `${act}-1`. Ato exibido = `displayAct(cfg)` = ciclo×5 + ato (`toRoman` genérico). HUD mostra `#lbl-diff`; o mapa tem seletor das dificuldades já liberadas (`state.maxCycle`).
+- Save guarda `cycle`, `maxCycle`, `playTime` (tempo real), `cheated` (Modo DEV ligado), `rankedUpTo`.
+- Ranking local (`hh_ranking_v1`, nome em `hh_player_name`): 1ª vitória sobre o Necromante em cada dificuldade por save grava `{name, cycle, act, time, level, stance, dev}`; ordena por dificuldade desc e tempo asc. `#modal-ranking` fica fora do `#hud-root` (abre no menu principal e na vitória do 5-5) com CSS próprio. **Não é online**: precisa de um backend (Supabase/Firebase etc.) para ser compartilhado.
+- Simulador: `general.goldMult`, `general.actBonus`, `items.salvageCost`; não simula os ciclos. Santo, padrões: ~87 min.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.

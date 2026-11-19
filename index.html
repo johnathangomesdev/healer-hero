@@ -244,6 +244,13 @@
       animation: tierTwinkle 1.6s ease-in-out infinite;
     }
     #hud-root .ui-h1, #hud-root .ui-h2, #hud-root .ui-btn, #hud-root .ui-num, #hud-root .ui-tiny { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7); }
+    /* Ranking fica fora da HUD (abre também no menu principal): mesma tipografia, em pixels de tela */
+    #modal-ranking .ui-h1   { font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: clamp(16px, 2.6vh, 24px); letter-spacing: 0.06em; text-transform: uppercase; }
+    #modal-ranking .ui-btn  { font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: clamp(12px, 2vh, 17px); letter-spacing: 0.04em; }
+    #modal-ranking .ui-body { font-family: 'Inter', sans-serif; font-weight: 600; font-size: clamp(12px, 2vh, 16px); }
+    #modal-ranking .ui-tiny { font-family: 'Lilita One', 'Arial Black', sans-serif; font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 0.04em; }
+    #modal-ranking .ui-h1, #modal-ranking .ui-btn, #modal-ranking .ui-tiny { text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7); }
+    #modal-ranking #rank-body { max-height: 55vh; }
 
     #arena-canvas {
       width: 100%;
@@ -371,6 +378,7 @@
         <button id="menu-btn-start" class="menu-btn primary">Iniciar</button>
         <button id="menu-btn-continue" class="menu-btn">Continuar</button>
         <button id="menu-btn-autosave" class="menu-btn hidden">Retomar Autosave</button>
+        <button id="menu-btn-ranking" class="menu-btn">Ranking</button>
         <button id="menu-btn-settings" class="menu-btn">Configurações</button>
         <button id="menu-btn-sprites" class="menu-btn dev">Editar Sprites</button>
         <button id="menu-btn-dev" class="menu-btn dev">Modo Dev: OFF</button>
@@ -390,6 +398,22 @@
       </div>
       <div id="menu-note" class="hidden"></div>
     </div>
+    <!-- MODAL: RANKING (quem derrotou o Necromante em cada dificuldade) -->
+    <div id="modal-ranking" class="hidden absolute inset-0 bg-slate-950/75 flex items-center justify-center p-3" style="z-index:70">
+      <div class="glass-drawer rounded-2xl p-4 w-full max-w-[820px] border-2 border-amber-400/80 flex flex-col gap-2 max-h-full">
+        <div class="flex items-center justify-between">
+          <span class="ui-h1 text-amber-300">🏆 RANKING</span>
+          <button id="btn-rank-close" class="icon-btn w-9 h-9 ui-btn">✕</button>
+        </div>
+        <div class="ui-tiny text-slate-400">Cada vez que alguém derrota o Necromante entra aqui. Ordem: maior dificuldade vencida, depois o menor tempo de jogo.</div>
+        <div id="rank-body" class="overflow-y-auto max-h-[230px]"></div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="ui-tiny text-slate-400">Jogador: <b id="rank-name" class="text-slate-200"></b></span>
+          <button id="btn-rank-rename" class="icon-btn ui-btn px-3 py-1">Trocar nome</button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- EDITOR DE SPRITES -->
     <div id="sprite-editor">
@@ -461,6 +485,7 @@
       <!-- Top-Center: Act Roman + Sub-stage Progress Dots (●---●---○) + World Map Icon -->
       <button id="btn-open-map" class="absolute left-1/2 -translate-x-1/2 glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
         <span id="lbl-act-roman" class="ui-h2 text-amber-300">I</span>
+        <span id="lbl-diff" class="hidden ui-tiny px-1.5 rounded-full border leading-tight"></span>
         <div class="flex items-center">
           <span id="dot-sub-1" class="w-2.5 h-2.5 rounded-full bg-red-500 border border-red-200 shadow-[0_0_8px_#ef4444]"></span>
           <span id="line-sub-1" class="w-3 h-0.5 bg-slate-500"></span>
@@ -703,6 +728,7 @@
           <span class="ui-h1 text-amber-300">MAPA DO REINO — SELECIONE O ATO</span>
           <button id="btn-close-map" class="icon-btn w-6 h-6 ui-btn">✕</button>
         </div>
+        <div id="world-map-diffs" class="hidden flex items-center gap-1 mb-1.5 flex-wrap"></div>
         <div class="relative w-full h-[220px] rounded-xl overflow-hidden border border-amber-500/40">
           <canvas id="world-map-canvas" width="510" height="220" class="w-full h-full block"></canvas>
           <div id="world-map-nodes" class="absolute inset-0"></div>
@@ -762,6 +788,7 @@
         <div class="flex justify-center gap-2.5 mt-3">
           <button id="btn-vic-next" class="icon-btn px-3 py-1.5 border-emerald-400 text-emerald-200 ui-btn">Próximo Ato</button>
           <button id="btn-vic-repeat" class="icon-btn px-3 py-1.5 ui-btn">Repetir Ato</button>
+          <button id="btn-vic-rank" class="hidden icon-btn px-3 py-1.5 ui-btn border-amber-400 text-amber-300">🏆 Ranking</button>
         </div>
       </div>
     </div>
@@ -1363,20 +1390,45 @@
       '5-2': { act: 5, sub: 2, sky: 'ALTAR', next: '5-3', scale: 6.91, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
       '5-3': { act: 5, sub: 3, sky: 'ALTAR', next: '5-4', scale: 7.28, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['CORRUPTED_BEAR', 'CORRUPTED_BEAR', 'ZOMBIE_WOLF']] },
       '5-4': { act: 5, sub: 4, sky: 'ALTAR', next: '5-5', scale: 7.66, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'ZOMBIE_WOLF'], ['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME']] },
-      '5-5': { act: 5, sub: 5, sky: 'ALTAR', next: '5-1', scale: 8.02, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_MAGE_BOSS']] }
+      '5-5': { act: 5, sub: 5, sky: 'ALTAR', next: 'NEXT_CYCLE', scale: 8.02, waves: [['CORRUPTED_BEAR', 'ZOMBIE_WOLF', 'CORRUPTED_SLIME'], ['ZOMBIE_MAGE_BOSS']] }
     };
+    // ---- Ciclos de dificuldade: depois do Necromante o jogo recomeça no "Ato 1" sem tutorial ----
+    // C1-1..C1-5 = versão de ciclo do Ato 1 (sem eventos, lobos de verdade, escala perto do Ato 2)
+    [1, 2, 3, 4, 5].forEach(n => {
+      const b = STAGES_DB['1-' + n];
+      STAGES_DB['C1-' + n] = { act: 1, sub: n, start: 'C1-1', sky: n <= 3 ? 'DUSK' : 'BLOOD', next: n < 5 ? 'C1-' + (n + 1) : '2-1',
+        scale: +(3.2 + 0.15 * (n - 1)).toFixed(2), waves: b.waves.map(w => w.map(k => (k === 'TUTORIAL_WOLF' ? 'ZOMBIE_WOLF' : k))) };
+    });
+    // stat = vida/força/defesa dos monstros; gold/dpe/exp = recompensas; drop = chance de item; decay = raridade; cap = tiers extras
+    const DIFFS = [
+      { name: 'Normal',   color: '#e5e7eb', stat: 1,   gold: 1, dpe: 1, exp: 1,   drop: 1,   decay: 1,    cap: 0 },
+      { name: 'Difícil',  color: '#60a5fa', stat: 2.2, gold: 2, dpe: 2, exp: 2,   drop: 1.4, decay: 1.35, cap: 1 },
+      { name: 'Insano',   color: '#c084fc', stat: 4.8, gold: 4, dpe: 4, exp: 3.5, drop: 1.8, decay: 1.7,  cap: 1 },
+      { name: 'Infernal', color: '#f87171', stat: 10,  gold: 8, dpe: 7, exp: 6,   drop: 2.2, decay: 2.0,  cap: 2 }
+    ];
+    // depois do Infernal ele se repete (Infernal II, III...), cada volta mais forte
+    function diffOf(cycle) {
+      const c = Math.max(0, cycle | 0);
+      if (c < DIFFS.length) return DIFFS[c];
+      const k = c - (DIFFS.length - 1), I = DIFFS[DIFFS.length - 1];
+      return Object.assign({}, I, { name: 'Infernal ' + toRoman(k + 1), stat: I.stat * Math.pow(2, k), gold: I.gold * Math.pow(1.8, k), dpe: I.dpe * Math.pow(1.8, k), exp: I.exp * Math.pow(1.7, k), drop: Math.min(4, I.drop + 0.2 * k), decay: Math.min(2.8, I.decay + 0.1 * k) });
+    }
+    function curDiff() { return diffOf(state.cycle || 0); }
+    function actStartId(cfg) { return cfg.start || `${cfg.act}-1`; }
+    function displayAct(cfg, cycle = state.cycle || 0) { return cycle * 5 + cfg.act; }
 
     // =========================================================================
     // BALANCEAMENTO: o painel balanceamento.html salva os parâmetros em
     // localStorage['hh_balance_game_v1'] (botão Salvar no jogo) (mesma origem). Aqui eles sobrescrevem
     // os valores padrão do jogo. Sem nada salvo, tudo fica como está no código.
     // =========================================================================
-    const BAL_VERSION = 6;
+    const BAL_VERSION = 7;
     const BAL = (() => {
       const B = { critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5, startDpe: 15,
         expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08,
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
-        fragYield: 3, fragPerPlus: 1, fragRefine: 1, fragTrade: 3,
+        fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3, salvageCost: null,
+        goldMult: 0.7, actBonus: 0.3,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
@@ -1388,14 +1440,14 @@
       const take = (src, keys) => { if (src) for (const k of keys) if (k in src) B[k] = num(src[k], B[k]); };
       try {
         B.active = true;
-        take(P.general, ['secondMercMin', 'critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
+        take(P.general, ['goldMult', 'actBonus', 'secondMercMin', 'critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
         take(P.progression, ['expBase', 'expGrowth', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
         take(P.skills, ['cost1', 'cost2', 'cost3', 'costGrowth', 'passBase', 'sk2Base', 'ultBase', 'perLevel', 'cd2', 'cd3']);
         take(P.items, ['tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab', 'fragYield', 'fragPerPlus', 'fragRefine', 'fragTrade']);
         const IT = P.items || {};
         if (Array.isArray(IT.tabCosts)) B.tabCosts = IT.tabCosts.map((v, i) => num(+v, B.tabCosts[i] || 0));
         if (IT.tierMult) for (const t of TIER_KEYS) TIER_MULT[t] = num(IT.tierMult[t], TIER_MULT[t]);
-        B.combineCost = IT.combineCost || null; B.combineUp = IT.combineUp || null; B.refineBase = IT.refineBase || null;
+        B.combineCost = IT.combineCost || null; B.combineUp = IT.combineUp || null; B.refineBase = IT.refineBase || null; B.salvageCost = IT.salvageCost || null;
         const stat4 = (o, d) => ({ vit: num(o && o.vit, d.vit), pow: num(o && o.pow, d.pow), def: num(o && o.def, d.def), spd: num(o && o.spd, d.spd) });
         if (P.hero) {
           B.hero = stat4(P.hero, B.hero); B.fatherBonusVit = num(P.hero.fatherBonusVit, B.fatherBonusVit);
@@ -1929,6 +1981,16 @@
     function startStage(stageId) {
       // vida e mortes continuam de uma fase para a outra; só cura/revive no início do ato ou ao tentar de novo após derrota
       const wasDefeated = state.isDefeated || getLivingAllies().length === 0;
+      if (stageId === 'NEXT_CYCLE') { // venceu o Necromante: sobe a dificuldade e volta ao "Ato 1"
+        state.cycle = (state.cycle || 0) + 1;
+        state.maxCycle = Math.max(state.maxCycle || 0, state.cycle);
+        stageId = 'C1-1';
+        const D = curDiff();
+        showBanner(`Dificuldade ${D.name}! Ato ${toRoman(displayAct(STAGES_DB['C1-1']))} — monstros mais fortes, recompensas maiores.`);
+      }
+      if (state.tutorialCompleted && stageId.startsWith('1-')) {
+        if ((state.cycle || 0) > 0) stageId = 'C1-' + stageId.slice(2);
+      }
       if (state.tutorialCompleted && stageId.startsWith('1-')) {
         stageId = '2-1';
         if (state.postTutorialStance) {
@@ -2060,6 +2122,7 @@
 
     function spawnEnemy(key, x, y, scaleMult = 1.0) {
       const db = ENEMIES_DB[key];
+      const D = curDiff(), sm = scaleMult * D.stat;
       const e = new CombatEntity({
         name: db.name,
         rig: db.rig,
@@ -2068,18 +2131,18 @@
         isRanged: db.ranged,
         splits: db.splits,
         stats: {
-          vit: Math.round(db.stats.vit * scaleMult),
-          pow: Math.round(db.stats.pow * scaleMult),
-          def: Math.round(db.stats.def * scaleMult),
+          vit: Math.round(db.stats.vit * sm),
+          pow: Math.round(db.stats.pow * sm),
+          def: Math.round(db.stats.def * sm),
           spd: db.stats.spd
         },
         x, y,
         range: db.range,
         speed: db.speed,
         rewards: {
-          gold: Math.round(db.gold * scaleMult),
-          dpe: Math.round(db.dpe * scaleMult),
-          exp: Math.round(db.exp * scaleMult)
+          gold: Math.max(1, Math.round(db.gold * scaleMult * D.gold * BAL.goldMult)),
+          dpe: Math.round(db.dpe * scaleMult * D.dpe),
+          exp: Math.round(db.exp * scaleMult * D.exp)
         }
       });
       e.enemyKey = key;
@@ -2093,14 +2156,20 @@
 
     // Tier do drop: monstro comum até Raro, alfas até Mítico, Lendário só do chefe final.
     // Cada tier acima de Comum é BAL.tierDecay vezes mais raro que o anterior (queda exponencial).
-    function dropTierCap(entity) { return entity.enemyKey === 'ZOMBIE_MAGE_BOSS' ? 'LEGENDARY' : (entity.isBoss || (ENEMIES_DB[entity.enemyKey] || {}).boss) ? 'MYTHIC' : 'RARE'; }
+    // dificuldades acima de Normal liberam tiers acima (D.cap) e deixam os tiers altos mais comuns (D.decay)
+    function dropTierCap(entity) {
+      const base = entity.enemyKey === 'ZOMBIE_MAGE_BOSS' ? 'LEGENDARY' : (entity.isBoss || (ENEMIES_DB[entity.enemyKey] || {}).boss) ? 'MYTHIC' : 'RARE';
+      return TIER_KEYS[Math.min(TIER_KEYS.length - 1, TIER_KEYS.indexOf(base) + curDiff().cap)];
+    }
     function rollDropTier(cap) {
       const n = TIER_KEYS.indexOf(cap) + 1, w = []; let tot = 0;
-      for (let k = 0; k < n; k++) { w.push(Math.pow(BAL.tierDecay, k)); tot += w[k]; }
+      const decay = Math.min(0.92, BAL.tierDecay * curDiff().decay);
+      for (let k = 0; k < n; k++) { w.push(Math.pow(decay, k)); tot += w[k]; }
       let r = Math.random() * tot;
       for (let k = 0; k < n; k++) { r -= w[k]; if (r <= 0) return TIER_KEYS[k]; }
       return 'COMMON';
     }
+    function upTier(tier, n) { return TIER_KEYS[Math.min(TIER_KEYS.length - 1, TIER_KEYS.indexOf(tier || 'COMMON') + (n | 0))]; }
     function capTier(tier, cap) { return TIER_KEYS.indexOf(tier) > TIER_KEYS.indexOf(cap) ? cap : tier; }
     function spawnPhysicalDrop(kind, amount, x, y, itemId = '', tier = null) {
       physicalDrops.push({
@@ -2159,15 +2228,15 @@
 
         // Drops físicos de itens no chão
         if (entity.isCursedSister) spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'EMERALD_CLOAK');
-        else if (entity.enemyKey === 'ALPHA_DEMON_WOLF') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'GOLDEN_ARMOR', capTier(ITEMS_DB.GOLDEN_ARMOR.tier, 'MYTHIC'));
-        else if (entity.enemyKey === 'SLIME_ALPHA') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'CRIMSON_WRAPS');
-        else if (entity.enemyKey === 'BEAR_ALPHA') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'IRON_BUCKLER');
+        else if (entity.enemyKey === 'ALPHA_DEMON_WOLF') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'GOLDEN_ARMOR', (state.cycle || 0) > 0 ? upTier('MYTHIC', curDiff().cap) : capTier(ITEMS_DB.GOLDEN_ARMOR.tier, 'MYTHIC'));
+        else if (entity.enemyKey === 'SLIME_ALPHA') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'CRIMSON_WRAPS', upTier(ITEMS_DB.CRIMSON_WRAPS.tier, curDiff().cap));
+        else if (entity.enemyKey === 'BEAR_ALPHA') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'IRON_BUCKLER', upTier(ITEMS_DB.IRON_BUCKLER.tier, curDiff().cap));
         else if (entity.enemyKey === 'ZOMBIE_MAGE_BOSS') spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'NECRO_MANTLE_SS');
         else if (state.stageId === '1-1' && Math.random() < 0.7 && !hasItemId('WOODEN_ROSARY')) {
           spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'WOODEN_ROSARY');
         } else if (state.stageId === '2-1' && Math.random() < 0.6 && !hasItemId('PILGRIM_SANDALS')) {
           spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'PILGRIM_SANDALS');
-        } else if (state.tutorialCompleted && Math.random() < BAL.dropChance) {
+        } else if (state.tutorialCompleted && Math.random() < BAL.dropChance * curDiff().drop) {
           // roupas de classe: chance pequena em qualquer monstro, priorizando as que ainda não foram obtidas
           const pool = BAL.pool || ['MONK_ROBE', 'FATHER_WRAPS', 'PILGRIM_SANDALS', 'KNIGHT_PLATE', 'KNIGHT_GREAVES', 'KNIGHT_SWORD', 'ELVEN_TUNIC', 'ELVEN_BOOTS', 'EMERALD_CLOAK'];
           const fresh = pool.filter(id => !hasItemId(id));
@@ -2248,8 +2317,22 @@
 
       // Tela de Vitória exclusiva pós-Boss X-3
       state.isVictory = true;
-      document.getElementById('lbl-vic-sub').textContent = `Ato ${toRoman(cfg.act)} Concluído`;
-      document.getElementById('lbl-vic-rewards').textContent = `+${state.chapterEarned.gold} GOLD  |  +${state.chapterEarned.dpe} DPE  |  +${state.chapterEarned.exp} EXP`;
+      // prêmio por concluir o ato: % do ouro ganho no ato (só quem chega ao chefe e vence recebe)
+      const earned = Math.max(0, (state.chapterEarned.gold || 0) - 1);
+      const bonus = Math.round(earned * BAL.actBonus);
+      if (bonus > 0) state.gold += bonus;
+      const D = curDiff();
+      document.getElementById('lbl-vic-sub').innerHTML = `Ato ${toRoman(displayAct(cfg))} Concluído <span style="color:${D.color}">· ${D.name}</span>`;
+      document.getElementById('lbl-vic-rewards').innerHTML = `+${earned} GOLD  |  +${state.chapterEarned.dpe} DPE  |  +${state.chapterEarned.exp} EXP`
+        + (bonus > 0 ? `<br><span class="text-amber-300">Prêmio do Ato: +${bonus} GOLD (${Math.round(BAL.actBonus * 100)}% do ouro ganho)</span>` : '')
+        + (cfg.next === 'NEXT_CYCLE' ? `<br><span style="color:${diffOf((state.cycle || 0) + 1).color}">Necromante derrotado! Próximo: dificuldade ${diffOf((state.cycle || 0) + 1).name}</span>` : '');
+      document.getElementById('btn-vic-next').textContent = cfg.next === 'NEXT_CYCLE' ? `Ir para ${diffOf((state.cycle || 0) + 1).name}` : 'Próximo Ato';
+      document.getElementById('btn-vic-rank').classList.toggle('hidden', cfg.next !== 'NEXT_CYCLE');
+      // 1ª vitória sobre o Necromante nesta dificuldade (neste save) entra no ranking
+      if (cfg.next === 'NEXT_CYCLE' && (state.rankedUpTo ?? -1) < (state.cycle || 0)) {
+        state.rankedUpTo = state.cycle || 0;
+        onDifficultyCleared();
+      }
       document.getElementById('modal-victory').classList.remove('hidden');
 
       if (state.isRepeat) {
@@ -2499,7 +2582,7 @@
         state.autoModalTimer -= dt;
         if (state.autoModalTimer <= 0) {
           const cfg = STAGES_DB[state.stageId];
-          if (state.isRepeat) startStage(`${cfg.act}-1`);
+          if (state.isRepeat) startStage(actStartId(cfg));
           else if (state.isAutoAdvance && !state.anyAllyDied) startStage(cfg.next);
         }
       }
@@ -5356,7 +5439,11 @@
     });
 
     function toRoman(num) {
-      return ['', 'I', 'II', 'III', 'IV', 'V'][num] || String(num);
+      num = Math.floor(num); if (!(num > 0) || num > 3999) return String(num);
+      let s = '';
+      for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']])
+        while (num >= v) { s += r; num -= v; }
+      return s;
     }
 
     function showBanner(msg) {
@@ -5396,7 +5483,10 @@
 
     function refreshAllUI() {
       const cfg = STAGES_DB[state.stageId] || STAGES_DB['1-1'];
-      document.getElementById('lbl-act-roman').textContent = toRoman(cfg.act);
+      document.getElementById('lbl-act-roman').textContent = toRoman(displayAct(cfg));
+      const dEl = document.getElementById('lbl-diff'), D = curDiff();
+      dEl.classList.toggle('hidden', !(state.cycle > 0));
+      dEl.textContent = D.name; dEl.style.color = D.color; dEl.style.borderColor = D.color;
 
       // Atualiza indicador de bolinhas ●---●---○
       for (let i = 1; i <= 5; i++) {
@@ -5430,9 +5520,12 @@
     // =========================================================================
     // DRAWER 5: CRAFT — Combinar 3 itens do mesmo tier | Refinar
     // =========================================================================
-    const COMBINE_COST = { COMMON: 60, UNCOMMON: 180, RARE: 450, MYTHIC: 1100, LEGENDARY: 2600, DIVINE: 6000 };
+    const COMBINE_COST = { COMMON: 90, UNCOMMON: 270, RARE: 680, MYTHIC: 1650, LEGENDARY: 3900, DIVINE: 9000 };
     const COMBINE_UP_CHANCE = { COMMON: 0.2, UNCOMMON: 0.15, RARE: 0.1, MYTHIC: 0.07, LEGENDARY: 0.04, DIVINE: 0 };
-    const REFINE_BASE = { COMMON: 40, UNCOMMON: 100, RARE: 250, MYTHIC: 600, LEGENDARY: 1400, DIVINE: 3000 };
+    const REFINE_BASE = { COMMON: 60, UNCOMMON: 150, RARE: 380, MYTHIC: 900, LEGENDARY: 2100, DIVINE: 4500 };
+    const SALVAGE_COST = { COMMON: 10, UNCOMMON: 30, RARE: 80, MYTHIC: 200, LEGENDARY: 500, DIVINE: 1200 };
+    if (BAL.salvageCost) Object.assign(SALVAGE_COST, BAL.salvageCost);
+    function salvageCost(inst) { return SALVAGE_COST[inst.tier] || 0; }
     const REFINE_MAX = BAL.refineMax;
     if (BAL.combineCost) Object.assign(COMBINE_COST, BAL.combineCost);
     if (BAL.combineUp) Object.assign(COMBINE_UP_CHANCE, BAL.combineUp);
@@ -5604,6 +5697,7 @@
         // QUEBRAR (vários itens de uma vez) + TROCAR fragmentos, no mesmo menu
         const list = craft.salvage.map(invGet).filter(Boolean);
         const gain = {}; list.forEach(i => { gain[i.tier] = (gain[i.tier] || 0) + salvageYield(i); });
+        const sCost = list.reduce((s, i) => s + salvageCost(i), 0);
         const f = frags(), r = FRAG_TRADE();
         const sel = list.map(i => craftSlotHtml(i, 'w-9 h-9')).join('') || craftSlotHtml(null, 'w-9 h-9');
         body.innerHTML = `
@@ -5613,9 +5707,9 @@
               <div class="flex flex-wrap justify-center gap-1 max-h-[84px] overflow-y-auto">${sel}</div>
               <div class="ui-body text-slate-300 text-center leading-tight">${list.length
                 ? `${list.length} ${list.length === 1 ? 'item' : 'itens'} ➜ ${TIER_KEYS.filter(t => gain[t]).map(t => fragLabel(t, '+' + gain[t])).join(' ')}<br><span class="text-rose-300">Os itens são destruídos.</span>`
-                : `Clique nos itens da bolsa para escolher. Cada um vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por refino).`}</div>
+                : `Clique nos itens da bolsa para escolher. Cada um vira fragmentos do próprio tier (${Math.round(BAL.fragYield)} + ${BAL.fragPerPlus} por refino) e custa um pouco de ouro.`}</div>
               <div class="flex gap-1">
-                <button id="craft-go" class="icon-btn ui-btn px-3 py-0.5 gap-1 whitespace-nowrap border-rose-400/80 text-rose-300" ${list.length ? '' : 'disabled'}>✂ Quebrar${list.length ? ` (${list.length})` : ''}</button>
+                <button id="craft-go" class="icon-btn ui-btn px-3 py-0.5 gap-1 whitespace-nowrap border-rose-400/80 text-rose-300" ${list.length ? '' : 'disabled'}>✂ Quebrar${list.length ? ` • <span class="text-amber-300">${sCost}</span>${COIN_ICO}` : ''}</button>
                 <button id="craft-salv-clear" class="icon-btn ui-btn px-2 py-0.5 whitespace-nowrap" data-tip="Tirar todos da seleção" ${list.length ? '' : 'disabled'}>✕</button>
               </div>
             </div>
@@ -5638,7 +5732,7 @@
         document.getElementById('craft-salv-clear').onclick = () => { craft.salvage = []; craft.resultMsg = ''; renderDrawer5Craft(); };
         const go = document.getElementById('craft-go');
         if (go) go.onclick = () => {
-          if (!list.length) return;
+          if (!list.length || !payGold(sCost)) return;
           const got = {}; list.forEach(i => { got[i.tier] = (got[i.tier] || 0) + salvageItem(i); });
           craft.salvage = [];
           craft.resultMsg = `<b class="text-emerald-300">✔</b> ${list.length === 1 ? ITEMS_DB[list[0].id].name + ' quebrado' : list.length + ' itens quebrados'}: ${TIER_KEYS.filter(t => got[t]).map(t => fragLabel(t, '+' + got[t])).join(' ')}`;
@@ -6467,10 +6561,27 @@
       const host = document.getElementById('world-map-nodes');
       host.innerHTML = '';
       const curAct = (STAGES_DB[state.stageId] || STAGES_DB['1-1']).act;
+      const cyc = state.mapCycle ?? (state.cycle || 0);
+      const D = diffOf(cyc);
+      // seletor de dificuldade (só as já liberadas)
+      const tabs = document.getElementById('world-map-diffs');
+      if (tabs) {
+        tabs.innerHTML = '';
+        for (let c = 0; c <= (state.maxCycle || 0); c++) {
+          const d = diffOf(c), b = document.createElement('button');
+          b.className = `icon-btn ui-btn px-2 py-0.5 ${c === cyc ? 'icon-btn-active' : ''}`;
+          b.style.color = d.color; b.textContent = d.name;
+          b.onclick = () => { state.mapCycle = c; renderIllustratedWorldMap(); };
+          tabs.appendChild(b);
+        }
+        tabs.classList.toggle('hidden', !(state.maxCycle > 0));
+      }
 
       actNodes.forEach(n => {
-        const locked = n.act === 1 && state.tutorialCompleted;
-        const isCurrent = curAct === n.act;
+        const locked = n.act === 1 && state.tutorialCompleted && cyc === 0;
+        const isCurrent = curAct === n.act && cyc === (state.cycle || 0);
+        n = Object.assign({}, n, cyc > 0 ? { stage: n.act === 1 ? 'C1-1' : n.stage, title: n.title.replace(/^Ato [IVX]+/, 'Ato ' + toRoman(cyc * 5 + n.act)).replace('Tutorial (Cabana)', 'Arredores da Cabana') + ` — ${D.name}` } : {});
+        const label = toRoman(cyc * 5 + n.act);
         const btn = document.createElement('button');
         btn.className = `icon-btn ui-btn absolute -translate-x-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-full flex-col ${
           isCurrent ? 'ring-2 ring-amber-300 bg-slate-900' : 'bg-slate-950/90'
@@ -6480,10 +6591,11 @@
         btn.style.borderColor = n.color;
         btn.disabled = locked;
         btn.dataset.tip = `<b>${n.title}</b><br>${n.desc}${locked ? '<br><span class="text-rose-400">Tutorial já concluído</span>' : ''}`;
-        btn.innerHTML = `<span style="color:${n.color}">${toRoman(n.act)}</span>`;
+        btn.innerHTML = `<span style="color:${n.color}">${label}</span>`;
         btn.onclick = () => {
           document.getElementById('modal-world-map').classList.add('hidden');
           state.awaitingAct2Lock = false;
+          state.cycle = cyc; state.mapCycle = null;
           startStage(n.stage);
         };
         host.appendChild(btn);
@@ -6666,6 +6778,7 @@
 
     // Mapa Mundial
     document.getElementById('btn-open-map').onclick = () => {
+      state.mapCycle = null;
       renderIllustratedWorldMap();
       document.getElementById('modal-world-map').classList.remove('hidden');
     };
@@ -6985,6 +7098,49 @@
       return d.toDateString() === now.toDateString() ? hm : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + hm;
     }
 
+    // =========================================================================
+    // RANKING — guardado neste navegador (localStorage). Uma entrada por Necromante derrotado.
+    // =========================================================================
+    const RANK_KEY = 'hh_ranking_v1', NAME_KEY = 'hh_player_name';
+    function rankLoad() { try { const a = JSON.parse(localStorage.getItem(RANK_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function rankSave(a) { try { localStorage.setItem(RANK_KEY, JSON.stringify(a)); } catch (e) { } }
+    function playerName(ask) {
+      let n = ''; try { n = localStorage.getItem(NAME_KEY) || ''; } catch (e) { }
+      if (!n || ask) {
+        const v = (window.prompt('Seu nome para o ranking:', n || 'Herói') || '').trim().slice(0, 16);
+        if (v) { n = v; try { localStorage.setItem(NAME_KEY, n); } catch (e) { } }
+      }
+      return n || 'Herói';
+    }
+    function fmtTime(sec) {
+      sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
+      return h ? `${h}h${String(m).padStart(2, '0')}m` : `${m}m${String(s).padStart(2, '0')}s`;
+    }
+    function rankSort(a) { return a.sort((x, y) => (y.cycle - x.cycle) || (x.time - y.time)); }
+    // chamado ao vencer o Necromante (antes de subir a dificuldade)
+    function onDifficultyCleared() {
+      const cyc = state.cycle || 0, D = diffOf(cyc), h = partySlots[2];
+      const robot = typeof ROBOT !== 'undefined' && DEV.on && ROBOT.on;
+      const entry = { name: robot ? 'Robô' : playerName(false), cycle: cyc, diff: D.name, act: cyc * 5 + 5, time: Math.round(state.playTime || 0),
+        level: h ? h.level : 1, stance: state.stance, dev: !!state.cheated, date: Date.now() };
+      const list = rankSort(rankLoad().concat([entry])).slice(0, 50);
+      rankSave(list);
+      const pos = list.indexOf(entry) + 1;
+      if (pos > 0 && pos <= 10) setTimeout(() => showBanner(`🏆 ${entry.name} entrou no Ranking em #${pos} (${D.name}, ${fmtTime(entry.time)})!`), 1200);
+    }
+    function renderRanking() {
+      const list = rankLoad(), STN = { SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' };
+      document.getElementById('rank-name').textContent = (() => { try { return localStorage.getItem(NAME_KEY) || '—'; } catch (e) { return '—'; } })();
+      document.getElementById('rank-body').innerHTML = list.length ? `<table class="w-full ui-body text-slate-200">
+        <thead><tr class="text-slate-400 ui-tiny text-left"><th class="px-1">#</th><th class="px-1">Jogador</th><th class="px-1">Dificuldade</th><th class="px-1 text-right">Ato</th><th class="px-1 text-right">Tempo</th><th class="px-1 text-right">Nível</th><th class="px-1">Classe</th></tr></thead>
+        <tbody>${list.map((e, i) => { const d = diffOf(e.cycle); return `<tr class="border-t border-slate-700/60 ${i < 3 ? 'text-amber-200' : ''}">
+          <td class="px-1">${['🥇', '🥈', '🥉'][i] || i + 1}</td><td class="px-1">${String(e.name).replace(/[<>&"]/g, '')}${e.dev ? ' <span class="ui-tiny text-rose-300">DEV</span>' : ''}</td>
+          <td class="px-1" style="color:${d.color}">${e.diff || d.name}</td><td class="px-1 text-right">${toRoman(e.act)}</td>
+          <td class="px-1 text-right tabular-nums">${fmtTime(e.time)}</td><td class="px-1 text-right">${e.level}</td><td class="px-1">${STN[e.stance] || e.stance || ''}</td></tr>`; }).join('')}</tbody></table>`
+        : '<div class="ui-body text-slate-400 text-center py-6">Ninguém derrotou o Necromante ainda. Seja o primeiro!</div>';
+    }
+    function openRanking() { renderRanking(); document.getElementById('modal-ranking').classList.remove('hidden'); }
+
     function saveGameProgress(key = SAVE_KEY) {
       const savePayload = {
         savedAt: Date.now(),
@@ -7000,6 +7156,11 @@
         stageId: state.stageId,
         inv: state.inv,
         frags: frags(),
+        cycle: state.cycle || 0,
+        maxCycle: state.maxCycle || 0,
+        playTime: Math.round(state.playTime || 0),
+        cheated: !!state.cheated,
+        rankedUpTo: state.rankedUpTo ?? -1,
         formation: state.formation,
         equippedSlots: state.equippedSlots,
         skillLevels: state.skillLevels,
@@ -7061,6 +7222,11 @@
         migrateOldInventory(data.ownedItems);
         state.frags = fragsInit();
         if (data.frags) for (const t of TIER_KEYS) state.frags[t] = Math.max(0, Math.floor(+data.frags[t] || 0));
+        state.cycle = Math.max(0, data.cycle | 0);
+        state.maxCycle = Math.max(state.cycle, data.maxCycle | 0);
+        state.playTime = +data.playTime || 0;
+        state.cheated = !!data.cheated;
+        state.rankedUpTo = typeof data.rankedUpTo === 'number' ? data.rankedUpTo : -1;
         state.formation = Array.isArray(data.formation) && data.formation.length === 3 ? data.formation : [2, 1, 0];
         state.skillLevels = data.skillLevels || state.skillLevels;
         sharePassiveLevel(Math.max(...Object.values(state.skillLevels).map(x => x[1] || 1))); // saves antigos
@@ -7122,6 +7288,7 @@
       flyingDrops = [];
       state.inv = [];
       state.frags = fragsInit();
+      state.cycle = 0; state.maxCycle = 0; state.playTime = 0; state.cheated = !!DEV.on; state.rankedUpTo = -1;
       state.formation = [2, 1, 0];
       state.equippedSlots = {
         0: { HEAD: '', CHEST: '', RIGHT_HAND: '', LEFT_HAND: '', FEET: '' },
@@ -7273,9 +7440,13 @@
 
     // Vitória & Derrota
     document.getElementById('btn-vic-next').onclick = () => startStage((STAGES_DB[state.stageId] || STAGES_DB['1-1']).next);
-    document.getElementById('btn-vic-repeat').onclick = () => startStage(`${(STAGES_DB[state.stageId] || STAGES_DB['1-1']).act}-1`);
+    document.getElementById('btn-vic-repeat').onclick = () => startStage(actStartId(STAGES_DB[state.stageId] || STAGES_DB['1-1']));
     document.getElementById('btn-def-retry').onclick = () => startStage(state.stageId);
-    document.getElementById('btn-def-act').onclick = () => startStage(`${(STAGES_DB[state.stageId] || STAGES_DB['1-1']).act}-1`);
+    document.getElementById('btn-vic-rank').onclick = openRanking;
+    document.getElementById('menu-btn-ranking').onclick = openRanking;
+    document.getElementById('btn-rank-close').onclick = () => document.getElementById('modal-ranking').classList.add('hidden');
+    document.getElementById('btn-rank-rename').onclick = () => { playerName(true); renderRanking(); };
+    document.getElementById('btn-def-act').onclick = () => startStage(actStartId(STAGES_DB[state.stageId] || STAGES_DB['1-1']));
 
     // =========================================================================
     // 12b. MODO DEV (menu no canto inferior esquerdo)
@@ -7536,8 +7707,9 @@
     }
     function robotManageItems(reserve) {
       robotEquipAll();
-      // item que ninguém do time usa vira fragmento na hora
-      getBagItems().filter(i => itemUselessForTeam(i.id)).forEach(salvageItem);
+      // item que ninguém do time usa vira fragmento na hora (se der para pagar a quebra)
+      const robotSalvage = i => { const c = salvageCost(i); if (state.gold >= c) { state.gold -= c; salvageItem(i); return true; } return false; };
+      getBagItems().filter(i => itemUselessForTeam(i.id)).forEach(robotSalvage);
       if (ROBOT.st.doCombine) {
         for (let guard = 0; guard < 50; guard++) {
           let did = false;
@@ -7563,7 +7735,7 @@
         if (state.invTabs < 4 && c !== undefined && state.gold - c >= reserve) { state.gold -= c; state.invTabs++; continue; }
         const bag = getBagItems().sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
         if (!bag.length) break;
-        salvageItem(bag[0]); // quebra o pior em fragmentos em vez de jogar fora
+        if (!robotSalvage(bag[0])) destroyItem(bag[0].uid); // quebra o pior em fragmentos (sem ouro: joga fora)
       }
       if (ROBOT.st.doRefine) {
         // falta fragmento de um tier: troca fragmentos dos tiers de baixo
@@ -7643,7 +7815,7 @@
         ROBOT.wait = 0;
         const cfg = STAGES_DB[state.stageId] || STAGES_DB['1-1'];
         if (state.isVictory) { ROBOT.stats.stages++; startStage(cfg.next); }
-        else { ROBOT.stats.defeats++; startStage(ROBOT.st.farmOnLoss ? `${cfg.act}-1` : state.stageId); }
+        else { ROBOT.stats.defeats++; startStage(ROBOT.st.farmOnLoss ? actStartId(cfg) : state.stageId); }
       } else ROBOT.wait = 0;
       // vigia: nada acontecendo (sem inimigos, sem transição, sem janela) por 4 s → destrava a fase
       const idle = !activeEnemies.some(e => !e.isDead) && !state.isScrolling && !state.isVictory && !state.isDefeated && !state.awaitingAct2Lock && SLOWMO.t <= 0 && !state.waveClearing;
@@ -8400,7 +8572,9 @@
       } else if (state.inMainMenu) {
         renderMenu(now / 1000);
       } else {
+        state.playTime = (state.playTime || 0) + dt; // tempo real jogado (para o ranking)
         if (DEV.on) {
+          state.cheated = true; // partida com Modo DEV não entra no ranking
           if (DEV.infGold && state.gold < 999999) state.gold = 999999;
           if (DEV.infDpe && state.dpe < 999999) state.dpe = 999999;
         }
