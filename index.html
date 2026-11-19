@@ -5400,7 +5400,11 @@
       }
     };
     const skillIconHtml = (stance, slot, cls = 'w-6 h-6') => skSvg(SKILL_ICONS[stance][slot], cls);
-    const classIconHtml = (stance, cls = 'w-6 h-6') => skSvg(CLASS_ICONS[stance], cls);
+    // logos das classes (arte do jogo em icons/); o SVG antigo fica só como reserva se a imagem não carregar
+    const CLASS_LOGO = { SAINT: 'icons/class-saint.png', EXORCIST: 'icons/class-exorcist.png', MONK: 'icons/class-monk.png' };
+    const classIconHtml = (stance, cls = 'w-6 h-6') => CLASS_LOGO[stance]
+      ? `<img src="${CLASS_LOGO[stance]}" alt="" draggable="false" class="${cls} object-contain pointer-events-none select-none" style="filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))">`
+      : skSvg(CLASS_ICONS[stance], cls);
 
     let _lastSkillBarKey = '';
     function updateSkillBarIcons() {
@@ -6054,12 +6058,12 @@
 
         // Nó de Vocação (Ícone clicável + Tooltip)
         const classBtn = document.createElement('button');
-        classBtn.className = `icon-btn absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 ${isAct ? 'icon-btn-active' : 'opacity-65'}`;
+        classBtn.className = `icon-btn absolute w-10 h-10 p-0 -translate-x-1/2 -translate-y-1/2 ${isAct ? 'icon-btn-active' : 'opacity-65'}`;
         classBtn.style.left = `${(cx / w) * 100}%`;
         classBtn.style.top = `${(classY / h) * 100}%`;
         classBtn.dataset.tip = `<b>${stInfo.name}</b><br>${stInfo.desc}`;
         classBtn.disabled = state.isPathLocked && !isAct;
-        classBtn.innerHTML = classIconHtml(st, 'w-6 h-6');
+        classBtn.innerHTML = classIconHtml(st, 'w-9 h-9');
         classBtn.onclick = () => {
           if (!state.isPathLocked) {
             state.stance = st;
@@ -6758,7 +6762,7 @@
       const drawerIcons = ['team', 'scroll', 'tree', 'bag', 'house', 'anvil'];
       document.querySelectorAll('[data-lock-path]').forEach(b => {
         const old = b.querySelector('svg');
-        if (old) old.outerHTML = classIconHtml(b.dataset.lockPath, 'w-9 h-9');
+        if (old) old.outerHTML = classIconHtml(b.dataset.lockPath, 'w-14 h-14');
       });
       document.querySelectorAll('.drawer-btn').forEach(b => put(b, drawerIcons[+b.dataset.drawer], 'w-6 h-6'));
       put(document.getElementById('btn-up-vit'), 'heart', 'w-7 h-7');
