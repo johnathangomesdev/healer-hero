@@ -5399,7 +5399,11 @@
             ${spk(5, 5, 2.8)}${spk(27, 27, 2.8)}`
       }
     };
-    const skillIconHtml = (stance, slot, cls = 'w-6 h-6') => skSvg(SKILL_ICONS[stance][slot], cls);
+    // ícones das skills (arte em icons/skill-<classe>-<1 passiva|2 ativa|3 ultimate>.png); SVG antigo como reserva
+    const SKILL_IMG_KEY = { SAINT: 'saint', EXORCIST: 'exorcist', MONK: 'monk' };
+    const skillIconHtml = (stance, slot, cls = 'w-6 h-6') => SKILL_IMG_KEY[stance]
+      ? `<img src="icons/skill-${SKILL_IMG_KEY[stance]}-${slot}.png" alt="" draggable="false" class="${cls} object-contain pointer-events-none select-none">`
+      : skSvg(SKILL_ICONS[stance][slot], cls);
     // logos das classes (arte do jogo em icons/); o SVG antigo fica só como reserva se a imagem não carregar
     const CLASS_LOGO = { SAINT: 'icons/class-saint.png', EXORCIST: 'icons/class-exorcist.png', MONK: 'icons/class-monk.png' };
     const classIconHtml = (stance, cls = 'w-6 h-6') => CLASS_LOGO[stance]
@@ -5415,7 +5419,7 @@
       for (const slot of [1, 2, 3]) {
         if (needRedraw) {
           const cvs = document.getElementById(`cvs-skill-${slot}`);
-          if (cvs) cvs.innerHTML = skillIconHtml(state.stance, slot, 'w-7 h-7');
+          if (cvs) cvs.innerHTML = skillIconHtml(state.stance, slot, 'w-8 h-8');
         }
         const badge = document.getElementById(`badge-skill-${slot}`);
         if (badge) badge.textContent = `L${lv[slot]}`;
@@ -6095,14 +6099,14 @@
 
           // Botão Ícone Clicável para Subir de Nível com DPE
           const sBtn = document.createElement('button');
-          sBtn.className = `icon-btn absolute w-7 h-7 -translate-x-1/2 -translate-y-1/2 ${unlocked ? 'border-amber-400/80' : 'opacity-40'}`;
+          sBtn.className = `icon-btn absolute w-8 h-8 p-0 -translate-x-1/2 -translate-y-1/2 ${unlocked ? 'border-amber-400/80' : 'opacity-40'}`;
           sBtn.style.left = `${(cx / w) * 100}%`;
           sBtn.style.top = `${(sy / h) * 100}%`;
           sBtn.dataset.tip = unlocked
             ? `<b>${nodeInfo.title}</b> [Lv.${lvl}]<br>${nodeInfo.desc}<br><span class="text-cyan-300 font-bold">Clique para evoluir (${cost} DPE)</span>`
             : `<b>${nodeInfo.title}</b> [Bloqueado]<br>Evolua a habilidade acima para Lv.2 primeiro.`;
 
-          sBtn.innerHTML = skillIconHtml(st, slot, 'w-5 h-5');
+          sBtn.innerHTML = skillIconHtml(st, slot, 'w-7 h-7');
 
           const lvlTag = document.createElement('span');
           lvlTag.className = 'absolute -right-5 ui-tiny text-slate-200 pointer-events-none';

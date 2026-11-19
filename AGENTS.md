@@ -102,6 +102,12 @@
 - Ranking local (`hh_ranking_v1`, nome em `hh_player_name`): 1ª vitória sobre o Necromante em cada dificuldade por save grava `{name, cycle, act, time, level, stance, dev}`; ordena por dificuldade desc e tempo asc. `#modal-ranking` fica fora do `#hud-root` (abre no menu principal e na vitória do 5-5) com CSS próprio. **Não é online**: precisa de um backend (Supabase/Firebase etc.) para ser compartilhado.
 - Simulador: `general.goldMult`, `general.actBonus`, `items.salvageCost`; não simula os ciclos. Santo, padrões: ~87 min.
 
+## 3h. Arte de classes e skills (2026-11-19)
+
+- Logos das classes: `icons/class-{saint,exorcist,monk}.png` via `CLASS_LOGO`/`classIconHtml` (escolha de vocação + nó inicial da árvore).
+- Ícones das skills: `icons/skill-{saint,exorcist,monk}-{1,2,3}.png` (1 passiva, 2 ativa, 3 ultimate; 128×128, cantos arredondados transparentes) via `SKILL_IMG_KEY`/`skillIconHtml`, usados na barra de skills, na árvore e nos cards do Time. `SKILL_ICONS` (SVG) é só reserva.
+- Card de mercenário no Time mostra a ultimate real (`MERC_ULT`).
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
