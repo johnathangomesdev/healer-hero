@@ -499,6 +499,8 @@
         <div class="se-row"><span>Vel.</span><input id="se-aspeed" type="range" min="0.05" max="1.5" step="0.05" value="1"><button id="se-pause" class="icon-btn px-2 py-0.5 text-[10px] font-bold">⏸</button></div>
         <div class="se-row"><span>Zoom</span><input id="se-zoom" type="range" min="0.3" max="4" step="0.05" value="1"><button id="se-center" class="icon-btn px-2 py-0.5 text-[10px] font-bold" title="Centralizar">⌖</button></div>
         <label class="se-row"><input id="se-showpts" type="checkbox" checked> mostrar articulações</label>
+        <div class="se-lbl">Equipamentos (teste de posição)</div>
+        <div id="se-eq" class="flex flex-col gap-1"></div>
         <div class="se-lbl">Peças (imagens)</div>
         <select id="se-parts"></select>
         <div class="se-lbl">Articulações (encaixes)</div>
@@ -5165,6 +5167,10 @@
         g.restore();
       };
       // esquerda primeiro (atrás), direita por cima (na frente) — igual aos braços
+      // giro da passiva: pernas (e capa) giram junto com o tronco (mesmo achatamento horizontal)
+      const spinC = Math.cos(pose.spin || 0), spinS = Math.abs(spinC) < 0.1 ? 0.1 * (spinC < 0 ? -1 : 1) : spinC;
+      g.save();
+      g.scale(spinS, 1);
       // capa do guerreiro de armadura: atrás das pernas e do tronco, balançando
       if (isKnight) {
         g.save();
@@ -5179,8 +5185,10 @@
       // (antes estava invertido: o pé subia quando ia para trás, parecendo andar de ré)
       const kneeWalkL = moving ? Math.max(0, walkC) * 0.85 + 0.12 : 0;
       const kneeWalkR = moving ? Math.max(0, -walkC) * 0.85 + 0.12 : 0;
-      drawLeg('L', 46, -swing - spread - crouch * 0.18, kneeWalkL + spread * 0.75 + crouch * 0.45);
-      drawLeg('R', -46, swing + spread - crouch * 0.1, kneeWalkR + crouch * 0.4);
+      const legL = () => drawLeg('L', 46, -swing - spread - crouch * 0.18, kneeWalkL + spread * 0.75 + crouch * 0.45);
+      const legR = () => drawLeg('R', -46, swing + spread - crouch * 0.1, kneeWalkR + crouch * 0.4);
+      if (spinC < 0) { legR(); legL(); } else { legL(); legR(); } // de costas, a perna da frente troca
+      g.restore();
 
       // ---- Tronco (pivô nos quadris) ----
       g.save();
@@ -8485,7 +8493,38 @@
         animTime: 0, isMoving: false, anim: null, attackLunge: 0, bowDraw: 0, isDead: false, hurtFlash: 0, isCursedSister: false, facing: 1
       };
       SE.ent.sprScope = SE.scope; // o desenho do editor usa o mesmo escopo do personagem
+      SE.eq = Object.assign({}, c.eq || {}); // equipamentos de teste (só no editor)
+      seRenderEq();
       seSetAnim(SE.animName);
+    }
+    // classe usada para filtrar os itens que o personagem do editor pode vestir
+    function seClassTag() {
+      const c = SE_CHARS[SE.ci];
+      if (c.rig === 'HEALER') return c.stance || 'SAINT';
+      if (SE.scope === 'PALADIN') return 'PALADIN';
+      if (c.rig === 'TANK') return 'TANK';
+      if (c.rig === 'ARCHER') return 'ARCHER';
+      return c.rig;
+    }
+    function seRenderEq() {
+      const box = document.getElementById('se-eq'); if (!box) return;
+      const c = SE_CHARS[SE.ci];
+      if (c.kind !== 'human') { box.innerHTML = '<div class="text-[10px] text-slate-500">Monstros não usam itens.</div>'; return; }
+      const tag = seClassTag();
+      const SLOTS_SE = [['HEAD', 'Cabeça'], ['CHEST', 'Peito'], ['RIGHT_HAND', 'Mão D.'], ['LEFT_HAND', 'Mão E.'], ['FEET', 'Pés']];
+      box.innerHTML = SLOTS_SE.map(([k, lb]) => {
+        const opts = Object.values(ITEMS_DB).filter(it => it.slot === k && (it.classes || []).includes(tag));
+        const cur = SE.eq[k] || '';
+        if (cur && !opts.some(o => o.id === cur) && ITEMS_DB[cur]) opts.unshift(ITEMS_DB[cur]);
+        return `<div class="se-row"><span style="width:44px">${lb}</span><select data-eq="${k}" style="flex:1;min-width:0"><option value="">— nenhum —</option>${opts.map(o => `<option value="${o.id}" ${o.id === cur ? 'selected' : ''}>${devEsc(o.name)}${o.twoHanded ? ' (2 mãos)' : ''}</option>`).join('')}</select></div>`;
+      }).join('') + `<div class="text-[10px] text-slate-500">Classe: ${devEsc(tag)} · só muda o desenho do editor</div>`;
+      box.querySelectorAll('select[data-eq]').forEach(sel => sel.onchange = () => {
+        const k = sel.dataset.eq, v = sel.value;
+        SE.eq[k] = v;
+        if (k === 'RIGHT_HAND' && v && ITEMS_DB[v].twoHanded) SE.eq.LEFT_HAND = '';
+        if (k === 'LEFT_HAND' && v && SE.eq.RIGHT_HAND && ITEMS_DB[SE.eq.RIGHT_HAND] && ITEMS_DB[SE.eq.RIGHT_HAND].twoHanded) SE.eq.RIGHT_HAND = '';
+        SE.sig = ''; seRenderEq();
+      });
     }
     function seSetAnim(name) {
       SE.animName = name;
@@ -8666,7 +8705,7 @@
       g.fillStyle = 'rgba(0,0,0,0.42)'; g.beginPath(); g.ellipse(0, 1, e.isBoss ? 22 : 14, 4, 0, 0, Math.PI * 2); g.fill();
       SPR_REC = { parts: [], joints: [] };
       try {
-        if (c.kind === 'human') drawSpriteHuman(g, e, c.eq || {}, c.stance || null);
+        if (c.kind === 'human') drawSpriteHuman(g, e, SE.eq || c.eq || {}, c.stance || null);
         else if (c.kind === 'slime') drawSpriteSlime(g, e);
         else if (c.kind === 'beast') drawSpriteBeast(g, e);
         else drawSpriteNecro(g, e);
