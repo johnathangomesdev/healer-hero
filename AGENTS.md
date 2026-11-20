@@ -109,6 +109,15 @@
 - Card de mercenário no Time mostra a ultimate real (`MERC_ULT`).
 - Mira dos monstros (2026-11-20): `e.lockTarget` = herói mais próximo que entrou no alcance (`e.range`); fica travado enquanto vivo e no alcance. Não usa mais o "mais à frente"/formação.
 
+## 3i. Nível dos itens (2026-11-20)
+
+- Instância ganhou `lvl` (`{uid,id,tier,plus,lvl}`; saves antigos sem `lvl` = 1). `itemLvl(inst)`, `levelOkFor(slot, inst)` (nível do personagem ≥ lvl). Trava em `equipItem`, `autoEquipClassWeapon` e `robotEquipAll`.
+- Força: `ilvlPower(lvl) = BAL.ilvlMult^⌊lvl/10⌋` (padrão 1.3) multiplica `instBonuses`.
+- Nível do drop: `zoneItemLevel()` lê `ACT_ITEM_LVL[ciclo][ato]` = média de nível do herói do robô em cada ato, arredondada de 10 em 10 (Normal 1/1/10/10/10, Difícil 20×5, Insano 20/30/30/30/30, Infernal 40 estimado; além disso +10 por ciclo). Re-medir com o robô se mudar EXP/dificuldade.
+- Craft (combinar) mantém o `lvl` do item sorteado. Bolsa mostra o nível no canto (vermelho se não alcança) e no tooltip (`itemTipTitle`). DEV: seletor de nível ao adicionar item.
+- EXP: a partir do nível `BAL.expSoftLvl` (20) a curva usa `BAL.expGrowthHigh` (1.10) em vez de `expGrowth` (1.40). Robô: Normal ~36 min, Difícil termina ~nv 29 (~120 min total), Insano chega a ~39.
+- O simulador `balanceamento.html` ainda NÃO modela nível de item nem a curva suave de EXP.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.

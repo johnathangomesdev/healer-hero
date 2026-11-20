@@ -1321,11 +1321,16 @@
     // ---- Itens como INSTÂNCIAS: cada item possuído tem tier e refino próprios ----
     //  state.inv = [{ uid, id, tier, plus }] | equippedSlots guardam o uid
     let _itemSeq = 1;
-    function newItemInst(id, tier = null) {
+    // lvl = nível mínimo para equipar (1, 10, 20, 30...); cada faixa de 10 deixa o item BAL.ilvlMult× mais forte
+    function newItemInst(id, tier = null, lvl = 1) {
       const base = ITEMS_DB[id];
-      return { uid: 'i' + Date.now().toString(36) + '_' + (_itemSeq++), id, tier: tier || (base && base.tier) || 'COMMON', plus: 0 };
+      return { uid: 'i' + Date.now().toString(36) + '_' + (_itemSeq++), id, tier: tier || (base && base.tier) || 'COMMON', plus: 0, lvl: Math.max(1, lvl | 0) };
     }
-    function addItem(id, tier = null) { const inst = newItemInst(id, tier); state.inv.push(inst); return inst; }
+    function addItem(id, tier = null, lvl = 1) { const inst = newItemInst(id, tier, lvl); state.inv.push(inst); return inst; }
+    const itemLvl = (inst) => Math.max(1, (inst && inst.lvl) | 0);
+    const ilvlPower = (lvl) => Math.pow(BAL.ilvlMult, Math.floor(Math.max(1, lvl | 0) / 10));
+    // nível do herói é suficiente para o item?
+    function levelOkFor(slotIdx, inst) { const a = partySlots[slotIdx]; return !inst || !a || a.level >= itemLvl(inst); }
     function invGet(uid) { return uid ? state.inv.find(x => x.uid === uid) || null : null; }
     function hasItemId(id) { return state.inv.some(x => x.id === id); }
     // aceita uid de instância ou id de tipo (menu/editor passam ids direto)
@@ -1338,13 +1343,13 @@
     // bônus da instância: base × (tier da instância / tier original) × (+12% por refino)
     function instBonuses(inst) {
       const base = ITEMS_DB[inst.id];
-      const m = (TIER_MULT[inst.tier] / TIER_MULT[base.tier || 'COMMON']) * (1 + BAL.refinePct * (inst.plus || 0));
+      const m = (TIER_MULT[inst.tier] / TIER_MULT[base.tier || 'COMMON']) * (1 + BAL.refinePct * (inst.plus || 0)) * ilvlPower(itemLvl(inst));
       return { vit: Math.round(base.bonuses.vit * m), pow: Math.round(base.bonuses.pow * m), def: Math.round(base.bonuses.def * m), spd: Math.round(base.bonuses.spd * m * 100) / 100 };
     }
     // "visão" da instância com o formato de um item do banco (para os helpers de UI)
     function instView(inst) {
       const base = ITEMS_DB[inst.id];
-      return Object.assign({}, base, { uid: inst.uid, tier: inst.tier, plus: inst.plus || 0, bonuses: instBonuses(inst), name: base.name + (inst.plus ? ` +${inst.plus}` : '') });
+      return Object.assign({}, base, { uid: inst.uid, tier: inst.tier, plus: inst.plus || 0, lvl: itemLvl(inst), bonuses: instBonuses(inst), name: base.name + (inst.plus ? ` +${inst.plus}` : '') });
     }
 
     const MERCENARIES_DB = {
@@ -1471,6 +1476,21 @@
       return Object.assign({}, I, { name: 'Infernal ' + toRoman(k + 1), stat: I.stat * Math.pow(2, k), gold: I.gold * Math.pow(1.8, k), dpe: I.dpe * Math.pow(1.8, k), exp: I.exp * Math.pow(1.7, k), drop: Math.min(4, I.drop + 0.2 * k), decay: Math.min(2.8, I.decay + 0.1 * k) });
     }
     function curDiff() { return diffOf(state.cycle || 0); }
+    // Nível dos itens que caem em cada ato (por dificuldade) = nível médio do time do Modo Robô naquele ato,
+    // arredondado para baixo de 10 em 10 (mínimo 1). Dificuldades além da tabela: +10 por volta.
+    // medido em 2026-11-20 (robô, 300 min): Normal 3.5/9.3/14.3/17.3/19.3 · Difícil 21/21/21/22.9/26.8 · Insano 29.8/30/32.6/36.8/38.8
+    const ACT_ITEM_LVL = [
+      [1, 1, 10, 10, 10],     // Normal
+      [20, 20, 20, 20, 20],   // Difícil
+      [20, 30, 30, 30, 30],   // Insano
+      [40, 40, 40, 40, 40]    // Infernal (estimado: o robô não chegou lá em 300 min)
+    ];
+    function zoneItemLevel(stageId = state.stageId, cycle = state.cycle || 0) {
+      const cfg = STAGES_DB[stageId] || { act: 1 };
+      const c = Math.max(0, cycle | 0), row = ACT_ITEM_LVL[Math.min(c, ACT_ITEM_LVL.length - 1)];
+      const extra = Math.max(0, c - (ACT_ITEM_LVL.length - 1)) * 10;
+      return Math.max(1, row[Math.min(4, Math.max(0, (cfg.act | 0) - 1))] + extra);
+    }
     function actStartId(cfg) { return cfg.start || `${cfg.act}-1`; }
     function displayAct(cfg, cycle = state.cycle || 0) { return cycle * 5 + cfg.act; }
 
@@ -1486,6 +1506,7 @@
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
         fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3, salvageCost: null,
         goldMult: 0.7, actBonus: 0.3,
+        ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
@@ -1498,9 +1519,9 @@
       try {
         B.active = true;
         take(P.general, ['goldMult', 'actBonus', 'secondMercMin', 'critChance', 'critMult', 'defMit', 'hpBase', 'hpPerVit', 'startDpe']);
-        take(P.progression, ['expBase', 'expGrowth', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
+        take(P.progression, ['expBase', 'expGrowth', 'expGrowthHigh', 'expSoftLvl', 'ptsPerLevel', 'vitPerPt', 'powPerPt', 'defPerPt', 'spdPerPt']);
         take(P.skills, ['cost1', 'cost2', 'cost3', 'costGrowth', 'passBase', 'sk2Base', 'ultBase', 'perLevel', 'cd2', 'cd3']);
-        take(P.items, ['tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab', 'fragYield', 'fragPerPlus', 'fragRefine', 'fragTrade']);
+        take(P.items, ['ilvlMult', 'tierDecay', 'dropChance', 'refinePct', 'refineMax', 'bagPerTab', 'fragYield', 'fragPerPlus', 'fragRefine', 'fragTrade']);
         const IT = P.items || {};
         if (Array.isArray(IT.tabCosts)) B.tabCosts = IT.tabCosts.map((v, i) => num(+v, B.tabCosts[i] || 0));
         if (IT.tierMult) for (const t of TIER_KEYS) TIER_MULT[t] = num(IT.tierMult[t], TIER_MULT[t]);
@@ -1815,7 +1836,8 @@
           this.exp -= this.maxExp;
           this.level++;
           this.unspentPoints += BAL.ptsPerLevel;
-          this.maxExp = Math.round(this.maxExp * BAL.expGrowth);
+          // depois do nível BAL.expSoftLvl a curva fica mais suave (dificuldades altas exigem níveis 30, 40...)
+          this.maxExp = Math.round(this.maxExp * (this.level >= BAL.expSoftLvl ? BAL.expGrowthHigh : BAL.expGrowth));
           up = true;
         }
         if (up) {
@@ -2232,7 +2254,7 @@
       physicalDrops.push({
         kind, // 'GOLD' | 'DPE' | 'ITEM'
         amount,
-        itemId, tier,
+        itemId, tier, lvl: kind === 'ITEM' ? zoneItemLevel() : 0,
         x,
         y: y - 14,
         vx: (Math.random() - 0.5) * 95,
@@ -2907,11 +2929,11 @@
           showBanner('Bolsa cheia! Compre uma nova aba no Inventário.');
           return false;
         }
-        const inst = addItem(d.itemId, d.tier || null);
+        const inst = addItem(d.itemId, d.tier || null, d.lvl || 1);
         state.hasNewItemNotif = true;
         sfx.play('LEVEL_UP');
         spawnFloatingText(d.x, d.y - 16, `${ITEMS_DB[d.itemId].name}!`, ITEM_TIERS[inst.tier].color);
-        guideTrigger('ITEM', { uid: inst.uid, compat: canEquipItem(2, d.itemId) });
+        guideTrigger('ITEM', { uid: inst.uid, compat: canEquipItem(2, d.itemId) && levelOkFor(2, inst) });
       }
       scheduleRefreshUI();
     }
@@ -5718,7 +5740,7 @@
           const upgraded = Math.random() < up;
           const newTier = upgraded ? nextTier : tier;
           insts.forEach(i => destroyItem(i.uid));
-          const out = addItem(pick.id, newTier);
+          const out = addItem(pick.id, newTier, itemLvl(pick)); // o nível vem do item sorteado
           craft.slots = ['', '', ''];
           craft.result = out.uid;
           const t = ITEM_TIERS[newTier];
@@ -6168,7 +6190,7 @@
     function autoEquipClassWeapon(slotIdx) {
       const e = state.equippedSlots[slotIdx];
       if (e.RIGHT_HAND) return;
-      const w = getBagItems().filter(i => ITEMS_DB[i.id].slot === 'RIGHT_HAND' && canEquipItem(slotIdx, i.id))
+      const w = getBagItems().filter(i => ITEMS_DB[i.id].slot === 'RIGHT_HAND' && canEquipItem(slotIdx, i.id) && levelOkFor(slotIdx, i))
         .sort((a, b) => ITEM_TIERS[b.tier].order - ITEM_TIERS[a.tier].order)[0];
       if (w) { e.RIGHT_HAND = w.uid; fixTwoHanded(slotIdx, 'RIGHT_HAND'); }
     }
@@ -6189,6 +6211,10 @@
       if (!it) return;
       if (!canEquipItem(slotIdx, inst.id)) {
         showBanner('Classe incompatível com este item!');
+        return;
+      }
+      if (!levelOkFor(slotIdx, inst)) {
+        showBanner(`Requer nível ${itemLvl(inst)} para equipar!`);
         return;
       }
       if (!getBagItems().includes(inst)) return; // só equipa o que está livre na bolsa
@@ -6280,7 +6306,7 @@
     }
     function itemTipTitle(it) {
       const t = itemTier(it);
-      return `<b style="color:${t.color}">${it.name}</b> <span style="color:${t.color}">· ${t.label}</span> · ${SLOT_LABEL[it.slot]}`;
+      return `<b style="color:${t.color}">${it.name}</b> <span style="color:${t.color}">· ${t.label}</span> · ${SLOT_LABEL[it.slot]}` + (it.lvl ? ` · <span class="text-sky-300">Nv. ${it.lvl}</span>` : '');
     }
 
     function renderDrawer3Inventory() {
@@ -6324,15 +6350,17 @@
         const inst = bagItems[pageStart + i] || null;
         const it = inst ? instView(inst) : null;
         const cell = document.createElement('div');
-        const compat = it ? canEquipItem(sIdx, inst.id) : true;
+        const classOk = it ? canEquipItem(sIdx, inst.id) : true;
+        const lvlOk = it ? levelOkFor(sIdx, inst) : true;
+        const compat = classOk && lvlOk;
         cell.className = `relative aspect-square rounded-lg border flex items-center justify-center ui-h2 ${
           it ? (compat ? 'bg-slate-900 cursor-grab' : 'bg-slate-900 opacity-45 cursor-not-allowed') : 'border-slate-800 bg-slate-950/60'
         }`;
         if (it) {
           cell.style.cssText = tierFrameStyle(it);
           cell.draggable = true;
-          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : 'Classe incompatível'}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
-          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]');
+          cell.dataset.tip = `${itemTipTitle(it)}<br>VIT+${it.bonuses.vit} POW+${it.bonuses.pow} DEF+${it.bonuses.def}<br><span class="text-amber-300">${compat ? 'Clique 2x ou arraste até o slot do personagem para equipar' : (!classOk ? 'Classe incompatível' : `Requer nível ${it.lvl} (personagem nv. ${partySlots[sIdx].level})`)}</span><br><span class="text-rose-300">Arraste para fora da janela para destruir</span>`;
+          cell.innerHTML = itemIconHtml(it, 'w-[80%] h-[80%]') + (it.lvl > 1 ? `<span class="absolute bottom-0 left-0.5 ui-tiny ${lvlOk ? 'text-sky-300' : 'text-rose-400'} pointer-events-none">${it.lvl}</span>` : '');
           cell.ondragstart = e => { e.dataTransfer.setData('text/plain', 'bag:' + inst.uid); e.dataTransfer.effectAllowed = 'move'; };
           cell.ondragend = e => askDestroyIfOutside(e, inst);
           // clique/toque duplo = equipa no personagem selecionado (troca com o que estiver no slot)
@@ -7613,9 +7641,9 @@
       const box = document.getElementById('dev-sub');
       box.innerHTML = Object.values(ITEMS_DB).map(it =>
         `<button data-item="${it.id}" class="icon-btn dev-btn justify-between w-full"><span style="color:${itemTier(it).color}">${devEsc(it.name)}</span><span class="text-slate-400">${itemTier(it).label} +</span></button>`).join('');
-      box.insertAdjacentHTML('afterbegin', `<select id="dev-item-tier"><option value="">Tier original do item</option>${TIER_KEYS.map(t => `<option value="${t}">${ITEM_TIERS[t].label}</option>`).join('')}</select>`);
+      box.insertAdjacentHTML('afterbegin', `<select id="dev-item-tier"><option value="">Tier original do item</option>${TIER_KEYS.map(t => `<option value="${t}">${ITEM_TIERS[t].label}</option>`).join('')}</select><select id="dev-item-lvl">${[1, 10, 20, 30, 40, 50].map(l => `<option value="${l}">Nível ${l}</option>`).join('')}</select>`);
       box.querySelectorAll('[data-item]').forEach(b => b.onclick = () => {
-        addItem(b.dataset.item, document.getElementById('dev-item-tier').value || null);
+        addItem(b.dataset.item, document.getElementById('dev-item-tier').value || null, +document.getElementById('dev-item-lvl').value || 1);
         state.hasNewItemNotif = true;
         sfx.play('COIN');
         showBanner(`Item adicionado: ${ITEMS_DB[b.dataset.item].name}`);
@@ -7769,7 +7797,7 @@
         for (const slot of ['HEAD', 'CHEST', 'RIGHT_HAND', 'LEFT_HAND', 'FEET']) {
           const curUid = state.equippedSlots[s][slot], cur = invGet(curUid);
           let best = cur && canEquipItem(s, cur.id) ? cur : null, bs = best ? robotScore(best, role) : 0;
-          for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id)) { const sc = robotScore(i, role); if (sc > bs) { bs = sc; best = i; } }
+          for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id) && levelOkFor(s, i)) { const sc = robotScore(i, role); if (sc > bs) { bs = sc; best = i; } }
           if (slot === 'LEFT_HAND' && isTwoHanded(state.equippedSlots[s].RIGHT_HAND)) continue;
           if (best && best.uid !== curUid) state.equippedSlots[s][slot] = best.uid;
           if (slot === 'RIGHT_HAND') fixTwoHanded(s, 'RIGHT_HAND');
@@ -7819,7 +7847,7 @@
               const pick = three[Math.floor(Math.random() * 3)];
               const up = Math.random() < COMBINE_UP_CHANCE[tier];
               three.forEach(i => destroyItem(i.uid));
-              addItem(pick.id, up ? TIER_KEYS[Math.min(5, TIER_KEYS.indexOf(tier) + 1)] : tier);
+              addItem(pick.id, up ? TIER_KEYS[Math.min(5, TIER_KEYS.indexOf(tier) + 1)] : tier, itemLvl(pick));
               robotEquipAll(); did = true; break;
             }
           }
