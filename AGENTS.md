@@ -111,6 +111,8 @@
 - Clicar no ícone (`#lbl-diff`, com stopPropagation para não abrir o mapa) abre `#diff-picker` (`renderDiffPicker`): lista as dificuldades liberadas (0..`maxCycle`) e vai para o início do MESMO ato na escolhida (Ato I: `C1-1`, ou `2-1` no Normal pós-tutorial). Fecha ao clicar fora.
 - Mira dos monstros (2026-11-20): `e.lockTarget` = herói mais próximo que entrou no alcance (`e.range`); fica travado enquanto vivo e no alcance. Não usa mais o "mais à frente"/formação.
 
+- Ícones dos menus: `icons/menu-{team,quests,tree,bag,tavern,craft}.png` (gavetas 0-5) e `menu-{autoskill,repeat,autoadvance,settings}.png` (barra superior), aplicados em `applyCartoonIcons` por `putImg` (classe `.img-btn`, sem fundo/borda; `.img-toggle` desligado fica cinza; gaveta aberta = brilho + escala).
+
 ## 3i. Nível dos itens (2026-11-20)
 
 - Instância ganhou `lvl` (`{uid,id,tier,plus,lvl}`; saves antigos sem `lvl` = 1). `itemLvl(inst)`, `levelOkFor(slot, inst)` (nível do personagem ≥ lvl). Trava em `equipItem`, `autoEquipClassWeapon` e `robotEquipAll`.

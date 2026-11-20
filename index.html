@@ -344,6 +344,14 @@
       box-shadow: 0 0 12px rgba(250, 204, 21, 0.28);
     }
 
+    /* botões com arte própria (icons/menu-*.png já têm moldura): sem fundo/borda do icon-btn */
+    .img-btn { padding: 0 !important; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+    .img-btn > img.menu-ico { width: 100%; height: 100%; border-radius: 24%; pointer-events: none; user-select: none; transition: filter .14s ease, box-shadow .14s ease; }
+    .img-btn.icon-btn-active { scale: 1.12; }
+    .img-btn.icon-btn-active > img.menu-ico { box-shadow: 0 0 0 2px #fff7c2, 0 0 14px 3px rgba(250, 204, 21, .85); }
+    /* toggles desligados ficam apagados */
+    .img-toggle:not(.toggle-on):not(.toggle-advance-on) > img.menu-ico { filter: grayscale(.85) brightness(.6); }
+
     .toggle-on {
       background: rgba(16, 68, 52, 0.9) !important;
       border-color: #34d399 !important;
@@ -6807,17 +6815,25 @@
         const html = icoSvg(CARTOON_ICONS[key], cls);
         if (old) old.outerHTML = html; else el.insertAdjacentHTML('afterbegin', html);
       };
-      put(document.getElementById('btn-skill-mode'), 'bolt');
-      put(document.getElementById('btn-repeat-mode'), 'repeat');
-      put(document.getElementById('btn-advance-mode'), 'advance');
-      put(document.getElementById('btn-system-menu'), 'gear');
+      // arte dos menus (icons/menu-*.png): troca o SVG pela imagem e tira fundo/borda do botão
+      const putImg = (el, name, toggle = false) => {
+        if (!el) return;
+        const old = el.querySelector('svg, img.menu-ico');
+        const html = `<img class="menu-ico" src="icons/menu-${name}.png" alt="" draggable="false">`;
+        if (old) old.outerHTML = html; else el.insertAdjacentHTML('afterbegin', html);
+        el.classList.add('img-btn'); if (toggle) el.classList.add('img-toggle');
+      };
+      putImg(document.getElementById('btn-skill-mode'), 'autoskill', true);
+      putImg(document.getElementById('btn-repeat-mode'), 'repeat', true);
+      putImg(document.getElementById('btn-advance-mode'), 'autoadvance', true);
+      putImg(document.getElementById('btn-system-menu'), 'settings');
       put(document.getElementById('btn-open-map'), 'map', 'w-4 h-4');
-      const drawerIcons = ['team', 'scroll', 'tree', 'bag', 'house', 'anvil'];
+      const drawerImgs = ['team', 'quests', 'tree', 'bag', 'tavern', 'craft'];
       document.querySelectorAll('[data-lock-path]').forEach(b => {
         const old = b.querySelector('svg');
         if (old) old.outerHTML = classIconHtml(b.dataset.lockPath, 'w-14 h-14');
       });
-      document.querySelectorAll('.drawer-btn').forEach(b => put(b, drawerIcons[+b.dataset.drawer], 'w-6 h-6'));
+      document.querySelectorAll('.drawer-btn').forEach(b => putImg(b, drawerImgs[+b.dataset.drawer]));
       put(document.getElementById('btn-up-vit'), 'heart', 'w-7 h-7');
       put(document.getElementById('btn-up-pow'), 'power', 'w-7 h-7');
       put(document.getElementById('btn-up-def'), 'shield', 'w-7 h-7');
