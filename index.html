@@ -2795,20 +2795,27 @@
         }
 
         if (allies.length === 0) { e.isMoving = false; continue; }
-        const frontAlly = allies.reduce((best, cur) => (cur.x > best.x ? cur : best), allies[0]);
-        const dist = e.x - frontAlly.x;
+        // alvo = o primeiro herói que entrar no alcance (o mais próximo), não o da posição 1 da formação.
+        // Uma vez travado, o monstro continua nele enquanto ele estiver vivo e no alcance.
+        const inRange = (a) => Math.abs(e.x - a.x) <= e.range;
+        let tgt = e.lockTarget;
+        if (!tgt || tgt.isDead || !inRange(tgt)) {
+          tgt = allies.reduce((best, cur) => (Math.abs(cur.x - e.x) < Math.abs(best.x - e.x) ? cur : best), allies[0]);
+          e.lockTarget = inRange(tgt) ? tgt : null;
+        }
 
-        if (dist > e.range && !e.isCursedSister) {
+        if (!inRange(tgt) && !e.isCursedSister) {
           e.isMoving = true;
-          e.x -= e.speed * dt;
+          e.x += (tgt.x < e.x ? -1 : 1) * e.speed * dt;
         } else {
           e.isMoving = false;
           e.attackTimer += dt * e.getSpd();
           if (e.attackTimer >= 1.0) {
             e.attackTimer = 0;
             const dmg = e.getPow();
+            const victim = tgt;
             e.triggerAttackAnim(() => {
-              if (!e.isDead && !frontAlly.isDead) frontAlly.receiveDamage(dmg, e, false);
+              if (!e.isDead && !victim.isDead) victim.receiveDamage(dmg, e, false);
             });
           }
         }

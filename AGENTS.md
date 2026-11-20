@@ -107,6 +107,7 @@
 - Logos das classes: `icons/class-{saint,exorcist,monk}.png` via `CLASS_LOGO`/`classIconHtml` (escolha de vocação + nó inicial da árvore).
 - Ícones das skills: `icons/skill-{saint,exorcist,monk}-{1,2,3}.png` (1 passiva, 2 ativa, 3 ultimate; 128×128, cantos arredondados transparentes) via `SKILL_IMG_KEY`/`skillIconHtml`, usados na barra de skills, na árvore e nos cards do Time. `SKILL_ICONS` (SVG) é só reserva.
 - Card de mercenário no Time mostra a ultimate real (`MERC_ULT`).
+- Mira dos monstros (2026-11-20): `e.lockTarget` = herói mais próximo que entrou no alcance (`e.range`); fica travado enquanto vivo e no alcance. Não usa mais o "mais à frente"/formação.
 
 ## 4. Como testar
 
