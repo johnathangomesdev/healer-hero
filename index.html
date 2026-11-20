@@ -2564,11 +2564,12 @@
     // 6. SKILLS ATIVAS E ULTIMATE
     // =========================================================================
     // ---- Ultimate dos mercenários (1 skill cada, usada sozinha quando carrega) ----
+    // recargas reduzidas em 50% (2026-11-20)
     const MERC_ULT = {
-      VANGUARD_WARRIOR: { cd: 12, name: 'Espadada Carregada', desc: 'Golpe carregado que acerta todos os monstros perto dele.' },
-      ELVEN_ARCHER: { cd: 13, name: 'Chuva de Flechas', desc: 'Flechas caem do céu sobre todos os monstros.' },
-      PALADIN: { cd: 14, name: 'Luz Restauradora', desc: 'Cura a si mesmo quando está com pouca vida.' },
-      MAGE: { cd: 13, name: 'Explosão Arcana', desc: 'Dano mágico em todos os monstros (ignora a Defesa).' }
+      VANGUARD_WARRIOR: { cd: 6, name: 'Espadada Carregada', desc: 'Golpe carregado que acerta todos os monstros perto dele.' },
+      ELVEN_ARCHER: { cd: 6.5, name: 'Chuva de Flechas', desc: 'Flechas caem do céu sobre todos os monstros.' },
+      PALADIN: { cd: 7, name: 'Luz Restauradora', desc: 'Cura a si mesmo quando está com pouca vida.' },
+      MAGE: { cd: 6.5, name: 'Explosão Arcana', desc: 'Dano mágico em todos os monstros (ignora a Defesa).' }
     };
     let arrowRain = [];
     function tickMercUltimates(dt) {
@@ -4446,6 +4447,17 @@
         const barY = hpBarY(ent);
         ctx.fillStyle = 'rgba(10, 12, 18, 0.88)';
         ctx.fillRect(-barW * 0.5, barY, barW, 4);
+        // recarga da ultimate do mercenário: anel que enche acima da barra de vida (brilha quando pronta)
+        const MU = ent.faction === 'ALLY' && ent.mercKey && MERC_ULT[ent.mercKey];
+        if (MU) {
+          const k = ent.ultCd === undefined ? 0.5 : Math.max(0, Math.min(1, 1 - ent.ultCd / MU.cd)), cy = barY - 7, r = 4;
+          ctx.save();
+          ctx.fillStyle = 'rgba(10,12,18,0.85)'; ctx.beginPath(); ctx.arc(0, cy, r + 1.4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = k >= 1 ? '#fde047' : '#a78bfa';
+          ctx.beginPath(); ctx.moveTo(0, cy); ctx.arc(0, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.closePath(); ctx.fill();
+          if (k >= 1) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45 + Math.sin(performance.now() / 160) * 0.25; ctx.beginPath(); ctx.arc(0, cy, r + 2.4, 0, Math.PI * 2); ctx.fill(); }
+          ctx.restore();
+        }
         if (ent.isBoss && ent.faction !== 'ALLY') { // coroa do alfa acima da barra
           const cy = barY - 3;
           cPoly(ctx, [[-6, cy], [6, cy], [7, cy - 7], [3.5, cy - 3.5], [0, cy - 8.5], [-3.5, cy - 3.5], [-7, cy - 7]], '#facc15');
