@@ -71,7 +71,7 @@
 
 - Tier do drop aleatório: `rollDropTier(dropTierCap(entity))`. Comum até Raro, alfas (boss:true) até Mítico, Lendário só do Necromante; peso de cada tier = `BAL.tierDecay^k` (padrão 0.3). Drops fixos de alfa são limitados com `capTier` (a Armadura da Alvorada cai Mítica do Lobo Alfa). O drop guarda `d.tier`.
 - Tutorial usa `TUTORIAL_WOLF` (Lobo Faminto, mais fraco, rig ZOMBIE_WOLF) em 1-2/1-3.
-- Peitorais travados por classe: MONK_ROBE→MONK, KNIGHT_PLATE e GOLDEN_ARMOR→TANK, ELVEN_TUNIC→ARCHER; sem peitoral = roupa de aldeão. SAINT_ROBE→SAINT (2026-11-20). Exorcista ainda não tem peitoral próprio.
+- Peitorais travados por classe: MONK_ROBE→MONK, KNIGHT_PLATE e GOLDEN_ARMOR→TANK, ELVEN_TUNIC→ARCHER; sem peitoral = roupa de aldeão. SAINT_ROBE→SAINT (2026-11-20). EXO_ROBE→EXORCIST.
 - Ritmo: meta de ≥30 min jogando perfeito. Medido com o Modo Robô no jogo real (headless): Monge ~41, Exorcista ~44, Santo ~53 min. O simulador do painel NÃO bate com o jogo real (erra por classe); valide mudanças de ritmo com o robô, não só com o simulador.
 - Escalas das fases e ouro dos monstros ficam iguais em `index.html` (STAGES_DB/ENEMIES_DB) e `balanceamento.html` (DEFAULTS); mude os dois juntos.
 
@@ -115,7 +115,9 @@
 
 - Roupa do Santo (2026-11-20): peças `st_*` numa linha `Object.assign(RIG_SRC, {...})` logo depois da `RIG_SRC` (também base64 — **não ler**). `HUMAN_SKINS.saint` (capuz = cabeça inteira com `noHair`, manto, mangas, antebraços, coxa+bota como o monge, `staff: [img, pivô, y da cruz]`). Itens `SAINT_HOOD` (HEAD), `SAINT_ROBE` (CHEST), `SAINT_BOOTS` (FEET), classe SAINT, no pool de drop; `SAINT_STAFF` agora desenha a arte `st_staff` (brilho na cruz ao conjurar). Recorte feito tirando fundo + anel branco da folha do usuário e escalando cada peça para o tamanho da equivalente do monge.
 
-- `WOODEN_ROSARY` agora se chama **Capuz do Noviço** (id mantido por causa dos saves): mostra no sprite o capuz do Santo com `NOVICE_TINT` (`ITEM_SKIN.headTint`, aplicado em `tinted(SK.headTint, ...)` na cabeça).
+- `WOODEN_ROSARY` agora se chama **Capuz do Noviço** (id mantido por causa dos saves): capuz do Santo com `NOVICE_TINT` (`ITEM_SKIN.cowlTint`).
+- **Capuz em 2 camadas** (`HUMAN_SKINS.x.cowl = {back, front, pv}`, `ITEM_SKIN.cowl`): `back` (abertura pintada de sombra) é desenhado antes da cabeça base, `front` (abertura transparente) depois do rosto — a cabeça/rosto do personagem aparece pelo recorte; sem cabelo. Peças `st_hoodB/st_hoodF` (substituíram `st_hood`) e `ex_hoodB/ex_hoodF`. Gerados pelo script `hollow` (flood fill da pele a partir do centro do rosto).
+- **Set do Exorcista aprendiz** (2026-11-20): peças `ex_*` numa segunda linha `Object.assign(RIG_SRC, {...})` (base64 — **não ler**), `HUMAN_SKINS.exorcist` (pivôs copiados do Santo, `book`). Itens COMMON, classe EXORCIST, no pool de drop: `EXO_HOOD` Capuz do Aprendiz, `EXO_ROBE` Manto do Aprendiz, `EXO_BOOTS` Botas do Aprendiz, `EXO_GRIMOIRE` Grimório Gasto (2 mãos, desenhado na mão com brilho roxo ao conjurar; `ITEM_SKIN.book`). Stats um pouco acima da roupa de aldeão.
 - Irmã infectada: `addExp` ignora quem não é `faction: 'ALLY'`; a transformação zera `levelUpAura/healAura/buff`; o loop dos monstros também decai essas auras (antes ficava com o efeito de level-up para sempre).
 
 ## 3i. Nível dos itens (2026-11-20)
