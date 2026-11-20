@@ -145,6 +145,8 @@
 - Cada ocorrência da mesma imagem num personagem tem chave própria: `foreR` (1ª), `foreR#2` (2ª)... (`sprKey`/`SPR_OCC`, zerado em `sprLayered`). Sem ajuste próprio, a 2ª segue a 1ª (`sprAdjOf`); ao editar, `seAdj(true)` copia o ajuste para cada ocorrência e elas ficam independentes.
 - Ajuste de peça aceita `fx`/`fy` (inverter H/V em volta do pivô) e `hide` (deletada: não desenha no jogo; no editor aparece a 18% para poder restaurar).
 
+- **Edições por personagem** (escopo): `sprScopeOf(ent, stance)` → `HEALER.SAINT|EXORCIST|MONK`, `FATHER`, `SISTER`, `VANGUARD_WARRIOR`, `PALADIN`, `ELVEN_ARCHER`, `MAGE` ou o rig do monstro. `sprLayered` define `SPR_SCOPE`; ajustes ficam em `parts['ESCOPO|peça']` / `joints['ESCOPO|articulação']` (posição, rotação, escala, inverter, deletar, camada e articulações). Sem ajuste próprio, cai no ajuste comum antigo (sem escopo). No editor: `SE.scope`, `seEff`/`seOwn`/`seAdj`; `ent.sprScope` força o escopo. Personagem novo: acrescente o caso em `sprScopeOf` e, no editor, `scope` no `SE_CHARS` se o rótulo não bastar.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.

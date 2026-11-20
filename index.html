@@ -4571,17 +4571,28 @@
     // Cada ocorrência de uma imagem no mesmo personagem tem chave própria: 'foreR' (1ª), 'foreR#2' (2ª)...
     // Sem ajuste próprio, a 2ª ocorrência segue o ajuste da 1ª (compatível com os ajustes antigos).
     let SPR_OCC = null;
+    // Escopo: as edições valem só para o personagem editado (Santo, Exorcista, Monge, Pai, Filha, cada mercenário, cada monstro).
+    // Chave com escopo = 'ESCOPO|peça'; sem ajuste próprio, cai no ajuste comum antigo (sem escopo).
+    let SPR_SCOPE = '';
+    function sprScopeOf(ent, stance) {
+      if (!ent) return '';
+      if (ent.sprScope) return ent.sprScope;
+      const r = ent.rig || '';
+      if (r === 'HEALER') return 'HEALER.' + (stance || 'SAINT');
+      if (r === 'TANK') return ent.isVillager ? 'FATHER' : (ent.mercKey === 'PALADIN' ? 'PALADIN' : 'VANGUARD_WARRIOR');
+      if (r === 'ARCHER') return ent.isVillager ? 'SISTER' : 'ELVEN_ARCHER';
+      return r;
+    }
     function sprKey(name) {
       if (!SPR_OCC) return name;
       const n = (SPR_OCC[name] = (SPR_OCC[name] || 0) + 1);
       return n === 1 ? name : name + '#' + n;
     }
     function sprAdjOf(key) {
-      const p = SPR_ADJ.parts;
-      if (p[key]) return p[key];
-      const i = key.indexOf('#');
-      return i > 0 ? p[key.slice(0, i)] : undefined;
+      const p = SPR_ADJ.parts, i = key.indexOf('#'), base = i > 0 ? key.slice(0, i) : null, S = SPR_SCOPE ? SPR_SCOPE + '|' : '';
+      return (S && p[S + key]) || (S && base && p[S + base]) || p[key] || (base && p[base]) || undefined;
     }
+    function sprJointOf(key) { return (SPR_SCOPE && SPR_ADJ.joints[SPR_SCOPE + '|' + key]) || SPR_ADJ.joints[key]; }
     function sprApply(g, name) {
       const a = sprAdjOf(name);
       if (!a) return;
@@ -4626,7 +4637,8 @@
       return function (g, ...args) {
         const prev = SPR_Q; SPR_Q = [];
         const prevOcc = SPR_OCC; SPR_OCC = {};
-        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; }
+        const prevScope = SPR_SCOPE; SPR_SCOPE = sprScopeOf(args[0], args[2]);
+        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; SPR_SCOPE = prevScope; }
       };
     }
     function sprDraw(g, im, base, pvx, pvy) {
@@ -4652,7 +4664,7 @@
     }
     // articulação ajustável: devolve [x, y] com o deslocamento do editor
     function JT(g, key, x, y) {
-      const o = SPR_ADJ.joints[key];
+      const o = sprJointOf(key);
       const rx = x + (o ? o.x || 0 : 0), ry = y + (o ? o.y || 0 : 0);
       if (SPR_REC) SPR_REC.joints.push({ key, M: g.getTransform(), x: rx, y: ry });
       return [rx, ry];
@@ -8444,10 +8456,13 @@
 
     function seMakeEnt() {
       const c = SE_CHARS[SE.ci];
+      SE.scope = c.scope || sprScopeOf({ rig: c.rig, isVillager: !!c.villager, mercKey: /Paladino/.test(c.label) ? 'PALADIN' : (c.rig === 'MAGE' ? 'MAGE' : null) }, c.stance);
+      SE.sig = '';
       SE.ent = {
         name: c.label, rig: c.rig, isHealer: c.rig === 'HEALER', isVillager: !!c.villager, isBoss: !!c.boss,
         animTime: 0, isMoving: false, anim: null, attackLunge: 0, bowDraw: 0, isDead: false, hurtFlash: 0, isCursedSister: false, facing: 1
       };
+      SE.ent.sprScope = SE.scope; // o desenho do editor usa o mesmo escopo do personagem
       seSetAnim(SE.animName);
     }
     function seSetAnim(name) {
@@ -8472,17 +8487,22 @@
       lastTime = performance.now();
     }
 
+    function seScoped(fn) { const p = SPR_SCOPE; SPR_SCOPE = SE.scope || ''; try { return fn(); } finally { SPR_SCOPE = p; } }
+    function seEff(type, key) { return seScoped(() => type === 'part' ? sprAdjOf(key) : sprJointOf(key)); }
+    function seOwn(type, key) { return (type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints)[(SE.scope || '') + '|' + key]; }
     function seAdj(create) {
       if (!SE.sel) return null;
-      const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints;
-      if (create && SE.sel.type === 'part') {
+      const type = SE.sel.type, bag = type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, S = (SE.scope || '') + '|';
+      const clone = o => JSON.parse(JSON.stringify(o));
+      if (!create) return seEff(type, SE.sel.key) || null;
+      if (type === 'part') {
         const key = SE.sel.key, i = key.indexOf('#'), base = i > 0 ? key.slice(0, i) : key;
-        // antes de mexer, cada ocorrência vira independente (copia o ajuste herdado da 1ª)
+        // antes de mexer, cada ocorrência vira independente (copia o ajuste que ela herda)
         const sibs = new Set((SE.rec ? SE.rec.parts : []).map(p => p.name).filter(n => n === base || n.startsWith(base + '#')));
-        for (const n of sibs) if (!bag[n] && bag[base] && n !== base) bag[n] = JSON.parse(JSON.stringify(bag[base]));
+        for (const n of sibs) if (n !== key && !bag[S + n]) { const e = seEff('part', n); if (e) bag[S + n] = clone(e); }
       }
-      if (!bag[SE.sel.key] && create) bag[SE.sel.key] = SE.sel.type === 'part' ? { x: 0, y: 0, r: 0, s: 1 } : { x: 0, y: 0 };
-      return bag[SE.sel.key] || null;
+      if (!bag[S + SE.sel.key]) { const e = seEff(type, SE.sel.key); bag[S + SE.sel.key] = e ? clone(e) : (type === 'part' ? { x: 0, y: 0, r: 0, s: 1 } : { x: 0, y: 0 }); }
+      return bag[S + SE.sel.key];
     }
     function seSelect(type, key) {
       SE.sel = key ? { type, key } : null;
@@ -8504,7 +8524,7 @@
       const box = document.getElementById('se-sel');
       if (!SE.sel) { box.innerHTML = '<div class="text-slate-400">Nada selecionado. Clique numa peça ou articulação.</div>'; return; }
       const a = seAdj(false);
-      let html = `<div class="font-bold ${SE.sel.type === 'part' ? 'text-sky-300' : 'text-orange-300'} truncate">${SE.sel.type === 'part' ? 'Peça' : 'Articulação'}: ${devEsc(SE.sel.key)}</div>`;
+      let html = `<div class="font-bold ${SE.sel.type === 'part' ? 'text-sky-300' : 'text-orange-300'} truncate">${SE.sel.type === 'part' ? 'Peça' : 'Articulação'}: ${devEsc(SE.sel.key)}</div><div class="text-[10px] text-emerald-300">Edição vale só para: <b>${devEsc(SE.scope || '')}</b></div>`;
       for (const [k, label, mn, mx, st] of SE_FIELDS[SE.sel.type]) {
         const v = seFieldVal(a, k);
         html += `<div class="se-row"><span>${label}</span><input type="range" data-f="${k}" min="${mn}" max="${mx}" step="${st}" value="${v}"><input class="se-num" type="number" data-f="${k}" step="${st}" value="${v}"></div>`;
@@ -8538,8 +8558,11 @@
         sprSave();
       });
       document.getElementById('se-reset-sel').onclick = () => {
-        const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints;
-        delete bag[SE.sel.key]; sprSave(); seRenderSel();
+        const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, k = (SE.scope || '') + '|' + SE.sel.key;
+        delete bag[k];
+        // ainda herda um ajuste comum antigo? zera só para este personagem
+        if (seEff(SE.sel.type, SE.sel.key)) bag[k] = SE.sel.type === 'part' ? { x: 0, y: 0, r: 0, s: 1 } : { x: 0, y: 0 };
+        sprSave(); seRenderSel();
       };
     }
     function seSyncSelInputs() {
@@ -8568,15 +8591,16 @@
       SE.sig = sig;
       const lay = document.getElementById('se-layers');
       lay.innerHTML = order.map((n, i) => {
-        const z = (sprAdjOf(n) && sprAdjOf(n).z) || 0;
-        const hid = sprAdjOf(n) && sprAdjOf(n).hide;
+        const ad = seEff('part', n);
+        const z = (ad && ad.z) || 0;
+        const hid = ad && ad.hide;
         const sel = SE.sel && SE.sel.type === 'part' && SE.sel.key === n;
         return `<div data-layer="${devEsc(n)}" style="cursor:pointer;padding:1px 4px;border-radius:4px;${sel ? 'background:rgba(56,189,248,0.25);color:#7dd3fc;' : ''}">${i + 1}. ${hid ? '<s class="text-rose-400">' + devEsc(n) + '</s> 🗑' : devEsc(n)}${z ? ` <span class="text-amber-300">(${z > 0 ? '+' + z : z})</span>` : ''}</div>`;
       }).join('');
       lay.querySelectorAll('[data-layer]').forEach(el => el.onclick = () => seSelect('part', el.dataset.layer));
       const ps = document.getElementById('se-parts'), js = document.getElementById('se-joints');
-      ps.innerHTML = '<option value="">— escolher peça —</option>' + parts.map(n => `<option value="${devEsc(n)}">${devEsc(n)}${SPR_ADJ.parts[n] ? ' *' : ''}</option>`).join('');
-      js.innerHTML = '<option value="">— escolher articulação —</option>' + joints.map(n => `<option value="${devEsc(n)}">${devEsc(n)}${SPR_ADJ.joints[n] ? ' *' : ''}</option>`).join('');
+      ps.innerHTML = '<option value="">— escolher peça —</option>' + parts.map(n => `<option value="${devEsc(n)}">${devEsc(n)}${seOwn('part', n) ? ' *' : ''}</option>`).join('');
+      js.innerHTML = '<option value="">— escolher articulação —</option>' + joints.map(n => `<option value="${devEsc(n)}">${devEsc(n)}${seOwn('joint', n) ? ' *' : ''}</option>`).join('');
       ps.value = SE.sel && SE.sel.type === 'part' ? SE.sel.key : '';
       js.value = SE.sel && SE.sel.type === 'joint' ? SE.sel.key : '';
     }
