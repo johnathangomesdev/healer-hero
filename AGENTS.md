@@ -115,6 +115,9 @@
 
 - Roupa do Santo (2026-11-20): peças `st_*` numa linha `Object.assign(RIG_SRC, {...})` logo depois da `RIG_SRC` (também base64 — **não ler**). `HUMAN_SKINS.saint` (capuz = cabeça inteira com `noHair`, manto, mangas, antebraços, coxa+bota como o monge, `staff: [img, pivô, y da cruz]`). Itens `SAINT_HOOD` (HEAD), `SAINT_ROBE` (CHEST), `SAINT_BOOTS` (FEET), classe SAINT, no pool de drop; `SAINT_STAFF` agora desenha a arte `st_staff` (brilho na cruz ao conjurar). Recorte feito tirando fundo + anel branco da folha do usuário e escalando cada peça para o tamanho da equivalente do monge.
 
+- `WOODEN_ROSARY` agora se chama **Capuz do Noviço** (id mantido por causa dos saves): mostra no sprite o capuz do Santo com `NOVICE_TINT` (`ITEM_SKIN.headTint`, aplicado em `tinted(SK.headTint, ...)` na cabeça).
+- Irmã infectada: `addExp` ignora quem não é `faction: 'ALLY'`; a transformação zera `levelUpAura/healAura/buff`; o loop dos monstros também decai essas auras (antes ficava com o efeito de level-up para sempre).
+
 ## 3i. Nível dos itens (2026-11-20)
 
 - Instância ganhou `lvl` (`{uid,id,tier,plus,lvl}`; saves antigos sem `lvl` = 1). `itemLvl(inst)`, `levelOkFor(slot, inst)` (nível do personagem ≥ lvl). Trava em `equipItem`, `autoEquipClassWeapon` e `robotEquipAll`.
