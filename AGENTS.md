@@ -108,6 +108,7 @@
 - Ícones das skills: `icons/skill-{saint,exorcist,monk}-{1,2,3}.png` (1 passiva, 2 ativa, 3 ultimate; 128×128, cantos arredondados transparentes) via `SKILL_IMG_KEY`/`skillIconHtml`, usados na barra de skills, na árvore e nos cards do Time. `SKILL_ICONS` (SVG) é só reserva.
 - Card de mercenário no Time mostra a ultimate real (`MERC_ULT`).
 - Ícones de dificuldade: `icons/diff-{normal,dificil,insano,infernal}.png` via `DIFF_ICONS`/`diffIconSrc(ciclo)`. No HUD, `#img-diff` fica dentro da barra de waves, à esquerda do número do ato (margem negativa para não aumentar a barra), sempre visível; Infernal II+ mostra numeral em `#lbl-diff-n`. Também no seletor de dificuldade do mapa.
+- Clicar no ícone (`#lbl-diff`, com stopPropagation para não abrir o mapa) abre `#diff-picker` (`renderDiffPicker`): lista as dificuldades liberadas (0..`maxCycle`) e vai para o início do MESMO ato na escolhida (Ato I: `C1-1`, ou `2-1` no Normal pós-tutorial). Fecha ao clicar fora.
 - Mira dos monstros (2026-11-20): `e.lockTarget` = herói mais próximo que entrou no alcance (`e.range`); fica travado enquanto vivo e no alcance. Não usa mais o "mais à frente"/formação.
 
 ## 3i. Nível dos itens (2026-11-20)

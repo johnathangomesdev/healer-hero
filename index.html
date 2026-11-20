@@ -538,7 +538,7 @@
       <!-- Top-Center: Act Roman + Sub-stage Progress Dots (●---●---○) + World Map Icon -->
       <button id="btn-open-map" class="absolute left-1/2 -translate-x-1/2 glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
         <!-- ícone da dificuldade, à esquerda do ato (margem negativa: não aumenta a altura da barra) -->
-        <span id="lbl-diff" class="relative w-7 h-7 -my-1.5 -ml-1.5 shrink-0 pointer-events-none">
+        <span id="lbl-diff" class="relative w-7 h-7 -my-1.5 -ml-1.5 shrink-0 cursor-pointer hover:scale-110 transition-transform">
           <img id="img-diff" src="icons/diff-normal.png" alt="" draggable="false" class="w-full h-full object-contain select-none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))">
           <span id="lbl-diff-n" class="hidden absolute -right-1 -bottom-0.5 ui-tiny text-white"></span>
         </span>
@@ -556,6 +556,8 @@
         </div>
         <svg class="w-3.5 h-3.5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
       </button>
+      <!-- seletor rápido de dificuldade (abre ao clicar no ícone da dificuldade) -->
+      <div id="diff-picker" class="hidden absolute left-1/2 -translate-x-1/2 top-10 glass-drawer rounded-xl p-1.5 flex flex-col gap-1 pointer-events-auto border border-amber-400/70 z-30"></div>
 
       <!-- Top-Right: Auto-Skill, Repeat, Auto-Advance, System Menu (☰) -->
       <div class="glass-pill rounded-full px-2 py-1 flex items-center gap-1.5 pointer-events-auto">
@@ -6889,6 +6891,41 @@
     });
 
     // Mapa Mundial
+    // Ícone da dificuldade: abre o seletor rápido (voltar a uma dificuldade menor para farmar, ou subir de novo)
+    function renderDiffPicker() {
+      const box = document.getElementById('diff-picker');
+      const cur = state.cycle || 0, act = (STAGES_DB[state.stageId] || STAGES_DB['1-1']).act;
+      box.innerHTML = `<div class="ui-tiny text-slate-300 text-center px-1">Dificuldade · Ato ${toRoman(act)}</div>`;
+      for (let c = 0; c <= (state.maxCycle || 0); c++) {
+        const d = diffOf(c), b = document.createElement('button');
+        b.className = `icon-btn ui-btn px-2 py-0.5 gap-1.5 justify-start ${c === cur ? 'icon-btn-active' : ''}`;
+        b.style.color = d.color;
+        b.innerHTML = `<img src="${diffIconSrc(c)}" alt="" draggable="false" class="w-5 h-5 object-contain pointer-events-none">${d.name} <span class="ui-tiny text-slate-400">${toRoman(c * 5 + act)}</span>`;
+        b.dataset.tip = `<b style="color:${d.color}">${d.name}</b><br>Itens de nível ${zoneItemLevel(act === 1 && c > 0 ? 'C1-1' : `${act}-1`, c)} neste ato`;
+        b.onclick = (ev) => {
+          ev.stopPropagation();
+          box.classList.add('hidden');
+          if (c === cur) return;
+          // mesmo ato na outra dificuldade (o Ato I do Normal é o tutorial: vai para o Ato II)
+          const id = act === 1 ? (c > 0 ? 'C1-1' : (state.tutorialCompleted ? '2-1' : '1-1')) : `${act}-1`;
+          state.awaitingAct2Lock = false; state.mapCycle = null;
+          state.cycle = c;
+          startStage(id);
+          showBannerSafe(`Dificuldade: ${d.name}`);
+        };
+        box.appendChild(b);
+      }
+      if (!(state.maxCycle > 0)) box.insertAdjacentHTML('beforeend', '<div class="ui-tiny text-slate-400 text-center px-1 max-w-[150px]">Derrote o Necromante (Ato V) para liberar o Difícil.</div>');
+    }
+    document.getElementById('lbl-diff').addEventListener('click', (ev) => {
+      ev.stopPropagation(); // não abre o mapa
+      const box = document.getElementById('diff-picker');
+      if (box.classList.contains('hidden')) { renderDiffPicker(); box.classList.remove('hidden'); } else box.classList.add('hidden');
+    });
+    document.addEventListener('pointerdown', (ev) => {
+      const box = document.getElementById('diff-picker');
+      if (!box.classList.contains('hidden') && !box.contains(ev.target) && !document.getElementById('lbl-diff').contains(ev.target)) box.classList.add('hidden');
+    });
     document.getElementById('btn-open-map').onclick = () => {
       state.mapCycle = null;
       renderIllustratedWorldMap();
