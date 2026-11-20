@@ -536,9 +536,13 @@
       </div>
 
       <!-- Top-Center: Act Roman + Sub-stage Progress Dots (●---●---○) + World Map Icon -->
-      <button id="btn-open-map" class="absolute left-1/2 -translate-x-1/2 glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
+      <button id="btn-open-map" class="absolute top-6 left-1/2 -translate-x-1/2 glass-pill rounded-full px-3.5 py-1 flex items-center gap-2.5 pointer-events-auto hover:border-amber-400 transition cursor-pointer" data-tip="<b>Mapa Mundial (Atos I a V)</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.">
         <span id="lbl-act-roman" class="ui-h2 text-amber-300">I</span>
-        <span id="lbl-diff" class="hidden ui-tiny px-1.5 rounded-full border leading-tight"></span>
+        <!-- ícone da dificuldade, em cima da barra de waves -->
+        <span id="lbl-diff" class="absolute left-1/2 -translate-x-1/2 bottom-full -mb-1.5 w-8 h-8 pointer-events-none">
+          <img id="img-diff" src="icons/diff-normal.png" alt="" draggable="false" class="w-full h-full object-contain select-none" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))">
+          <span id="lbl-diff-n" class="hidden absolute -right-2 bottom-0 ui-tiny text-white"></span>
+        </span>
         <div class="flex items-center">
           <span id="dot-sub-1" class="w-2.5 h-2.5 rounded-full bg-red-500 border border-red-200 shadow-[0_0_8px_#ef4444]"></span>
           <span id="line-sub-1" class="w-3 h-0.5 bg-slate-500"></span>
@@ -1476,6 +1480,8 @@
       return Object.assign({}, I, { name: 'Infernal ' + toRoman(k + 1), stat: I.stat * Math.pow(2, k), gold: I.gold * Math.pow(1.8, k), dpe: I.dpe * Math.pow(1.8, k), exp: I.exp * Math.pow(1.7, k), drop: Math.min(4, I.drop + 0.2 * k), decay: Math.min(2.8, I.decay + 0.1 * k) });
     }
     function curDiff() { return diffOf(state.cycle || 0); }
+    const DIFF_ICONS = ['icons/diff-normal.png', 'icons/diff-dificil.png', 'icons/diff-insano.png', 'icons/diff-infernal.png'];
+    const diffIconSrc = (cycle) => DIFF_ICONS[Math.min(DIFF_ICONS.length - 1, Math.max(0, cycle | 0))];
     // Nível dos itens que caem em cada ato (por dificuldade) = nível médio do time do Modo Robô naquele ato,
     // arredondado para baixo de 10 em 10 (mínimo 1). Dificuldades além da tabela: +10 por volta.
     // medido em 2026-11-20 (robô, 300 min): Normal 3.5/9.3/14.3/17.3/19.3 · Difícil 21/21/21/22.9/26.8 · Insano 29.8/30/32.6/36.8/38.8
@@ -5578,9 +5584,13 @@
     function refreshAllUI() {
       const cfg = STAGES_DB[state.stageId] || STAGES_DB['1-1'];
       document.getElementById('lbl-act-roman').textContent = toRoman(displayAct(cfg));
-      const dEl = document.getElementById('lbl-diff'), D = curDiff();
-      dEl.classList.toggle('hidden', !(state.cycle > 0));
-      dEl.textContent = D.name; dEl.style.color = D.color; dEl.style.borderColor = D.color;
+      const cyc = state.cycle || 0, D = curDiff();
+      const dImg = document.getElementById('img-diff'), dSrc = diffIconSrc(cyc);
+      if (dImg.getAttribute('src') !== dSrc) dImg.setAttribute('src', dSrc);
+      const dN = document.getElementById('lbl-diff-n'); // Infernal II, III...: numeral pequeno ao lado do ícone
+      dN.classList.toggle('hidden', cyc < DIFFS.length);
+      dN.textContent = cyc >= DIFFS.length ? toRoman(cyc - DIFFS.length + 2) : '';
+      document.getElementById('btn-open-map').dataset.tip = `<b>Mapa Mundial (Atos I a V)</b><br>Dificuldade: <b style="color:${D.color}">${D.name}</b><br>Clique para abrir o mapa ilustrado e selecionar o Ato.`;
 
       // Atualiza indicador de bolinhas ●---●---○
       for (let i = 1; i <= 5; i++) {
@@ -6670,8 +6680,9 @@
         tabs.innerHTML = '';
         for (let c = 0; c <= (state.maxCycle || 0); c++) {
           const d = diffOf(c), b = document.createElement('button');
-          b.className = `icon-btn ui-btn px-2 py-0.5 ${c === cyc ? 'icon-btn-active' : ''}`;
-          b.style.color = d.color; b.textContent = d.name;
+          b.className = `icon-btn ui-btn px-2 py-0.5 gap-1 ${c === cyc ? 'icon-btn-active' : ''}`;
+          b.style.color = d.color;
+          b.innerHTML = `<img src="${diffIconSrc(c)}" alt="" draggable="false" class="w-5 h-5 object-contain pointer-events-none">${d.name}`;
           b.onclick = () => { state.mapCycle = c; renderIllustratedWorldMap(); };
           tabs.appendChild(b);
         }
