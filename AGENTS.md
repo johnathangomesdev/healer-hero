@@ -71,7 +71,7 @@
 
 - Tier do drop aleatório: `rollDropTier(dropTierCap(entity))`. Comum até Raro, alfas (boss:true) até Mítico, Lendário só do Necromante; peso de cada tier = `BAL.tierDecay^k` (padrão 0.3). Drops fixos de alfa são limitados com `capTier` (a Armadura da Alvorada cai Mítica do Lobo Alfa). O drop guarda `d.tier`.
 - Tutorial usa `TUTORIAL_WOLF` (Lobo Faminto, mais fraco, rig ZOMBIE_WOLF) em 1-2/1-3.
-- Peitorais travados por classe: MONK_ROBE→MONK, KNIGHT_PLATE e GOLDEN_ARMOR→TANK, ELVEN_TUNIC→ARCHER; sem peitoral = roupa de aldeão. Santo/Exorcista ainda não têm peitoral próprio.
+- Peitorais travados por classe: MONK_ROBE→MONK, KNIGHT_PLATE e GOLDEN_ARMOR→TANK, ELVEN_TUNIC→ARCHER; sem peitoral = roupa de aldeão. SAINT_ROBE→SAINT (2026-11-20). Exorcista ainda não tem peitoral próprio.
 - Ritmo: meta de ≥30 min jogando perfeito. Medido com o Modo Robô no jogo real (headless): Monge ~41, Exorcista ~44, Santo ~53 min. O simulador do painel NÃO bate com o jogo real (erra por classe); valide mudanças de ritmo com o robô, não só com o simulador.
 - Escalas das fases e ouro dos monstros ficam iguais em `index.html` (STAGES_DB/ENEMIES_DB) e `balanceamento.html` (DEFAULTS); mude os dois juntos.
 
@@ -112,6 +112,8 @@
 - Mira dos monstros (2026-11-20): `e.lockTarget` = herói mais próximo que entrou no alcance (`e.range`); fica travado enquanto vivo e no alcance. Não usa mais o "mais à frente"/formação.
 
 - Ícones dos menus: `icons/menu-{team,quests,tree,bag,tavern,craft}.png` (gavetas 0-5) e `menu-{autoskill,repeat,autoadvance,settings}.png` (barra superior), aplicados em `applyCartoonIcons` por `putImg` (classe `.img-btn`, sem fundo/borda; `.img-toggle` desligado fica cinza; gaveta aberta = brilho + escala).
+
+- Roupa do Santo (2026-11-20): peças `st_*` numa linha `Object.assign(RIG_SRC, {...})` logo depois da `RIG_SRC` (também base64 — **não ler**). `HUMAN_SKINS.saint` (capuz = cabeça inteira com `noHair`, manto, mangas, antebraços, coxa+bota como o monge, `staff: [img, pivô, y da cruz]`). Itens `SAINT_HOOD` (HEAD), `SAINT_ROBE` (CHEST), `SAINT_BOOTS` (FEET), classe SAINT, no pool de drop; `SAINT_STAFF` agora desenha a arte `st_staff` (brilho na cruz ao conjurar). Recorte feito tirando fundo + anel branco da folha do usuário e escalando cada peça para o tamanho da equivalente do monge.
 
 ## 3i. Nível dos itens (2026-11-20)
 
