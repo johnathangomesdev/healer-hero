@@ -5183,6 +5183,7 @@
       // Tank: espada na mão direita (braço da frente), escudo no braço esquerdo
       let aR = aB, aL = aF;
       if (isTank) { aR = aF; aL = -0.5 + (pose.armB + 0.25) * 0.3; }
+      if (isSaint && SK.staff) aR = aB - 0.55; // Santo: braço do cajado (direito) um pouco para trás, para o cajado não cobrir o rosto
       const heldSword = () => {
         const sw = SK.sword || HUMAN_SKINS.base.sword;
         // espada perpendicular à mão: volta para o referencial do antebraço e gira 90° para a frente.
@@ -5301,7 +5302,33 @@
         g.translate(1.5, 2.5);
         g.scale(K * 0.9, K * 0.9); rigPart(g, SK.tome[0], SK.tome[1], SK.tome[2]);
       };
-      const drawRightArm = () => drawArm('R', -SH_X, aR, -0.34, [-38, 65], [0, 30], isTank ? heldSword : (SK.tome ? heldTome : null), true);
+      // cajado do Santo / livro do Exorcista: na MÃO DIREITA; giro que mantém a mesma inclinação na tela que tinham na mão esquerda
+      const casterHeld = (isSaint && SK.staff) || (isExorcist && SK.book);
+      const heldCaster = () => {
+        const angR = (-aR - 0.34) + (bendCache.R || 0);
+        if (isSaint && SK.staff) {
+          // cajado do Santo (dourado) ou de madeira (iniciante): em pé ao lado do corpo (desfaz o giro do braço); a ponta brilha ao conjurar
+          g.rotate(-angR - 0.3 + (pose.wpn - rest.wpn) * 0.45);
+          const stf = SK.staff;
+          g.save(); g.scale(K, K); rigPart(g, stf[0], stf[1], stf[2]); g.restore();
+          if (pose.glow > 0.05) {
+            g.save(); g.globalCompositeOperation = 'lighter';
+            cCircle(g, 0, stf[3] * K, 3 + pose.glow * 3.5, hexA('#fde047', 0.15 + pose.glow * 0.22), false);
+            g.restore();
+          }
+        } else {
+          // livro do Exorcista (inicial = EXORCIST_ORB, id antigo do orbe; ou Grimório Gasto): de pé na mão (como o tomo do Mago), flutua de leve; brilho roxo ao conjurar
+          g.rotate(-angR * 0.85 + 0.12 + Math.sin(T * 1.7) * 0.04 - (pose.wpn - rest.wpn) * 0.2);
+          g.translate(1.5, 0.5 + Math.sin(T * 2.2) * 0.6);
+          g.save(); g.scale(K, K); rigPart(g, SK.book[0], SK.book[1], SK.book[2]); g.restore();
+          if (pose.glow > 0.05) {
+            g.save(); g.globalCompositeOperation = 'lighter';
+            cCircle(g, 0, -4, 4 + pose.glow * 5, hexA('#a855f7', 0.15 + pose.glow * 0.25), false);
+            g.restore();
+          }
+        }
+      };
+      const drawRightArm = () => drawArm('R', -SH_X, aR, -0.34, [-38, 65], [0, 30], isTank ? heldSword : (SK.tome ? heldTome : (casterHeld ? heldCaster : null)), true);
       armPart = 'upper'; drawRightArm();
 
       // colar (Monge iniciante): no pescoço, por cima do tronco e por baixo da cabeça
@@ -5352,16 +5379,6 @@
             cPoly(g, [[-3.6, -16.4], [0, -19.6], [3.6, -16.4], [2.2, -14], [-2.2, -14]], '#581c87');
             cNgon(g, 0, -20.4, 3.6 + Math.sin(T * 3) * 0.5 + pose.glow * 1.6, 6, T * 0.6, '#4ade80');
           });
-        } else if (isSaint && SK.staff) {
-          // cajado do Santo (dourado) ou de madeira (iniciante): preso pela empunhadura; a ponta brilha ao conjurar
-          g.rotate(pose.wpn * 0.55);
-          const stf = SK.staff;
-          g.save(); g.scale(K, K); rigPart(g, stf[0], stf[1], stf[2]); g.restore();
-          if (pose.glow > 0.05) {
-            g.save(); g.globalCompositeOperation = 'lighter';
-            cCircle(g, 0, stf[3] * K, 3 + pose.glow * 3.5, hexA('#fde047', 0.15 + pose.glow * 0.22), false);
-            g.restore();
-          }
         } else if (SK.mstaff) {
           // cajado de cristal do Mago: endireitado (mst[3]) e preso pela empunhadura; o cristal brilha ao conjurar
           const mst = SK.mstaff;
@@ -5371,15 +5388,6 @@
           g.save(); g.globalCompositeOperation = 'lighter';
           cCircle(g, 0, mst[4] * K, 2.5 + gl * 3, hexA('#7dd3fc', 0.12 + gl * 0.2), false);
           g.restore();
-        } else if (isExorcist && SK.book) {
-          // livro do Exorcista (inicial = EXORCIST_ORB, id antigo do orbe; ou Grimório Gasto): aberto na mão, flutua de leve; brilho roxo ao conjurar
-          g.translate(2, -4 + Math.sin(T * 2.2) * 0.8); g.rotate(-0.15 - pose.wpn * 0.2);
-          g.save(); g.scale(K, K); rigPart(g, SK.book[0], SK.book[1], SK.book[2]); g.restore();
-          if (pose.glow > 0.05) {
-            g.save(); g.globalCompositeOperation = 'lighter';
-            cCircle(g, 0, -4, 4 + pose.glow * 5, hexA('#a855f7', 0.15 + pose.glow * 0.25), false);
-            g.restore();
-          }
         } else if (isArcher) {
           // arco (sprite) preso pela empunhadura; corda e flecha desenhadas por código para poder puxar
           const d = (ent.bowDraw || 0) * 110; // px da arte
