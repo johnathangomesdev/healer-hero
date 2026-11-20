@@ -4568,12 +4568,27 @@
       const st = document.getElementById('se-save-status');
       if (st) { st.textContent = '• alterações não salvas no arquivo'; st.style.color = '#fbbf24'; }
     }
+    // Cada ocorrência de uma imagem no mesmo personagem tem chave própria: 'foreR' (1ª), 'foreR#2' (2ª)...
+    // Sem ajuste próprio, a 2ª ocorrência segue o ajuste da 1ª (compatível com os ajustes antigos).
+    let SPR_OCC = null;
+    function sprKey(name) {
+      if (!SPR_OCC) return name;
+      const n = (SPR_OCC[name] = (SPR_OCC[name] || 0) + 1);
+      return n === 1 ? name : name + '#' + n;
+    }
+    function sprAdjOf(key) {
+      const p = SPR_ADJ.parts;
+      if (p[key]) return p[key];
+      const i = key.indexOf('#');
+      return i > 0 ? p[key.slice(0, i)] : undefined;
+    }
     function sprApply(g, name) {
-      const a = SPR_ADJ.parts[name];
+      const a = sprAdjOf(name);
       if (!a) return;
       g.translate(a.x || 0, a.y || 0);
       if (a.r) g.rotate(a.r);
       if (a.s && a.s !== 1) g.scale(a.s, a.s);
+      if (a.fx || a.fy) g.scale(a.fx ? -1 : 1, a.fy ? -1 : 1); // inverter horizontal / vertical (em volta do pivô)
     }
     // ---- Camadas (ordem de desenho) ----
     // Durante o desenho de um personagem, as peças entram numa fila (SPR_Q) com o estado do canvas;
@@ -4592,7 +4607,7 @@
       const q = SPR_Q; SPR_Q = prev;
       if (!q || !q.length) return;
       q.forEach((it, i) => {
-        const z = (SPR_ADJ.parts[it.name] && SPR_ADJ.parts[it.name].z) || 0;
+        const z = (sprAdjOf(it.name) && sprAdjOf(it.name).z) || 0;
         it.i = i; it.k = i + z + (z > 0 ? 0.5 : (z < 0 ? -0.5 : 0));
       });
       q.sort((a, b) => a.k - b.k || a.i - b.i);
@@ -4610,18 +4625,24 @@
     function sprLayered(fn) {
       return function (g, ...args) {
         const prev = SPR_Q; SPR_Q = [];
-        try { return fn(g, ...args); } finally { sprFlush(g, prev); }
+        const prevOcc = SPR_OCC; SPR_OCC = {};
+        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; }
       };
     }
-    function sprDraw(g, im, name, pvx, pvy) {
+    function sprDraw(g, im, base, pvx, pvy) {
+      const name = sprKey(base);
+      const A = sprAdjOf(name);
+      if (A && A.hide && !SPR_REC) return; // peça deletada no editor
+      const ghost = A && A.hide; // no editor a peça deletada aparece apagadinha para poder restaurar
       if (SPR_Q) {
         const M0 = g.getTransform();
         g.save(); sprApply(g, name); const s = sprSnap(g); g.restore();
+        if (ghost) s.a *= 0.18;
         const w = im.naturalWidth * 2, h = im.naturalHeight * 2;
         SPR_Q.push({ name, s, fn: () => g.drawImage(im, -pvx, -pvy, w, h), rec: { name, img: im, M0, M: s.M, rx: -pvx, ry: -pvy, w, h } });
         return;
       }
-      if (!SPR_REC && !SPR_ADJ.parts[name]) { g.drawImage(im, -pvx, -pvy, im.naturalWidth * 2, im.naturalHeight * 2); return; }
+      if (!SPR_REC && !A) { g.drawImage(im, -pvx, -pvy, im.naturalWidth * 2, im.naturalHeight * 2); return; }
       g.save();
       const M0 = SPR_REC ? g.getTransform() : null;
       sprApply(g, name);
@@ -8454,6 +8475,12 @@
     function seAdj(create) {
       if (!SE.sel) return null;
       const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints;
+      if (create && SE.sel.type === 'part') {
+        const key = SE.sel.key, i = key.indexOf('#'), base = i > 0 ? key.slice(0, i) : key;
+        // antes de mexer, cada ocorrência vira independente (copia o ajuste herdado da 1ª)
+        const sibs = new Set((SE.rec ? SE.rec.parts : []).map(p => p.name).filter(n => n === base || n.startsWith(base + '#')));
+        for (const n of sibs) if (!bag[n] && bag[base] && n !== base) bag[n] = JSON.parse(JSON.stringify(bag[base]));
+      }
       if (!bag[SE.sel.key] && create) bag[SE.sel.key] = SE.sel.type === 'part' ? { x: 0, y: 0, r: 0, s: 1 } : { x: 0, y: 0 };
       return bag[SE.sel.key] || null;
     }
@@ -8489,11 +8516,19 @@
           <span id="se-z-val" class="mono text-amber-300" style="width:30px;text-align:center">${z > 0 ? '+' + z : z}</span>
           <button id="se-z-up" class="icon-btn dev-btn flex-1" title="Para frente ( ] )">▲ Frente</button></div>`;
       }
+      if (SE.sel.type === 'part') {
+        html += `<div class="se-row" style="gap:4px"><button id="se-flip-h" class="icon-btn dev-btn flex-1 ${a && a.fx ? 'toggle-on' : ''}">↔ Inverter H</button><button id="se-flip-v" class="icon-btn dev-btn flex-1 ${a && a.fy ? 'toggle-on' : ''}">↕ Inverter V</button></div>`;
+        html += `<button id="se-hide" class="icon-btn dev-btn ${a && a.hide ? 'toggle-on' : 'text-rose-300 border-rose-500/50'}">${a && a.hide ? '↺ Restaurar peça' : '🗑 Deletar peça'}</button>`;
+      }
       html += '<button id="se-reset-sel" class="icon-btn dev-btn">Resetar seleção</button>';
       box.innerHTML = html;
       if (SE.sel.type === 'part') {
         document.getElementById('se-z-down').onclick = () => seNudge('z', -1);
         document.getElementById('se-z-up').onclick = () => seNudge('z', 1);
+        const tog = k => { const adj = seAdj(true); if (adj[k]) delete adj[k]; else adj[k] = true; SE.sig = ''; sprSave(); seRenderSel(); };
+        document.getElementById('se-flip-h').onclick = () => tog('fx');
+        document.getElementById('se-flip-v').onclick = () => tog('fy');
+        document.getElementById('se-hide').onclick = () => tog('hide');
       }
       box.querySelectorAll('input[data-f]').forEach(inp => inp.oninput = () => {
         const v = parseFloat(inp.value); if (!Number.isFinite(v)) return;
@@ -8533,9 +8568,10 @@
       SE.sig = sig;
       const lay = document.getElementById('se-layers');
       lay.innerHTML = order.map((n, i) => {
-        const z = (SPR_ADJ.parts[n] && SPR_ADJ.parts[n].z) || 0;
+        const z = (sprAdjOf(n) && sprAdjOf(n).z) || 0;
+        const hid = sprAdjOf(n) && sprAdjOf(n).hide;
         const sel = SE.sel && SE.sel.type === 'part' && SE.sel.key === n;
-        return `<div data-layer="${devEsc(n)}" style="cursor:pointer;padding:1px 4px;border-radius:4px;${sel ? 'background:rgba(56,189,248,0.25);color:#7dd3fc;' : ''}">${i + 1}. ${devEsc(n)}${z ? ` <span class="text-amber-300">(${z > 0 ? '+' + z : z})</span>` : ''}</div>`;
+        return `<div data-layer="${devEsc(n)}" style="cursor:pointer;padding:1px 4px;border-radius:4px;${sel ? 'background:rgba(56,189,248,0.25);color:#7dd3fc;' : ''}">${i + 1}. ${hid ? '<s class="text-rose-400">' + devEsc(n) + '</s> 🗑' : devEsc(n)}${z ? ` <span class="text-amber-300">(${z > 0 ? '+' + z : z})</span>` : ''}</div>`;
       }).join('');
       lay.querySelectorAll('[data-layer]').forEach(el => el.onclick = () => seSelect('part', el.dataset.layer));
       const ps = document.getElementById('se-parts'), js = document.getElementById('se-joints');

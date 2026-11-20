@@ -140,6 +140,11 @@
 - EXP: a partir do nível `BAL.expSoftLvl` (20) a curva usa `BAL.expGrowthHigh` (1.10) em vez de `expGrowth` (1.40). Robô: Normal ~36 min, Difícil termina ~nv 29 (~120 min total), Insano chega a ~39.
 - O simulador `balanceamento.html` ainda NÃO modela nível de item nem a curva suave de EXP.
 
+## 3j. Editor de sprites (2026-11-20)
+
+- Cada ocorrência da mesma imagem num personagem tem chave própria: `foreR` (1ª), `foreR#2` (2ª)... (`sprKey`/`SPR_OCC`, zerado em `sprLayered`). Sem ajuste próprio, a 2ª segue a 1ª (`sprAdjOf`); ao editar, `seAdj(true)` copia o ajuste para cada ocorrência e elas ficam independentes.
+- Ajuste de peça aceita `fx`/`fy` (inverter H/V em volta do pivô) e `hide` (deletada: não desenha no jogo; no editor aparece a 18% para poder restaurar).
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
