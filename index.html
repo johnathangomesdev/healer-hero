@@ -2064,7 +2064,8 @@
         this.hitstopTimer = 0.04;
         const pushDir = this.faction === 'UNDEAD' ? 1 : -1;
         // aliados recuam bem menos (vários monstros pequenos batendo rápido empurravam o boneco para trás); mini slimes não empurram
-        const allyKb = this.faction === 'ALLY' ? (attacker && attacker.rig === 'MINI_CORRUPTED_SLIME' ? 0 : 0.3) : 1;
+        // aliados só recuam (de leve) com golpe de alfa/chefe; monstro comum não empurra (vários lobos empurravam o mercenário até o herói)
+        const allyKb = this.faction === 'ALLY' ? (attacker && attacker.isBoss ? 0.3 : 0) : 1;
         this.knockbackVx = pushDir * (isCrit ? 125 : 65) * (this.isBoss ? 0.4 : 1.0) * allyKb;
 
         // som do golpe conforme a arma de quem bateu
@@ -2951,10 +2952,20 @@
           tgt = allies.reduce((best, cur) => (Math.abs(cur.x - e.x) < Math.abs(best.x - e.x) ? cur : best), allies[0]);
           e.lockTarget = inRange(tgt) ? tgt : null;
         }
+        // corpo a corpo não alcança quem está atrás da linha de frente: enquanto o aliado da frente estiver de pé, o alvo é ele
+        if (e.range < 120) {
+          const fa = allies.reduce((m, a) => (a.x > m.x ? a : m), allies[0]);
+          if (tgt !== fa && tgt.x < fa.x - 4) { tgt = fa; e.lockTarget = inRange(fa) ? fa : null; }
+        }
 
         if (!inRange(tgt) && !e.isCursedSister) {
           e.isMoving = true;
           e.x += (tgt.x < e.x ? -1 : 1) * e.speed * dt;
+          // linha de frente: monstro corpo a corpo não atravessa o aliado mais à frente (ele segura a passagem)
+          if (e.range < 120) {
+            const front = allies.reduce((m, a) => Math.max(m, a.x), -1e9);
+            if (e.x < front + 20) e.x = front + 20;
+          }
         } else {
           e.isMoving = false;
           e.attackTimer += dt * e.getSpd();

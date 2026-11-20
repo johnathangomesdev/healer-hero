@@ -147,6 +147,8 @@
 
 - **Edições por personagem** (escopo): `sprScopeOf(ent, stance)` → `HEALER.SAINT|EXORCIST|MONK`, `FATHER`, `SISTER`, `VANGUARD_WARRIOR`, `PALADIN`, `ELVEN_ARCHER`, `MAGE` ou o rig do monstro. `sprLayered` define `SPR_SCOPE`; ajustes ficam em `parts['ESCOPO|peça']` / `joints['ESCOPO|articulação']` (posição, rotação, escala, inverter, deletar, camada e articulações). Sem ajuste próprio, cai no ajuste comum antigo (sem escopo). No editor: `SE.scope`, `seEff`/`seOwn`/`seAdj`; `ent.sprScope` força o escopo. Personagem novo: acrescente o caso em `sprScopeOf` e, no editor, `scope` no `SE_CHARS` se o rótulo não bastar.
 
+- **Linha de frente** (2026-11-20): monstro corpo a corpo (`range < 120`) mira o aliado mais à frente enquanto ele estiver vivo e não passa dele (`x >= frente + 20`); aliados só recuam com golpe de alfa/chefe (`allyKb`). Antes, vários lobos empurravam o mercenário até o herói. Ranged (Necromante) continua livre.
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
