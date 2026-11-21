@@ -5252,7 +5252,9 @@
       const SH_Y = -158, SH_X = 80; // ombros nos cantos de cima do tronco
       // Tank: espada na mão direita (braço da frente), escudo no braço esquerdo
       let aR = aB, aL = aF;
-      if (isTank) { aR = aF; aL = -0.5 + (pose.armB + 0.25) * 0.3; }
+      // Tank: braço da espada (direito) usa a pose do braço da frente, mas o balanço da caminhada tem que ser
+      // o do braço direito (oposto à perna direita) — antes ia junto com o pé direito
+      if (isTank) { aR = aF + (moving ? walkPh * 0.5 : 0); aL = -0.5 + (pose.armB + 0.25) * 0.3; }
       if (isSaint && SK.staff) aR = aB - 0.55; // Santo: braço do cajado (direito) um pouco para trás, para o cajado não cobrir o rosto
       const heldSword = () => {
         const sw = SK.sword || HUMAN_SKINS.base.sword;
