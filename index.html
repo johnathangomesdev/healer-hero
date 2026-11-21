@@ -1805,7 +1805,15 @@
       ULTIMATE: [{ A: { lean: -0.3, sq: 0.74, armF: -1.0, armB: -1.4, wpn: -1.2, head: -0.25, glow: 1.3, stance: 1.0, crouch: 1.2 }, S: { lean: 0.15, sq: 1.3, hop: -16, armF: 3.0, armB: -3.0, wpn: 0.1, head: 0.1, glow: 1.6, stance: 0.4, crouch: 0.3 } }]
     };
     const ANIM_TIMING_DEF = JSON.parse(JSON.stringify(ANIM_TIMING)); // padrão do código (para "resetar")
-    function animOverride(kind, v) { try { return (SPR_ADJ.anims || {})[kind + '.' + v] || null; } catch (_e) { return null; } }
+    // keyframes editados: do personagem ('ESCOPO@TIPO.v') ou, sem isso, comuns ('TIPO.v')
+    function animOverride(kind, v, scope) {
+      try { const A = SPR_ADJ.anims || {}, sc = scope === undefined ? SPR_SCOPE : scope; return (sc && A[sc + '@' + kind + '.' + v]) || A[kind + '.' + v] || null; } catch (_e) { return null; }
+    }
+    // tempos do golpe para um personagem: os dele ('ESCOPO@T.TIPO') > os comuns (ANIM_TIMING)
+    function animTimingFor(ent, kind) {
+      const T = ANIM_TIMING[kind] || ANIM_TIMING.ATTACK;
+      try { const sc = sprScopeOf(ent, ent && ent.isHealer ? state.stance : null), o = sc && (SPR_ADJ.anims || {})[sc + '@T.' + kind]; return o ? Object.assign({}, T, o) : T; } catch (_e) { return T; }
+    }
     // tempos editados (SPR_ADJ.anims['T.TIPO'] = { a, i, f }) por cima do padrão
     function animApplyTiming() {
       for (const k in ANIM_TIMING_DEF) {
@@ -2001,7 +2009,7 @@
 
       // kind: 'ATTACK' (2 variações alternadas) | 'SKILL' | 'PASSIVE' | 'ULTIMATE'
       triggerAttackAnim(onImpact, kind = 'ATTACK') {
-        const T = ANIM_TIMING[kind] || ANIM_TIMING.ATTACK;
+        const T = animTimingFor(this, kind);
         let variant = 0;
         if (kind === 'ATTACK') {
           this.comboStep = (this.comboStep + 1) % 2;
@@ -4593,7 +4601,7 @@
     //  joints[chave] = { x, y }            -> desloca a articulação (ponto onde a peça se encaixa)
     const SPR_ADJ_KEY = 'healer_hero_sprite_adj_v1';
     // ajustes gravados no próprio arquivo pelo botão "Salvar" do editor (não editar esta linha à mão)
-    const SPR_ADJ_FILE = {"parts":{"forearmL":{"x":1.8,"y":-0.2,"r":0,"s":1,"z":-6},"armL":{"x":0,"y":0,"r":0,"s":1},"forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":5},"cajado_santo":{"x":0,"y":0,"r":0,"s":1,"z":-8},"head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"foreR":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":4},"armR":{"x":0,"y":0,"r":0,"s":1,"z":11},"legR":{"x":0,"y":0,"r":0,"s":1,"z":1},"legL":{"x":0,"y":0,"r":0,"s":1,"z":3},"shield":{"x":0,"y":0,"r":0,"s":1,"z":3},"sword":{"x":9.1,"y":-24.2,"r":0,"s":1,"z":1},"w_sword":{"x":0,"y":-23.3,"r":0,"s":1,"z":2},"w_shield":{"x":0,"y":0,"r":0,"s":1,"z":3},"w_foreR":{"x":10.4,"y":-5.9,"r":0,"s":1},"s_armR":{"x":0,"y":0,"r":0,"s":0.77},"s_armL":{"x":0,"y":0,"r":0.17453292519943295,"s":0.77},"s_foreL":{"x":-16.3,"y":19,"r":-0.3316125578789226,"s":1},"s_foreR":{"x":2.3,"y":2,"r":0.06981317007977318,"s":1},"s_hair":{"x":8.5,"y":-6.1,"r":-0.03490658503988661,"s":1.07},"a_torso":{"x":0,"y":0,"r":0,"s":0.76},"a_armL":{"x":3.1,"y":-21.8,"r":-0.06981317007977318,"s":1},"a_forearmL":{"x":1.6,"y":1.5,"r":-0.017453292519943295,"s":1},"a_forearmR":{"x":0,"y":0,"r":0,"s":1},"a_armR":{"x":-8.8,"y":5.6,"r":0.5585053606381858,"s":0.69},"wolf_torso":{"x":67.6,"y":45,"r":-0.22689280275926282,"s":1},"wolf_head":{"x":-33.6,"y":-6.3,"r":0,"s":1},"wolf_legFL":{"x":-38.8,"y":8.5,"r":0,"s":1},"wolf_legFR":{"x":-15,"y":19.6,"r":0,"s":1},"bear_head":{"x":6.3,"y":-136.1,"r":0,"s":1.06},"bear_torso":{"x":174.4,"y":-11.9,"r":-0.3665191429188093,"s":1.25},"bear_legFR":{"x":-19.1,"y":-52.7,"r":0,"s":1.34},"bear_legFL":{"x":15.1,"y":-62.8,"r":0,"s":1.34},"bear_legHR":{"x":22.3,"y":-40.8,"r":0,"s":1.34},"bear_legHL":{"x":34.6,"y":-49.1,"r":0,"s":1.34},"bear_tail":{"x":-34.3,"y":-22.3,"r":0,"s":1.34},"necro_hood":{"x":56,"y":15.3,"r":0,"s":0.73},"necro_head":{"x":-23.7,"y":-5.3,"r":0,"s":1,"z":19},"necro_armL":{"x":-7,"y":-25.8,"r":0,"s":0.7},"necro_foreR":{"x":0,"y":0,"r":0,"s":0.7,"z":-8},"necro_torso":{"x":-12.9,"y":-66.3,"r":0,"s":1},"necro_foreL":{"x":20,"y":-36.8,"r":0,"s":0.7},"necro_armR":{"x":5,"y":23,"r":0,"s":0.7,"z":-5},"necro_staff":{"x":-2.2,"y":-1.2,"r":0,"s":1.21},"HEALER.SAINT|st_staff":{"x":0,"y":0,"r":1.064650843716542,"s":1,"z":6},"HEALER.SAINT|forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":3},"HEALER.SAINT|foreR#2":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":5},"HEALER.SAINT|foreR":{"x":3.8,"y":-1.5,"r":-0.2617993877991494,"s":1,"z":-7},"HEALER.SAINT|armR":{"x":0,"y":0,"r":-0.48869219055841256,"s":1,"z":11},"HEALER.EXORCIST|forearmR":{"x":-6.2,"y":-0.5,"r":0,"s":1,"z":4},"HEALER.EXORCIST|foreR":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":4},"HEALER.EXORCIST|foreR#2":{"x":1.9,"y":7.9,"r":-0.2617993877991494,"s":1,"z":4},"HEALER.EXORCIST|ex_book":{"x":25.9,"y":-16.8,"r":0,"s":1},"HEALER.MONK|forearmL":{"x":-16.1,"y":-8.6,"r":-0.8028514559173923,"s":1,"z":-5,"fx":true},"HEALER.MONK|foreR":{"x":-6.2,"y":1.9,"r":-0.2617993877991494,"s":1,"z":4},"HEALER.MONK|foreR#2":{"x":1.3,"y":6.7,"r":0.15707963267948963,"s":1,"z":4},"HEALER.MONK|m_legR":{"x":-9.9,"y":0.2,"r":-0.03490658503988667,"s":1},"HEALER.MONK|m_thighR":{"x":0,"y":0,"r":0,"s":1},"HEALER.MONK|m_foreL":{"x":-4.1,"y":-10.6,"r":-0.017453292519943316,"s":1,"z":2},"HEALER.MONK|m_armL":{"x":0,"y":0,"r":0.17453292519943295,"s":0.72},"HEALER.MONK|m_head":{"x":0,"y":0,"r":0,"s":1},"HEALER.MONK|m_armR":{"x":0,"y":0,"r":0,"s":0.7},"HEALER.MONK|m_legL":{"x":0,"y":0,"r":0,"s":1},"HEALER.SAINT|st_foreL":{"x":0,"y":-2.4,"r":0,"s":1,"z":-6},"HEALER.SAINT|st_hoodF":{"x":-31.3,"y":12.9,"r":0,"s":1},"HEALER.SAINT|st_hoodB":{"x":0,"y":0,"r":0,"s":1,"hide":true},"HEALER.SAINT|st_torso":{"x":-9.6,"y":30.7,"r":0,"s":1.07},"ELVEN_ARCHER|ar_hoodF":{"x":9.7,"y":10.2,"r":0,"s":0.87},"ELVEN_ARCHER|ar_hoodB":{"x":-505.9,"y":31.2,"r":0,"s":1,"hide":true},"ELVEN_ARCHER|s_hair":{"x":-4.4,"y":-2.6,"r":-0.03490658503988661,"s":1.07},"ELVEN_ARCHER|ar_legL":{"x":0,"y":0,"r":0,"s":1,"z":1},"ELVEN_ARCHER|ar_legR":{"x":0,"y":0,"r":0,"s":1,"z":1},"ELVEN_ARCHER|ar_torso":{"x":-1.7,"y":-1.5,"r":0,"s":0.87},"ELVEN_ARCHER|ar_quiver":{"x":0,"y":0,"r":-0.31415926535897937,"s":1},"ELVEN_ARCHER|ar_handR#2":{"x":17.8,"y":35.3,"r":1.012290966156712,"s":1},"ELVEN_ARCHER|ar_foreR":{"x":0,"y":0,"r":0,"s":1},"ELVEN_ARCHER|ar_armR":{"x":-1.6,"y":-1.6,"r":0,"s":0.8},"ELVEN_ARCHER|ar_armL":{"x":0,"y":0,"r":0,"s":0.8},"ELVEN_ARCHER|ar_foreL":{"x":4.2,"y":4.6,"r":-0.2617993877991494,"s":1},"ELVEN_ARCHER|ar_bow":{"x":0,"y":0,"r":0,"s":1},"PALADIN|pa_helmF":{"x":28.2,"y":31.8,"r":0,"s":1},"PALADIN|pa_helmB":{"x":365.9,"y":-262.8,"r":0,"s":1,"hide":true},"PALADIN|pa_handR#2":{"x":-10.8,"y":38.8,"r":1.1868238913561453,"s":1},"PALADIN|pa_hammer":{"x":22,"y":12.6,"r":0,"s":1},"PALADIN|pa_shield":{"x":15.9,"y":-19.9,"r":0,"s":1},"PALADIN|pa_handR":{"x":-35.7,"y":34.5,"r":0.5585053606381858,"s":1,"fx":true},"PALADIN|pa_foreL":{"x":93.3,"y":55.1,"r":0.9599310885968821,"s":1},"PALADIN|pa_torso":{"x":-5,"y":-3,"r":0,"s":1},"PALADIN|head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"PALADIN|pa_foreR":{"x":-13.2,"y":8,"r":0,"s":1},"PALADIN|pa_armR":{"x":-3.7,"y":-3.5,"r":0,"s":1,"z":5},"VANGUARD_WARRIOR|wl_helmF":{"x":0.9,"y":21.1,"r":0,"s":0.92},"VANGUARD_WARRIOR|hair":{"x":1.4,"y":0.5,"r":0,"s":1},"VANGUARD_WARRIOR|wl_helmB":{"x":-566.6,"y":-62.4,"r":0,"s":1,"hide":true},"VANGUARD_WARRIOR|wl_handR#2":{"x":5.8,"y":28.1,"r":1.064650843716542,"s":1},"HEALER.EXORCIST|ex_hoodF":{"x":-47.9,"y":6.6,"r":0,"s":1},"HEALER.EXORCIST|ex_hoodB":{"x":0,"y":0,"r":0,"s":1,"hide":true},"FATHER|forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":3},"VANGUARD_WARRIOR|w_foreR":{"x":10.4,"y":-5.9,"r":0,"s":1,"z":-6},"ELVEN_ARCHER|a_hood":{"x":-7,"y":-9,"r":0,"s":0.91},"ELVEN_ARCHER|a_forearmR":{"x":-5.9,"y":-5,"r":0,"s":1},"ELVEN_ARCHER|foreR":{"x":7.8,"y":10.1,"r":-0.2617993877991494,"s":1,"z":4},"ELVEN_ARCHER|foreR#2":{"x":-10.6,"y":5.6,"r":-0.2617993877991494,"s":1,"z":4},"SISTER|s_hair":{"x":-3.8,"y":-3.7,"r":-0.03490658503988661,"s":1.07},"HEALER.SAINT|sb_hoodF":{"x":-28.5,"y":6.8,"r":0,"s":0.93},"HEALER.SAINT|sb_hoodB":{"x":-28.2,"y":9.8,"r":0,"s":0.93},"HEALER.SAINT|st_armR":{"x":-3.7,"y":9.7,"r":0,"s":0.86},"HEALER.SAINT|st_armL":{"x":0,"y":0,"r":0,"s":0.86},"HEALER.SAINT|legL":{"x":0,"y":0,"r":0,"s":1,"z":3},"PALADIN|wl_helmF":{"x":0,"y":23,"r":0,"s":0.95},"PALADIN|wl_helmB":{"x":0,"y":22.1,"r":0,"s":0.95},"PALADIN|sword":{"x":9.1,"y":-24.2,"r":0,"s":1,"z":1,"hide":true},"HEALER.MONK|mi_head":{"x":3.3,"y":10.6,"r":0,"s":1},"HEALER.SAINT|head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"HEALER.EXORCIST|sb_hoodF":{"x":-46.5,"y":-0.4,"r":0,"s":1},"HEALER.EXORCIST|sb_hoodB":{"x":-46.5,"y":2.4,"r":0,"s":1},"HEALER.SAINT|sb_staff":{"x":0,"y":0,"r":1.0471975511965987,"s":1},"HEALER.SAINT|v_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"HEALER.SAINT|v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"HEALER.SAINT|v_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"HEALER.SAINT|v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"HEALER.SAINT|v_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"HEALER.SAINT|v_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"HEALER.SAINT|v_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"v_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"v_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"v_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"v_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"v_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"vg_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"vg_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"vg_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"vg_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"vg_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"vg_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"vg_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"HEALER.MONK|v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":11},"HEALER.MONK|v_foreL":{"x":0.1,"y":0.1,"r":0,"s":1,"z":-5},"HEALER.MONK|v_legL":{"x":-36.7,"y":1.6,"r":0,"s":1,"z":-1},"HEALER.MONK|v_thighL":{"x":-2.8,"y":21.4,"r":0,"s":1,"z":-2},"HEALER.MONK|v_torso":{"x":-1.5,"y":-1.1,"r":0,"s":1},"HEALER.MONK|v_armL":{"x":-5.5,"y":4.4,"r":0,"s":1},"HEALER.MONK|v_thighR":{"x":-71.8,"y":19.3,"r":0,"s":1,"z":-1},"HEALER.MONK|v_legR":{"x":-37,"y":-1.8,"r":0,"s":1,"z":-1},"HEALER.EXORCIST|v_legL":{"x":-28.4,"y":2.2,"r":0,"s":1},"HEALER.EXORCIST|v_legR":{"x":-37.4,"y":-1.1,"r":0,"s":1},"HEALER.EXORCIST|v_thighR":{"x":-80,"y":13,"r":0,"s":1,"z":-1},"HEALER.EXORCIST|v_foreR":{"x":1.9,"y":3.9,"r":-0.31415926535897937,"s":1,"z":9},"HEALER.EXORCIST|v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2}},"joints":{"knight.cintura":{"x":0,"y":0},"sister.ombroR":{"x":0.3,"y":7.2},"archer.cotoveloL":{"x":-14.2,"y":4.7},"archer.cotoveloR":{"x":-1.5,"y":-13.2},"archer.ombroR":{"x":0,"y":0},"archer.pulsoR":{"x":-5.9,"y":-0.5},"archer.pulsoL":{"x":6.1,"y":0.1},"WOLF.pescoco":{"x":1.8,"y":31.4},"WOLF.rabo":{"x":-4.7,"y":43.8},"necro.cotoveloL":{"x":-14,"y":-15.1},"necro.ombroL":{"x":-3.7,"y":-15.7},"necro.ombroR":{"x":-11.9,"y":-64.1},"necro.cotoveloR":{"x":-7.4,"y":-7.5},"necro.maoR":{"x":9.3,"y":-25.6},"necro.quadrilL":{"x":3.4,"y":0},"necro.quadrilR":{"x":-7.8,"y":0},"necro.pescoco":{"x":-5.4,"y":-31.1},"HEALER.MONK|monk.cotoveloL":{"x":-11.9,"y":8.1},"HEALER.MONK|monk.quadrilR":{"x":35.8,"y":0},"HEALER.MONK|monk.pulsoL":{"x":11.5,"y":6.5},"HEALER.MONK|monk.ombroL":{"x":-12.8,"y":4.2},"HEALER.MONK|monk.ombroR":{"x":5,"y":3.4},"ELVEN_ARCHER|ranger.ombroR":{"x":-12.1,"y":18.4},"ELVEN_ARCHER|ranger.ombroL":{"x":-7.9,"y":21.2},"ELVEN_ARCHER|ranger.pulsoL":{"x":14.1,"y":13.7},"ELVEN_ARCHER|sister.pescoco":{"x":-11.5,"y":15.5},"HEALER.SAINT|base.cintura":{"x":-0.1,"y":34.6},"HEALER.SAINT|base.pescoco":{"x":1.9,"y":11.7},"HEALER.SAINT|base.ombroR":{"x":29.3,"y":11.3},"HEALER.SAINT|base.cotoveloR":{"x":-12,"y":12.2},"HEALER.SAINT|base.pulsoR":{"x":9.5,"y":13.8},"base.cintura":{"x":-0.1,"y":34.6},"base.pescoco":{"x":1.9,"y":11.7},"base.ombroR":{"x":29.3,"y":11.3},"base.cotoveloR":{"x":-12,"y":12.2},"base.pulsoR":{"x":9.5,"y":13.8},"knight.ombroR":{"x":29.3,"y":11.3},"knight.cotoveloR":{"x":-12,"y":12.2},"knight.pulsoR":{"x":9.5,"y":13.8},"HEALER.MONK|base.joelhoL":{"x":22,"y":29.2},"HEALER.MONK|base.quadrilL":{"x":1.1,"y":5.8},"HEALER.MONK|base.quadrilR":{"x":75.2,"y":4.8},"HEALER.MONK|base.cintura":{"x":-0.1,"y":34.6},"HEALER.MONK|base.cotoveloR":{"x":-20.6,"y":25.1},"HEALER.MONK|base.cotoveloL":{"x":-1,"y":39.6},"HEALER.MONK|base.ombroL":{"x":-0.9,"y":4.1},"HEALER.MONK|base.pescoco":{"x":1.9,"y":11.7},"HEALER.MONK|base.joelhoR":{"x":-29.8,"y":12.4},"HEALER.EXORCIST|base.joelhoR":{"x":-46.1,"y":11.6},"HEALER.EXORCIST|base.joelhoL":{"x":32.6,"y":9.5},"HEALER.EXORCIST|base.cintura":{"x":-0.1,"y":34.6},"HEALER.EXORCIST|base.quadrilR":{"x":92.8,"y":10.1},"HEALER.EXORCIST|base.quadrilL":{"x":12.1,"y":9.3},"HEALER.EXORCIST|base.cotoveloL":{"x":0,"y":0}},"t":1795273379328};
+    const SPR_ADJ_FILE = {"parts":{"forearmL":{"x":1.8,"y":-0.2,"r":0,"s":1,"z":-6},"armL":{"x":0,"y":0,"r":0,"s":1},"forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":5},"cajado_santo":{"x":0,"y":0,"r":0,"s":1,"z":-8},"head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"foreR":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":4},"armR":{"x":0,"y":0,"r":0,"s":1,"z":11},"legR":{"x":0,"y":0,"r":0,"s":1,"z":1},"legL":{"x":0,"y":0,"r":0,"s":1,"z":3},"shield":{"x":0,"y":0,"r":0,"s":1,"z":3},"sword":{"x":9.1,"y":-24.2,"r":0,"s":1,"z":1},"w_sword":{"x":0,"y":-23.3,"r":0,"s":1,"z":2},"w_shield":{"x":0,"y":0,"r":0,"s":1,"z":3},"w_foreR":{"x":10.4,"y":-5.9,"r":0,"s":1},"s_armR":{"x":0,"y":0,"r":0,"s":0.77},"s_armL":{"x":0,"y":0,"r":0.17453292519943295,"s":0.77},"s_foreL":{"x":-16.3,"y":19,"r":-0.3316125578789226,"s":1},"s_foreR":{"x":2.3,"y":2,"r":0.06981317007977318,"s":1},"s_hair":{"x":8.5,"y":-6.1,"r":-0.03490658503988661,"s":1.07},"a_torso":{"x":0,"y":0,"r":0,"s":0.76},"a_armL":{"x":3.1,"y":-21.8,"r":-0.06981317007977318,"s":1},"a_forearmL":{"x":1.6,"y":1.5,"r":-0.017453292519943295,"s":1},"a_forearmR":{"x":0,"y":0,"r":0,"s":1},"a_armR":{"x":-8.8,"y":5.6,"r":0.5585053606381858,"s":0.69},"wolf_torso":{"x":67.6,"y":45,"r":-0.22689280275926282,"s":1},"wolf_head":{"x":-33.6,"y":-6.3,"r":0,"s":1},"wolf_legFL":{"x":-38.8,"y":8.5,"r":0,"s":1},"wolf_legFR":{"x":-15,"y":19.6,"r":0,"s":1},"bear_head":{"x":6.3,"y":-136.1,"r":0,"s":1.06},"bear_torso":{"x":174.4,"y":-11.9,"r":-0.3665191429188093,"s":1.25},"bear_legFR":{"x":-19.1,"y":-52.7,"r":0,"s":1.34},"bear_legFL":{"x":15.1,"y":-62.8,"r":0,"s":1.34},"bear_legHR":{"x":22.3,"y":-40.8,"r":0,"s":1.34},"bear_legHL":{"x":34.6,"y":-49.1,"r":0,"s":1.34},"bear_tail":{"x":-34.3,"y":-22.3,"r":0,"s":1.34},"necro_hood":{"x":56,"y":15.3,"r":0,"s":0.73},"necro_head":{"x":-23.7,"y":-5.3,"r":0,"s":1,"z":19},"necro_armL":{"x":-7,"y":-25.8,"r":0,"s":0.7},"necro_foreR":{"x":0,"y":0,"r":0,"s":0.7,"z":-8},"necro_torso":{"x":-12.9,"y":-66.3,"r":0,"s":1},"necro_foreL":{"x":20,"y":-36.8,"r":0,"s":0.7},"necro_armR":{"x":5,"y":23,"r":0,"s":0.7,"z":-5},"necro_staff":{"x":-2.2,"y":-1.2,"r":0,"s":1.21},"HEALER.SAINT|st_staff":{"x":0,"y":0,"r":1.064650843716542,"s":1,"z":6},"HEALER.SAINT|forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":3},"HEALER.SAINT|foreR#2":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":5},"HEALER.SAINT|foreR":{"x":3.8,"y":-1.5,"r":-0.2617993877991494,"s":1,"z":-7},"HEALER.SAINT|armR":{"x":0,"y":0,"r":-0.48869219055841256,"s":1,"z":11},"HEALER.EXORCIST|forearmR":{"x":-6.2,"y":-0.5,"r":0,"s":1,"z":4},"HEALER.EXORCIST|foreR":{"x":1.3,"y":6.7,"r":-0.2617993877991494,"s":1,"z":4},"HEALER.EXORCIST|foreR#2":{"x":1.9,"y":7.9,"r":-0.2617993877991494,"s":1,"z":4},"HEALER.EXORCIST|ex_book":{"x":25.9,"y":-16.8,"r":0,"s":1},"HEALER.MONK|forearmL":{"x":-16.1,"y":-8.6,"r":-0.8028514559173923,"s":1,"z":-5,"fx":true},"HEALER.MONK|foreR":{"x":-6.2,"y":1.9,"r":-0.19198621771937624,"s":1,"z":4},"HEALER.MONK|foreR#2":{"x":1.3,"y":6.7,"r":0.15707963267948963,"s":1,"z":4},"HEALER.MONK|m_legR":{"x":-36.6,"y":2.6,"r":-0.03490658503988667,"s":1},"HEALER.MONK|m_thighR":{"x":-30.7,"y":-7.4,"r":-0.17453292519943295,"s":1},"HEALER.MONK|m_foreL":{"x":-1.5,"y":-2.8,"r":0.05235987755982986,"s":1,"z":2},"HEALER.MONK|m_armL":{"x":0,"y":0,"r":0.17453292519943295,"s":0.72},"HEALER.MONK|m_head":{"x":0,"y":0,"r":0,"s":1},"HEALER.MONK|m_armR":{"x":0,"y":0,"r":0,"s":0.7},"HEALER.MONK|m_legL":{"x":-41,"y":-6.8,"r":0,"s":1},"HEALER.SAINT|st_foreL":{"x":0,"y":-2.4,"r":0,"s":1,"z":-6},"HEALER.SAINT|st_hoodF":{"x":-31.3,"y":12.9,"r":0,"s":1},"HEALER.SAINT|st_hoodB":{"x":0,"y":0,"r":0,"s":1,"hide":true},"HEALER.SAINT|st_torso":{"x":-9.6,"y":30.7,"r":0,"s":1.07},"ELVEN_ARCHER|ar_hoodF":{"x":9.7,"y":10.2,"r":0,"s":0.87},"ELVEN_ARCHER|ar_hoodB":{"x":-505.9,"y":31.2,"r":0,"s":1,"hide":true},"ELVEN_ARCHER|s_hair":{"x":-4.4,"y":-2.6,"r":-0.03490658503988661,"s":1.07},"ELVEN_ARCHER|ar_legL":{"x":0,"y":0,"r":0,"s":1,"z":1},"ELVEN_ARCHER|ar_legR":{"x":0,"y":0,"r":0,"s":1,"z":1},"ELVEN_ARCHER|ar_torso":{"x":-1.7,"y":-1.5,"r":0,"s":0.87},"ELVEN_ARCHER|ar_quiver":{"x":0,"y":0,"r":-0.31415926535897937,"s":1},"ELVEN_ARCHER|ar_handR#2":{"x":17.8,"y":35.3,"r":1.012290966156712,"s":1},"ELVEN_ARCHER|ar_foreR":{"x":0,"y":0,"r":0,"s":1},"ELVEN_ARCHER|ar_armR":{"x":-1.6,"y":-1.6,"r":0,"s":0.8},"ELVEN_ARCHER|ar_armL":{"x":0,"y":0,"r":0,"s":0.8},"ELVEN_ARCHER|ar_foreL":{"x":4.2,"y":4.6,"r":-0.2617993877991494,"s":1},"ELVEN_ARCHER|ar_bow":{"x":0,"y":0,"r":0,"s":1},"PALADIN|pa_helmF":{"x":28.2,"y":31.8,"r":0,"s":1},"PALADIN|pa_helmB":{"x":365.9,"y":-262.8,"r":0,"s":1,"hide":true},"PALADIN|pa_handR#2":{"x":-10.8,"y":38.8,"r":1.1868238913561453,"s":1},"PALADIN|pa_hammer":{"x":22,"y":12.6,"r":0,"s":1},"PALADIN|pa_shield":{"x":15.9,"y":-19.9,"r":0,"s":1},"PALADIN|pa_handR":{"x":-35.7,"y":34.5,"r":0.5585053606381858,"s":1,"fx":true},"PALADIN|pa_foreL":{"x":93.3,"y":55.1,"r":0.9599310885968821,"s":1},"PALADIN|pa_torso":{"x":-5,"y":-3,"r":0,"s":1},"PALADIN|head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"PALADIN|pa_foreR":{"x":-13.2,"y":8,"r":0,"s":1},"PALADIN|pa_armR":{"x":-3.7,"y":-3.5,"r":0,"s":1,"z":5},"VANGUARD_WARRIOR|wl_helmF":{"x":0.9,"y":21.1,"r":0,"s":0.92},"VANGUARD_WARRIOR|hair":{"x":1.4,"y":0.5,"r":0,"s":1},"VANGUARD_WARRIOR|wl_helmB":{"x":-566.6,"y":-62.4,"r":0,"s":1,"hide":true},"VANGUARD_WARRIOR|wl_handR#2":{"x":5.8,"y":28.1,"r":1.064650843716542,"s":1},"HEALER.EXORCIST|ex_hoodF":{"x":-47.9,"y":6.6,"r":0,"s":1},"HEALER.EXORCIST|ex_hoodB":{"x":0,"y":0,"r":0,"s":1,"hide":true},"FATHER|forearmR":{"x":6.9,"y":3.1,"r":0,"s":1,"z":3},"VANGUARD_WARRIOR|w_foreR":{"x":10.4,"y":-5.9,"r":0,"s":1,"z":-6},"ELVEN_ARCHER|a_hood":{"x":-7,"y":-9,"r":0,"s":0.91},"ELVEN_ARCHER|a_forearmR":{"x":-5.9,"y":-5,"r":0,"s":1},"ELVEN_ARCHER|foreR":{"x":7.8,"y":10.1,"r":-0.2617993877991494,"s":1,"z":4},"ELVEN_ARCHER|foreR#2":{"x":-10.6,"y":5.6,"r":-0.2617993877991494,"s":1,"z":4},"SISTER|s_hair":{"x":-3.8,"y":-3.7,"r":-0.03490658503988661,"s":1.07},"HEALER.SAINT|sb_hoodF":{"x":-28.5,"y":6.8,"r":0,"s":0.93},"HEALER.SAINT|sb_hoodB":{"x":-28.2,"y":9.8,"r":0,"s":0.93},"HEALER.SAINT|st_armR":{"x":-3.7,"y":9.7,"r":0,"s":0.86},"HEALER.SAINT|st_armL":{"x":0,"y":0,"r":0,"s":0.86},"HEALER.SAINT|legL":{"x":0,"y":0,"r":0,"s":1,"z":3},"PALADIN|wl_helmF":{"x":0,"y":23,"r":0,"s":0.95},"PALADIN|wl_helmB":{"x":0,"y":22.1,"r":0,"s":0.95},"PALADIN|sword":{"x":9.1,"y":-24.2,"r":0,"s":1,"z":1,"hide":true},"HEALER.MONK|mi_head":{"x":3.3,"y":10.6,"r":0,"s":1},"HEALER.SAINT|head":{"x":-2.8,"y":1.9,"r":0.06981317007977318,"s":0.88},"HEALER.EXORCIST|sb_hoodF":{"x":-46.5,"y":-0.4,"r":0,"s":1},"HEALER.EXORCIST|sb_hoodB":{"x":-46.5,"y":2.4,"r":0,"s":1},"HEALER.SAINT|sb_staff":{"x":0,"y":0,"r":1.0471975511965987,"s":1},"HEALER.SAINT|v_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"HEALER.SAINT|v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"HEALER.SAINT|v_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"HEALER.SAINT|v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"HEALER.SAINT|v_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"HEALER.SAINT|v_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"HEALER.SAINT|v_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"v_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"v_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"v_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"v_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"v_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"vg_thighR":{"x":0.8,"y":12.1,"r":0,"s":1,"z":-1},"vg_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"vg_armR":{"x":-31.7,"y":12.9,"r":-0.5759586531581291,"s":1,"z":16},"vg_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":9},"vg_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":5},"vg_foreL":{"x":0,"y":0,"r":0,"s":1,"z":-8},"vg_handL":{"x":0,"y":0,"r":0,"s":1,"z":-13},"HEALER.MONK|v_foreR":{"x":3.3,"y":0.5,"r":-0.31415926535897937,"s":1,"z":11},"HEALER.MONK|v_foreL":{"x":0.1,"y":0.1,"r":0,"s":1,"z":-5},"HEALER.MONK|v_legL":{"x":-36.7,"y":1.6,"r":0,"s":1,"z":-1},"HEALER.MONK|v_thighL":{"x":-2.8,"y":21.4,"r":0,"s":1,"z":-2},"HEALER.MONK|v_torso":{"x":-1.5,"y":-1.1,"r":0,"s":1},"HEALER.MONK|v_armL":{"x":-5.5,"y":4.4,"r":0,"s":1},"HEALER.MONK|v_thighR":{"x":-71.8,"y":19.3,"r":0,"s":1,"z":-1},"HEALER.MONK|v_legR":{"x":-37,"y":-1.8,"r":0,"s":1,"z":-1},"HEALER.EXORCIST|v_legL":{"x":-28.4,"y":2.2,"r":0,"s":1},"HEALER.EXORCIST|v_legR":{"x":-37.4,"y":-1.1,"r":0,"s":1},"HEALER.EXORCIST|v_thighR":{"x":-80,"y":13,"r":0,"s":1,"z":-1},"HEALER.EXORCIST|v_foreR":{"x":1.9,"y":3.9,"r":-0.31415926535897937,"s":1,"z":9},"HEALER.EXORCIST|v_thighL":{"x":-1.8,"y":10.5,"r":0,"s":1,"z":-2},"HEALER.MONK|sb_hoodF":{"x":-37.2,"y":0.5,"r":0,"s":1},"HEALER.MONK|sb_hoodB":{"x":-37.4,"y":1.8,"r":0,"s":1},"HEALER.MONK|m_torso":{"x":35.6,"y":-7.9,"r":-0.10471975511965977,"s":1.14},"HEALER.MONK|mi_beads":{"x":-630.4,"y":-538,"r":0,"s":1,"hide":true},"HEALER.MONK|m_thighL":{"x":37.2,"y":-3.6,"r":0.3316125578789227,"s":1},"HEALER.MONK|v_handR":{"x":-2.1,"y":-5.8,"r":-0.9250245035569955,"s":1,"z":9}},"joints":{"knight.cintura":{"x":0,"y":0},"sister.ombroR":{"x":0.3,"y":7.2},"archer.cotoveloL":{"x":-14.2,"y":4.7},"archer.cotoveloR":{"x":-1.5,"y":-13.2},"archer.ombroR":{"x":0,"y":0},"archer.pulsoR":{"x":-5.9,"y":-0.5},"archer.pulsoL":{"x":6.1,"y":0.1},"WOLF.pescoco":{"x":1.8,"y":31.4},"WOLF.rabo":{"x":-4.7,"y":43.8},"necro.cotoveloL":{"x":-14,"y":-15.1},"necro.ombroL":{"x":-3.7,"y":-15.7},"necro.ombroR":{"x":-11.9,"y":-64.1},"necro.cotoveloR":{"x":-7.4,"y":-7.5},"necro.maoR":{"x":9.3,"y":-25.6},"necro.quadrilL":{"x":3.4,"y":0},"necro.quadrilR":{"x":-7.8,"y":0},"necro.pescoco":{"x":-5.4,"y":-31.1},"HEALER.MONK|monk.cotoveloL":{"x":-24.6,"y":1.7},"HEALER.MONK|monk.quadrilR":{"x":35.8,"y":0},"HEALER.MONK|monk.pulsoL":{"x":0.5,"y":17},"HEALER.MONK|monk.ombroL":{"x":-12.8,"y":4.2},"HEALER.MONK|monk.ombroR":{"x":5,"y":3.4},"ELVEN_ARCHER|ranger.ombroR":{"x":-12.1,"y":18.4},"ELVEN_ARCHER|ranger.ombroL":{"x":-7.9,"y":21.2},"ELVEN_ARCHER|ranger.pulsoL":{"x":14.1,"y":13.7},"ELVEN_ARCHER|sister.pescoco":{"x":-11.5,"y":15.5},"HEALER.SAINT|base.cintura":{"x":-0.1,"y":34.6},"HEALER.SAINT|base.pescoco":{"x":1.9,"y":11.7},"HEALER.SAINT|base.ombroR":{"x":29.3,"y":11.3},"HEALER.SAINT|base.cotoveloR":{"x":-12,"y":12.2},"HEALER.SAINT|base.pulsoR":{"x":9.5,"y":13.8},"base.cintura":{"x":-0.1,"y":34.6},"base.pescoco":{"x":1.9,"y":11.7},"base.ombroR":{"x":29.3,"y":11.3},"base.cotoveloR":{"x":-12,"y":12.2},"base.pulsoR":{"x":9.5,"y":13.8},"knight.ombroR":{"x":29.3,"y":11.3},"knight.cotoveloR":{"x":-12,"y":12.2},"knight.pulsoR":{"x":9.5,"y":13.8},"HEALER.MONK|base.joelhoL":{"x":22,"y":29.2},"HEALER.MONK|base.quadrilL":{"x":12.6,"y":11.1},"HEALER.MONK|base.quadrilR":{"x":68.6,"y":8.6},"HEALER.MONK|base.cintura":{"x":-0.1,"y":34.6},"HEALER.MONK|base.cotoveloR":{"x":-20.6,"y":25.1},"HEALER.MONK|base.cotoveloL":{"x":-1,"y":39.6},"HEALER.MONK|base.ombroL":{"x":-0.9,"y":4.1},"HEALER.MONK|base.pescoco":{"x":1.9,"y":11.7},"HEALER.MONK|base.joelhoR":{"x":-29.8,"y":12.4},"HEALER.EXORCIST|base.joelhoR":{"x":-46.1,"y":11.6},"HEALER.EXORCIST|base.joelhoL":{"x":32.6,"y":9.5},"HEALER.EXORCIST|base.cintura":{"x":-0.1,"y":34.6},"HEALER.EXORCIST|base.quadrilR":{"x":92.8,"y":10.1},"HEALER.EXORCIST|base.quadrilL":{"x":12.1,"y":9.3},"HEALER.EXORCIST|base.cotoveloL":{"x":0,"y":0},"HEALER.MONK|monk.joelhoL":{"x":33.7,"y":21.5},"HEALER.MONK|monk.joelhoR":{"x":30.1,"y":1.6}},"anims":{"HEALER.MONK@MONK_ATTACK.0":{"A":{"lean":-0.38},"S":{"lean":0.47,"sq":1,"hop":0,"armF":1.29,"armB":0.7,"head":0.02,"glow":0,"stance":1.16,"crouch":0}},"HEALER.MONK@T.ATTACK":{"a":1,"i":1.3,"f":1.5},"HEALER.MONK@MONK_ATTACK.1":{"A":{"lean":-0.29},"S":{"lean":0.45}}},"t":1795274739836};
     let SPR_ADJ = { parts: Object.assign({}, SPR_ADJ_FILE.parts), joints: Object.assign({}, SPR_ADJ_FILE.joints), anims: Object.assign({}, SPR_ADJ_FILE.anims), t: SPR_ADJ_FILE.t || 0 };
     try {
       // a cópia do navegador só vale se for MAIS NOVA que a do arquivo (antes ela sempre passava por cima,
@@ -4633,9 +4641,25 @@
     }
     function sprAdjOf(key) {
       const p = SPR_ADJ.parts, i = key.indexOf('#'), base = i > 0 ? key.slice(0, i) : null, S = SPR_SCOPE ? SPR_SCOPE + '|' : '';
-      return (S && p[S + key]) || (S && base && p[S + base]) || p[key] || (base && p[base]) || undefined;
+      const SA = S && SPR_ANIM ? SPR_SCOPE + '@' + SPR_ANIM + '|' : '';
+      return (SA && p[SA + key]) || (SA && base && p[SA + base]) || (S && p[S + key]) || (S && base && p[S + base]) || p[key] || (base && p[base]) || undefined;
     }
-    function sprJointOf(key) { return (SPR_SCOPE && SPR_ADJ.joints[SPR_SCOPE + '|' + key]) || SPR_ADJ.joints[key]; }
+    // ajuste da animação atual ('ESCOPO@ANIM|chave') > do personagem ('ESCOPO|chave') > comum ('chave')
+    function sprJointOf(key) {
+      const j = SPR_ADJ.joints;
+      return (SPR_SCOPE && SPR_ANIM && j[SPR_SCOPE + '@' + SPR_ANIM + '|' + key]) || (SPR_SCOPE && j[SPR_SCOPE + '|' + key]) || j[key];
+    }
+    // animação atual do personagem (cada animação pode ter posição/rotação/camada próprias das peças e articulações)
+    let SPR_ANIM = '';
+    function sprAnimOf(ent) {
+      if (!ent) return '';
+      const an = ent.anim;
+      if (an) {
+        if (an.kind === 'ATTACK') return an.variant % 2 === 0 ? 'ATK1' : 'ATK2';
+        return { SKILL: 'SKILL', PASSIVE: 'PASSIVE', ULTIMATE: 'ULT' }[an.kind] || '';
+      }
+      return ent.isMoving ? 'WALK' : 'IDLE';
+    }
     function sprApply(g, name) {
       const a = sprAdjOf(name);
       if (!a) return;
@@ -4680,8 +4704,8 @@
       return function (g, ...args) {
         const prev = SPR_Q; SPR_Q = [];
         const prevOcc = SPR_OCC; SPR_OCC = {};
-        const prevScope = SPR_SCOPE; SPR_SCOPE = sprScopeOf(args[0], args[2]);
-        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; SPR_SCOPE = prevScope; }
+        const prevScope = SPR_SCOPE, prevAnim = SPR_ANIM; SPR_SCOPE = sprScopeOf(args[0], args[2]); SPR_ANIM = sprAnimOf(args[0]);
+        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; SPR_SCOPE = prevScope; SPR_ANIM = prevAnim; }
       };
     }
     function sprDraw(g, im, base, pvx, pvy) {
@@ -8611,10 +8635,11 @@
       e.isMoving = name === 'WALK'; e.anim = null;
       const map = { ATK1: ['ATTACK', 0], ATK2: ['ATTACK', 1], SKILL: ['SKILL', 0], PASSIVE: ['PASSIVE', 0], ULT: ['ULTIMATE', 0] };
       if (map[name]) {
-        const [kind, variant] = map[name], T = ANIM_TIMING[kind];
+        const [kind, variant] = map[name], T = seTiming(kind);
         e.anim = { kind, variant, t: 0, a: T.a, i: T.i, total: T.i + T.f };
       }
       seRenderKf();
+      SE.sig = ''; if (SE.sel && typeof seRenderSel === 'function') seRenderSel(); // valores da peça nesta animação
     }
 
     // ---- Editor de keyframes: pose de PREPARAÇÃO (A) e de GOLPE (S) + tempos; vale para todos os personagens daquele tipo ----
@@ -8623,6 +8648,7 @@
       ['armF', 'Braço da frente', -3.2, 3.2, 0.01], ['armB', 'Braço de trás', -3.2, 3.2, 0.01], ['wpn', 'Arma/pulso', -3.2, 3.2, 0.01],
       ['head', 'Cabeça', -0.6, 0.6, 0.01], ['glow', 'Brilho', 0, 2, 0.05], ['stance', 'Abrir pernas', 0, 1.5, 0.01], ['crouch', 'Agachar', 0, 1.5, 0.01]
     ];
+    function seTiming(kind) { const o = (SPR_ADJ.anims || {})[(SE.scope || '') + '@T.' + kind]; return Object.assign({}, ANIM_TIMING[kind], o || {}); }
     function seKfInfo() {
       const e = SE.ent; if (!e || !e.anim) return null;
       const c = SE_CHARS[SE.ci] || {};
@@ -8630,17 +8656,17 @@
       if (kind === 'ATTACK' && c.rig === 'HEALER' && c.stance === 'MONK') kind = 'MONK_ATTACK';
       const set = ANIM_POSES[kind]; if (!set) return null;
       const v = e.anim.variant % set.length;
-      const ov = animOverride(kind, v) || {};
+      const ov = animOverride(kind, v, SE.scope || '') || {};
       return { kind, v, base: set[v], A: Object.assign({}, set[v].A, ov.A), S: Object.assign({}, set[v].S, ov.S), tk: e.anim.kind };
     }
     function seRenderKf() {
       const box = document.getElementById('se-kf'); if (!box) return;
       const K = seKfInfo();
       if (!K) { box.innerHTML = ''; return; }
-      const e = SE.ent, T = ANIM_TIMING[K.tk];
+      const e = SE.ent, T = seTiming(K.tk);
       const num = (v) => (Math.round(v * 100) / 100);
       const rest = (k) => REST_POSE[k];
-      let h = `<div class="se-lbl">Keyframes · ${K.kind}${ANIM_POSES[K.kind].length > 1 ? ' #' + (K.v + 1) : ''}</div>`;
+      let h = `<div class="se-lbl">Keyframes · ${K.kind}${ANIM_POSES[K.kind].length > 1 ? ' #' + (K.v + 1) : ''}</div><div class="text-[10px] text-emerald-300">Vale só para: <b>${devEsc(SE.scope || '')}</b></div>`;
       h += `<div class="se-row"><span>Tempo</span><input id="kf-t" type="range" min="0" max="${num(e.anim.total)}" step="0.005" value="${e.anim.t}"></div>`;
       h += `<div class="se-row" style="gap:4px"><button class="icon-btn dev-btn flex-1" data-kft="a">Ver preparação</button><button class="icon-btn dev-btn flex-1" data-kft="i">Ver golpe</button></div>`;
       for (const [k, lab, mx] of [['a', 'Duração da preparação (s)', 1], ['i', 'Momento do impacto (s)', 1.3], ['f', 'Volta à pose (s)', 1.5]]) {
@@ -8663,13 +8689,13 @@
         const k = inp.dataset.kftime, tm = Object.assign({ a: T.a, i: T.i, f: T.f }, { [k]: +inp.value });
         if (tm.i < tm.a + 0.01) tm.i = tm.a + 0.01;
         SPR_ADJ.anims = SPR_ADJ.anims || {};
-        SPR_ADJ.anims['T.' + K.tk] = tm; animApplyTiming();
+        SPR_ADJ.anims[(SE.scope || '') + '@T.' + K.tk] = tm;
         Object.assign(e.anim, { a: tm.a, i: tm.i, total: tm.i + tm.f });
         inp.nextElementSibling.textContent = num(+inp.value); sprSave();
       });
       box.querySelectorAll('[data-kftime]').forEach(inp => inp.onchange = () => seRenderKf()); // atualiza os outros valores ao soltar
       box.querySelectorAll('[data-kfp]').forEach(inp => inp.oninput = () => {
-        const k = inp.dataset.kfp, key = K.kind + '.' + K.v;
+        const k = inp.dataset.kfp, key = (SE.scope || '') + '@' + K.kind + '.' + K.v;
         SPR_ADJ.anims = SPR_ADJ.anims || {};
         const o = SPR_ADJ.anims[key] || (SPR_ADJ.anims[key] = { A: {}, S: {} });
         o[tab][k] = +inp.value;
@@ -8677,8 +8703,8 @@
         freeze(tab === 'A' ? e.anim.a : e.anim.i);
       });
       box.querySelector('#kf-reset').onclick = () => {
-        if (SPR_ADJ.anims) { delete SPR_ADJ.anims[K.kind + '.' + K.v]; delete SPR_ADJ.anims['T.' + K.tk]; }
-        animApplyTiming(); const T2 = ANIM_TIMING[K.tk]; Object.assign(e.anim, { a: T2.a, i: T2.i, total: T2.i + T2.f });
+        if (SPR_ADJ.anims) { delete SPR_ADJ.anims[(SE.scope || '') + '@' + K.kind + '.' + K.v]; delete SPR_ADJ.anims[(SE.scope || '') + '@T.' + K.tk]; }
+        const T2 = seTiming(K.tk); Object.assign(e.anim, { a: T2.a, i: T2.i, total: T2.i + T2.f });
         sprSave(); seRenderKf();
       };
     }
@@ -8694,12 +8720,14 @@
       lastTime = performance.now();
     }
 
-    function seScoped(fn) { const p = SPR_SCOPE; SPR_SCOPE = SE.scope || ''; try { return fn(); } finally { SPR_SCOPE = p; } }
+    function seScoped(fn) { const p = SPR_SCOPE, pa = SPR_ANIM; SPR_SCOPE = SE.scope || ''; SPR_ANIM = SE.animName || 'IDLE'; try { return fn(); } finally { SPR_SCOPE = p; SPR_ANIM = pa; } }
+    // as edições do editor valem só para o personagem E a animação escolhidos
+    function seKeyPfx() { return (SE.scope || '') + '@' + (SE.animName || 'IDLE') + '|'; }
     function seEff(type, key) { return seScoped(() => type === 'part' ? sprAdjOf(key) : sprJointOf(key)); }
-    function seOwn(type, key) { return (type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints)[(SE.scope || '') + '|' + key]; }
+    function seOwn(type, key) { return (type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints)[seKeyPfx() + key]; }
     function seAdj(create) {
       if (!SE.sel) return null;
-      const type = SE.sel.type, bag = type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, S = (SE.scope || '') + '|';
+      const type = SE.sel.type, bag = type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, S = seKeyPfx();
       const clone = o => JSON.parse(JSON.stringify(o));
       if (!create) return seEff(type, SE.sel.key) || null;
       if (type === 'part') {
@@ -8731,7 +8759,7 @@
       const box = document.getElementById('se-sel');
       if (!SE.sel) { box.innerHTML = '<div class="text-slate-400">Nada selecionado. Clique numa peça ou articulação.</div>'; return; }
       const a = seAdj(false);
-      let html = `<div class="font-bold ${SE.sel.type === 'part' ? 'text-sky-300' : 'text-orange-300'} truncate">${SE.sel.type === 'part' ? 'Peça' : 'Articulação'}: ${devEsc(SE.sel.key)}</div><div class="text-[10px] text-emerald-300">Edição vale só para: <b>${devEsc(SE.scope || '')}</b></div>`;
+      let html = `<div class="font-bold ${SE.sel.type === 'part' ? 'text-sky-300' : 'text-orange-300'} truncate">${SE.sel.type === 'part' ? 'Peça' : 'Articulação'}: ${devEsc(SE.sel.key)}</div><div class="text-[10px] text-emerald-300">Edição vale só para: <b>${devEsc(SE.scope || '')}</b> · animação <b>${devEsc(document.querySelector('#se-anim option[value="' + (SE.animName || 'IDLE') + '"]') ? document.querySelector('#se-anim option[value="' + (SE.animName || 'IDLE') + '"]').textContent : SE.animName)}</b></div>`;
       for (const [k, label, mn, mx, st] of SE_FIELDS[SE.sel.type]) {
         const v = seFieldVal(a, k);
         html += `<div class="se-row"><span>${label}</span><input type="range" data-f="${k}" min="${mn}" max="${mx}" step="${st}" value="${v}"><input class="se-num" type="number" data-f="${k}" step="${st}" value="${v}"></div>`;
@@ -8765,7 +8793,7 @@
         sprSave();
       });
       document.getElementById('se-reset-sel').onclick = () => {
-        const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, k = (SE.scope || '') + '|' + SE.sel.key;
+        const bag = SE.sel.type === 'part' ? SPR_ADJ.parts : SPR_ADJ.joints, k = seKeyPfx() + SE.sel.key;
         delete bag[k];
         // ainda herda um ajuste comum antigo? zera só para este personagem
         if (seEff(SE.sel.type, SE.sel.key)) bag[k] = SE.sel.type === 'part' ? { x: 0, y: 0, r: 0, s: 1 } : { x: 0, y: 0 };
