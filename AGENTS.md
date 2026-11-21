@@ -178,3 +178,5 @@
 - Uivo, urso e slime aguardam referências.
 
 - (2026-11-21) Grupos do PSD já encaixados: `guerreiro` → skin `knight` (peças `vg_*`, item novo `KNIGHT_HELM`), `monge` → skin `monkInit` (peças `mo_*`; itens MONK_INIT_*; cabeça própria careca, `noHair`). Script: `outfit.py <grupo> <prefixo>` usa as matrizes medidas do aldeão (fit.json) e apaga olhos/boca da cabeça.
+
+- (2026-11-21) **Limpeza de sprites**: só ficam as roupas do PSD do aldeão — Vanguarda (`knight`, `vg_*`), Monge iniciante (`monkInit`, `mo_*`), Arqueiro (`ranger`, `aq_*`, grupo `arqueiro`; itens RANGER_*; capuz com cabelo próprio `hair`) + aldeão base e a Filha. Roupas de Santo, Exorcista, Monge avançado, couro, Paladino, Mago e Élfica foram removidas (os itens continuam, sem visual; ícone genérico). Paladino usa o visual do Vanguarda com o malho (`pa_hammer`). Mercenária élfica = sprite da Filha. Imagens sem uso foram apagadas de RIG_SRC (4,9 MB → 2,6 MB). Ferramenta `tools/cortar_pecas.py` corta folhas do GPT.
