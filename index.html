@@ -4802,7 +4802,6 @@
     // Peças de cada roupa. Todas já estão na proporção do aldeão (o padrão de tamanho).
     //  torso: [img, pivôX, pivôY] | sleeve/fore/hand: [img, pivôX, pivôY, giro da arte, escala]
     //  Padrão dos braços: sleeve = a manga da roupa | fore = antebraço, sem a mão | hand = sempre a mesma mão padrão
-    //  legDrop: quanto a bota desce do quadril | split: altura do corte do tornozelo
     const HUMAN_BASE_J = { elbow: { R: [9.2, 42.7], L: [31.3, 35.0] }, wrist: { R: [-38.5, 36.3], L: [1.4, 55.5] }, kneeAt: { R: [36.4, 82.8], L: [29.3, 86.0] }, thigh: { R: ['v_thighR', 21.5, 38.1, 1], L: ['v_thighL', 38.2, 33.2, 1] } }; // articulações do aldeão base (PSD)
     const HUMAN_SKINS = {
       monk: {
@@ -4811,7 +4810,7 @@
         sleeve: { R: ['m_armR', 82, 44, 0.8], L: ['m_armL', 50, 44, 0.8] }, elbow: { R: [-36, 52], L: [38, 52] },
         fore: { R: ['m_foreR', 75, 22, -0.42, 0.72], L: ['m_foreL', 36, 22, 0.42, 0.72] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'm_legR', L: 'm_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'm_legR', L: 'm_legL' },
         // coxa (calça larga) + perna (sandália) como peças inteiras, articuladas no joelho
         thigh: { R: ['m_thighR', 65, 22, 0.75], L: ['m_thighL', 65, 22, 0.75] },
         // kneeAt = centro da barra da calça (onde a perna entra); legPivot = centro do topo da perna
@@ -4826,7 +4825,7 @@
         sleeve: { R: ['st_armR', 72, 30], L: ['st_armL', 50, 30] }, elbow: { R: [-32, 70], L: [30, 72] },
         fore: { R: ['st_foreR', 70, 20, -0.36, 0.8], L: ['st_foreL', 35, 20, 0.39, 0.8] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'st_legR', L: 'st_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'st_legR', L: 'st_legL' },
         thigh: { R: ['st_thighR', 68, 20, 0.75], L: ['st_thighL', 56, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [70, 14], L: [76, 14] },
         staff: ['st_staff', 75, 296, -246]
@@ -4839,7 +4838,7 @@
         sleeve: { R: ['ex_armR', 72, 30], L: ['ex_armL', 50, 30] }, elbow: { R: [-32, 70], L: [30, 72] },
         fore: { R: ['ex_foreR', 70, 20, -0.36, 0.8], L: ['ex_foreL', 35, 20, 0.39, 0.8] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'ex_legR', L: 'ex_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'ex_legR', L: 'ex_legL' },
         thigh: { R: ['ex_thighR', 68, 20, 0.75], L: ['ex_thighL', 56, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [70, 14], L: [76, 14] },
         book: ['ex_book', 80, 80]
@@ -4853,7 +4852,7 @@
         sleeve: { R: ['wl_armR', 88, 40], L: ['wl_armL', 45, 40] }, elbow: { R: [-40, 78], L: [42, 78] },
         fore: { R: ['wl_foreR', 66, 27, -0.28, 0.9], L: ['wl_foreL', 50, 27, 0.27, 0.9] },
         hand: { R: ['wl_handR', 60, 18, -0.41, 1], L: ['wl_handR', 60, 18, -0.41, 1] },
-        leg: { R: 'wl_legR', L: 'wl_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'wl_legR', L: 'wl_legL' },
         thigh: { R: ['wl_thighR', 68, 20, 0.75], L: ['wl_thighL', 56, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [70, 14], L: [76, 14] },
         sword: ['wl_sword', 56, 240, -0.19, 1], shield: ['wl_shield', 100, 103, 1]
@@ -4866,7 +4865,7 @@
         sleeve: { R: ['pa_armR', 88, 40], L: ['pa_armL', 45, 40] }, elbow: { R: [-40, 78], L: [42, 78] },
         fore: { R: ['pa_foreR', 66, 27, -0.28, 0.9], L: ['pa_foreL', 50, 27, 0.27, 0.9] },
         hand: { R: ['pa_handR', 58, 20, -0.41, 1], L: ['pa_handR', 58, 20, -0.41, 1] },
-        leg: { R: 'pa_legR', L: 'pa_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'pa_legR', L: 'pa_legL' },
         thigh: { R: ['pa_thighR', 64, 20, 0.75], L: ['pa_thighL', 58, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [70, 14], L: [76, 14] },
         sword: ['pa_hammer', 67, 202, -0.32, 1.35], shield: ['pa_shield', 91, 117, 1]
@@ -4879,7 +4878,7 @@
         sleeve: { R: ['sb_armR', 72, 30], L: ['sb_armL', 50, 30] }, elbow: { R: [-32, 70], L: [30, 72] },
         fore: { R: ['sb_foreR', 70, 20, -0.36, 0.8], L: ['sb_foreL', 35, 20, 0.39, 0.8] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'sb_legR', L: 'sb_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'sb_legR', L: 'sb_legL' },
         thigh: { R: ['sb_thighR', 64, 20, 0.75], L: ['sb_thighL', 58, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [68, 14], L: [76, 14] },
         staff: ['sb_staff', 61, 340, -304]
@@ -4893,7 +4892,7 @@
         sleeve: { R: ['mg_armR', 90, 40], L: ['mg_armL', 50, 40] }, elbow: { R: [-40, 76], L: [42, 76] },
         fore: { R: ['mg_foreR', 66, 27, -0.28, 0.9], L: ['mg_foreL', 50, 27, 0.27, 0.9] },
         hand: { R: ['mg_handR', 62, 18, -0.41, 1], L: ['mg_handR', 62, 18, -0.41, 1] },
-        leg: { R: 'mg_legR', L: 'mg_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'mg_legR', L: 'mg_legL' },
         thigh: { R: ['mg_thighR', 64, 20, 0.75], L: ['mg_thighL', 62, 20, 0.75] },
         kneeAt: { R: [-12, 72], L: [12, 72] }, legScale: 0.74, legPivot: { R: [70, 14], L: [73, 14] },
         mstaff: ['mg_staff', 62, 222, -0.43, -178],
@@ -4907,7 +4906,7 @@
         sleeve: { R: ['ar_armR', 80, 26], L: ['ar_armL', 38, 26] }, elbow: { R: [-38, 68], L: [38, 68] },
         fore: { R: ['ar_foreR', 70, 22, -0.55, 0.78], L: ['ar_foreL', 32, 22, 0.55, 0.78] },
         hand: { R: ['ar_handR', 58, 20, -0.41, 1], L: ['ar_handR', 58, 20, -0.41, 1] },
-        leg: { R: 'ar_legR', L: 'ar_legL' }, legDrop: 0, split: 92,
+        leg: { R: 'ar_legR', L: 'ar_legL' },
         thigh: { R: ['ar_thighR', 65, 20, 0.75], L: ['ar_thighL', 64, 20, 0.75] },
         kneeAt: { R: [0, 70], L: [0, 70] }, legScale: 0.87, legPivot: { R: [61, 12], L: [61, 12] },
         quiver: ['ar_quiver', 90, 125],
@@ -4921,7 +4920,7 @@
         sleeve: { R: ['mi_armR', 82, 44, 0.8], L: ['mi_armL', 50, 44, 0.8] }, elbow: { R: [-36, 52], L: [38, 52] },
         fore: { R: ['mi_foreR', 75, 22, -0.42, 0.72], L: ['mi_foreL', 36, 22, 0.42, 0.72] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'mi_legR', L: 'mi_legL' }, legDrop: 0, split: 100,
+        leg: { R: 'mi_legR', L: 'mi_legL' },
         thigh: { R: ['mi_thighR', 65, 22, 0.75], L: ['mi_thighL', 65, 22, 0.75] },
         kneeAt: { R: [-10, 70], L: [7, 68] }, legScale: 0.74, legPivot: { R: [77, 12], L: [71, 12] }
       },
@@ -4933,7 +4932,7 @@
         sleeve: { R: ['v_armR', 35.8, 29.0, 1], L: ['v_armL', 24.6, 33.3, 1] }, elbow: { R: [9.2, 42.7], L: [31.3, 35.0] },
         fore: { R: ['v_foreR', 77.3, 45.1, 0, 1], L: ['v_foreL', 57.2, 29.1, 0, 1] },
         hand: { R: ['v_handR', 84.5, 39.4, 0, 1], L: ['v_handL', 67.6, 43.5, 0, 1] }, wrist: { R: [-38.5, 36.3], L: [1.4, 55.5] },
-        leg: { R: 'v_legR', L: 'v_legL' }, legDrop: 0, split: 92,
+        leg: { R: 'v_legR', L: 'v_legL' },
         thigh: { R: ['v_thighR', 21.5, 38.1, 1], L: ['v_thighL', 38.2, 33.2, 1] },
         kneeAt: { R: [36.4, 82.8], L: [29.3, 86.0] }, legScale: 1, legPivot: { R: [56.1, 27.2], L: [58.8, 22.2] },
         sword: ['sword', 35, 180, -0.316, 1.1], shield: ['shield', 87, 95, 1.1]
@@ -4943,7 +4942,7 @@
         sleeve: { R: ['a_armR', 95, 52], L: ['a_armL', 60, 52] }, elbow: { R: [-38, 65], L: [40, 63] },
         fore: { R: ['a_forearmR', 105, 38, -0.57, 0.7], L: ['a_forearmL', 42, 38, 0.57, 0.7] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 'a_legR', L: 'a_legL' }, legDrop: 0, split: 92,
+        leg: { R: 'a_legR', L: 'a_legL' },
         hood: ['a_hood', 160, 272, 1.08], quiver: ['a_quiver', 87, 165],
         // arco: [img, pivô da empunhadura], pontas da corda e posição de repouso da corda (relativas à empunhadura)
         bow: { img: ['a_bow', 140, 210], top: [-118, -165], bot: [-102, 162], rest: -108 }
@@ -4955,7 +4954,7 @@
         sleeve: { R: ['s_armR', 77, 24], L: ['s_armL', 35, 24] }, elbow: { R: [-38, 68], L: [38, 68] },
         fore: { R: ['s_foreR', 70, 22, -0.55, 0.78], L: ['s_foreL', 32, 22, 0.55, 0.78] },
         hand: { R: ['foreR', 58, 24, -0.41, 1], L: ['foreR', 58, 24, -0.41, 1] }, // mão padrão
-        leg: { R: 's_legR', L: 's_legL' }, legDrop: 0, split: 92,
+        leg: { R: 's_legR', L: 's_legL' },
         thigh: { R: ['s_thighR', 65, 20, 0.75], L: ['s_thighL', 64, 20, 0.75] },
         kneeAt: { R: [0, 70], L: [0, 70] }, legScale: 0.87, legPivot: { R: [50, 12], L: [52, 12] },
         quiver: ['s_quiver', 77, 130],
@@ -4968,7 +4967,7 @@
         sleeve: { R: ['vg_armR', 34.7, 29.9, 1], L: ['vg_armL', 25.5, 33.2, 1] }, elbow: HUMAN_BASE_J.elbow,
         fore: { R: ['vg_foreR', 76.9, 44.2, 0, 1], L: ['vg_foreL', 57.2, 27.5, 0, 1] },
         hand: { R: ['vg_handR', 78.7, 35.3, 0, 1], L: ['vg_handL', 59.0, 30.3, 0, 1] }, wrist: HUMAN_BASE_J.wrist,
-        leg: { R: 'vg_legR', L: 'vg_legL' }, legDrop: 0, split: 92,
+        leg: { R: 'vg_legR', L: 'vg_legL' },
         thigh: HUMAN_BASE_J.thigh, kneeAt: HUMAN_BASE_J.kneeAt, legScale: 1,
         legPivot: { R: [51.6, 41.9], L: [52.4, 41.5] },
         sword: ['w_sword', 43, 240, -0.214, 1], shield: ['w_shield', 96, 115, 1]
@@ -5054,7 +5053,7 @@
         }
         if (m.feet) {
           const F = HUMAN_SKINS[m.feet];
-          Object.assign(S, { leg: F.leg, legDrop: F.legDrop, split: F.split, feetKey: m.feet });
+          Object.assign(S, { leg: F.leg, feetKey: m.feet });
           if (F.thigh) Object.assign(S, { thigh: F.thigh, kneeAt: F.kneeAt, legScale: F.legScale, legPivot: F.legPivot });
           else { delete S.thigh; delete S.kneeAt; delete S.legScale; delete S.legPivot; }
         }
@@ -5169,22 +5168,9 @@
           g.restore();
           return;
         }
-        // perna dividida em duas peças: canela (cima) e pé (baixo), com dobra na faixa laranja
-        const im = RIG_IMG[SK.leg[side]], SPLIT = SK.split, w = im.naturalWidth, h = im.naturalHeight;
-        g.translate(0, 35 + SK.legDrop);
-        const legName = SK.leg[side], legM0 = g.getTransform();
-        sprApply(g, legName);
-        const legRec = { name: legName, img: null, M0: legM0, M: g.getTransform(), rx: -60, ry: -20, w: w * 2, h: h * 2 };
-        // pé: gira em torno da frente da junta (o canto de trás some sob a canela)
-        const y0 = SPLIT - 8;
-        g.save();
-        { const kj = JT(g, feetKey + '.joelho' + side, 42, SPLIT - 20); g.translate(kj[0], kj[1]); }
-        g.rotate(knee);
-        sprCode(g, legName, () => g.drawImage(im, 0, y0 / 2, w, h - y0 / 2, -102, -8, w * 2, (h - y0 / 2) * 2));
-        g.restore();
-        // canela por cima, escondendo o corte
-        const y1 = SPLIT + 8;
-        sprCode(g, legName, () => g.drawImage(im, 0, 0, w, y1 / 2, -60, -20, w * 2, y1), legRec);
+        // perna inteira sem coxa separada (só a bota élfica antiga): desenhada inteira no quadril, sem corte
+        g.translate(0, 35);
+        rigPart(g, SK.leg[side], 60, 20);
         g.restore();
       };
       // esquerda primeiro (atrás), direita por cima (na frente) — igual aos braços
