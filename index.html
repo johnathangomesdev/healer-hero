@@ -2056,9 +2056,7 @@
             } else {
               const R = kind === 'ULTIMATE' ? 95 : (kind === 'SKILL' ? 62 : 46);
               shockwaveRings.push({ x: this.x, y: this.y - 14, color: col, maxR: R, ttl: 0.5, maxTtl: 0.5 });
-              if (kind !== 'PASSIVE' && this.faction !== 'UNDEAD') {
-                slashArcs.push({ x: this.x + 17 * this.facing, y: this.y - 22, facing: this.facing, uppercut: false, color: col, ttl: 0.22, maxTtl: 0.22 });
-              }
+              // (arco de corte das skills/ultimates removido)
               spawnParticles(this.x, this.y - 18, col, kind === 'ULTIMATE' ? 26 : (kind === 'SKILL' ? 14 : 10), this.facing);
               if (kind === 'ULTIMATE') {
                 shockwaveRings.push({ x: this.x, y: this.y - 4, color: '#ffffff', maxR: 60, ttl: 0.36, maxTtl: 0.36 });
@@ -2642,7 +2640,6 @@
           a.triggerAttackAnim(() => {
             for (const e of getLivingEnemies()) if (Math.abs(e.x - a.x) <= 95) e.receiveDamage(pow * 2.3, a, false, true);
             shockwaveRings.push({ x: a.x + 30 * a.facing, y: a.y - 14, color: '#e0f2fe', maxR: 80, ttl: 0.45, maxTtl: 0.45 });
-            slashArcs.push({ x: a.x + 22 * a.facing, y: a.y - 20, facing: a.facing, uppercut: false, color: '#e0f2fe', ttl: 0.3, maxTtl: 0.3 });
             triggerShake(3, 0.2);
           }, 'ULTIMATE');
         }
@@ -5268,7 +5265,7 @@
         g.rotate(handAngle + Math.PI / 2 + wrist + sw[3]); // sw[3]: a lâmina da arte já vem inclinada
         g.scale(K * sw[4], K * sw[4]);
         rigPart(g, sw[0], sw[1], sw[2]);
-        trailRecord(g, ent, 0, -sw[2] * 0.92); // ponta da lâmina
+        // (rastro da espada/malho removido)
       };
 
       // braço: ombro -> antebraço/mão. `held` desenha o que a mão segura (em unidades do jogo)
