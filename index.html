@@ -1454,7 +1454,7 @@
         id: 'MAGE',
         name: 'Mago Aprendiz',
         classLabel: 'Conjurador / Dano Mágico',
-        rig: 'MAGE', dmgType: 'MAG', ranged: true, range: 220,
+        rig: 'MAGE', dmgType: 'MAG', ranged: true, range: 420,
         cost: 120,
         gear: ['MAGE_STAFF', 'MAGE_HAT', 'MAGE_ROBE', 'MAGE_BOOTS'], // já vem equipado (tudo Comum)
         stats: { vit: 20, pow: 23, def: 4, res: 12, spd: 1.0 }
@@ -1464,13 +1464,13 @@
     // mercenários = o dmgType deles (padrão físico); monstros = ENEMIES_DB.dmgType (padrão físico)
     function dmgTypeOf(ent) {
       if (!ent) return 'PHYS';
-      if (ent.isHealer) return 'MAG';
+      if (ent.isHealer) return state.stance === 'MONK' ? 'PHYS' : 'MAG';
       const m = ent.mercKey && MERCENARIES_DB[ent.mercKey];
       if (m) return m.dmgType || 'PHYS';
       return ent.dmgType || 'PHYS';
     }
     const mercIsRanged = (m) => (m.ranged !== undefined ? !!m.ranged : m.rig === 'ARCHER');
-    const mercRange = (m) => m.range || (mercIsRanged(m) ? 240 : 42);
+    const mercRange = (m) => m.range || (mercIsRanged(m) ? 420 : 42);
 
     const SKILLS_DB = {
       SAINT: {
@@ -2141,13 +2141,13 @@
         name: 'Herói (Aldeão)', rig: 'HEALER', faction: 'ALLY', slotIndex: 2,
         isHealer: true, isVillager: true,
         stats: { ...BAL.hero },
-        x: slotHomeX(2), y: GROUND_Y, range: 240, speed: 120
+        x: slotHomeX(2), y: GROUND_Y, range: 420, speed: 120
       });
       partySlots[1] = new CombatEntity({
         name: 'Filha (Aldeã)', rig: 'ARCHER', faction: 'ALLY', slotIndex: 1,
         isVillager: true, isRanged: true,
         stats: { ...BAL.daughter },
-        x: slotHomeX(1), y: GROUND_Y, range: 240, speed: 120
+        x: slotHomeX(1), y: GROUND_Y, range: 420, speed: 120
       });
       partySlots[0] = new CombatEntity({
         name: 'Pai (Aldeão)', rig: 'TANK', faction: 'ALLY', slotIndex: 0,
@@ -2251,7 +2251,7 @@
             name: 'Filha (Aldeã)', rig: 'ARCHER', faction: 'ALLY', slotIndex: 1,
             isVillager: true, isRanged: true,
             stats: { vit: 14, pow: 15, def: 4, spd: 1.25 },
-            x: slotHomeX(1), y: GROUND_Y, range: 240, speed: 120
+            x: slotHomeX(1), y: GROUND_Y, range: 420, speed: 120
           });
         }
         partySlots[1] = null;
@@ -2663,7 +2663,7 @@
         } else {
           if (enemies.length === 0) return false;
           const target = enemies[0];
-          castAnim(() => target.receiveDamage((pow + healer.getVit() * 0.4) * mult, healer, true, true));
+          castAnim(() => target.receiveDamage((pow + healer.getVit() * 0.4) * mult, healer, false, true)); // Monge: dano físico
         }
       } else if (slot === 3) {
         if (stance === 'SAINT') {
@@ -2675,7 +2675,7 @@
         } else {
           if (enemies.length === 0) return false;
           castAnim(() => {
-            for (const e of [...enemies]) e.receiveDamage(pow * mult * 0.85, healer, true, true);
+            for (const e of [...enemies]) e.receiveDamage(pow * mult * 0.85, healer, stance !== 'MONK', true);
           });
         }
       }
@@ -3137,7 +3137,7 @@
         });
       } else {
         passiveAnim(() => {
-          if (!target.isDead) target.receiveDamage(pow * 1.18 + vit * 0.35 + 9, ally, true);
+          if (!target.isDead) target.receiveDamage(pow * 1.18 + vit * 0.35 + 9, ally, false);
           if (isThird) ally.receiveHeal(pow * pMult, 0.15);
         });
       }
@@ -7856,7 +7856,7 @@
                   stats: { vit: ad.baseVit, pow: ad.basePow, def: ad.baseDef, spd: ad.baseSpd,
                     res: Number.isFinite(ad.baseRes) ? ad.baseRes : (ad.mercKey && MERCENARIES_DB[ad.mercKey] ? MERCENARIES_DB[ad.mercKey].stats.res : undefined) },
                   x: slotHomeX(slotIdx), y: GROUND_Y, speed: 120,
-                  range: ad.mercKey && MERCENARIES_DB[ad.mercKey] ? mercRange(MERCENARIES_DB[ad.mercKey]) : (ad.isRanged ? 240 : 42)
+                  range: ad.mercKey && MERCENARIES_DB[ad.mercKey] ? mercRange(MERCENARIES_DB[ad.mercKey]) : (ad.isRanged ? 420 : 42)
                 });
                 Object.assign(ent, ad);
                 ent.applyEquipmentBonuses();
@@ -9174,8 +9174,8 @@
       const flow = GUIDE_FLOWS[GUIDE.key];
       gDots.innerHTML = flow.map((_, i) => `<i class="${i <= GUIDE.idx ? 'on' : ''}"></i>`).join('');
       const mode = val(st.next);
-      gNext.style.display = mode === 'button' ? '' : 'none';
-      gNext.textContent = st.btn || 'Continuar';
+      gNext.style.display = (mode === 'button' || mode === 'auto') ? '' : 'none';
+      gNext.textContent = st.btn || (mode === 'auto' ? 'Avançar ▶' : 'Continuar');
       gSkip.style.display = 'none'; // tutorial obrigatório: sem pular
       gBox.style.display = 'block';
       gBox.style.animation = 'none'; void gBox.offsetWidth; gBox.style.animation = '';
