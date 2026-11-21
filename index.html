@@ -5087,9 +5087,9 @@
       // Roupa montada pelas peças EQUIPADAS: o corpo base (aldeão; arqueiras usam o corpo da irmã)
       // só troca peças quando o item correspondente está equipado (ver ITEM_SKIN).
       const SK = composeHumanSkin(isArcher ? 'sister' : 'base', eqSlots);
-      const skinKey = SK.bodyKey;           // cintura e pescoço
-      const chestKey = SK.chestKey;         // ombros, cotovelos e pulsos
-      const feetKey = SK.feetKey;           // quadris e joelhos
+      const skinKey = SK.bodyKey;           // cintura, pescoço, ombros e quadris: presos ao CORPO (trocar equipamento não move as outras peças)
+      const chestKey = SK.chestKey;         // cotovelos e pulsos (fazem parte da roupa do peito)
+      const feetKey = SK.feetKey;           // joelhos (fazem parte da bota/calça)
       const isKnight = SK.cape;             // capa do guerreiro vem com a couraça
       const tinted = (t, fn) => {
         if (!t) return fn();
@@ -5150,7 +5150,7 @@
       g.translate(0, drop);
       const drawLeg = (side, hx, rot, knee) => {
         g.save();
-        { const hj = JT(g, feetKey + '.quadril' + side, hx, HIP_Y); g.translate(hj[0], hj[1]); }
+        { const hj = JT(g, skinKey + '.quadril' + side, hx, HIP_Y); g.translate(hj[0], hj[1]); }
         g.rotate(rot);
         if (SK.thigh) {
           // roupa que já vem com coxa e perna separadas: coxa no quadril, perna inteira no joelho (sem cortar)
@@ -5236,7 +5236,7 @@
       let armPart = 'all'; // 'upper' = só a manga | 'lower' = antebraço + mão + arma | 'all'
       const drawArm = (side, sx, a, off, elbow, hand, held, handOver = false) => {
         g.save();
-        { const oj = JT(g, chestKey + '.ombro' + side, sx, SH_Y); g.translate(oj[0], oj[1]); }
+        { const oj = JT(g, skinKey + '.ombro' + side, sx, SH_Y); g.translate(oj[0], oj[1]); }
         const r = -a + off;
         g.rotate(r);
         // ---- Cotovelo: flexão dinâmica (calculada uma vez por braço por quadro) ----
