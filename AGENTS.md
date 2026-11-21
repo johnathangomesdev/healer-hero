@@ -149,6 +149,14 @@
 
 - **Alcance corpo a corpo** (2026-11-20): o aliado melee para a `min(38 + 8×slot, alcance do monstro − 8)` do monstro (antes a distância passava do alcance do lobo/urso: o monstro andava, o aliado recuava = empurrão infinito). Monstro ataca o primeiro aliado que entra no alcance (`lockTarget`) e não passa do aliado mais à frente (`x >= frente + 8`); aliados só recuam com golpe de alfa/chefe (`allyKb`). Antes, vários lobos empurravam o mercenário até o herói. Ranged (Necromante) continua livre.
 
+## 3k. Aldeão base do PSD (2026-11-21) — PADRÃO VISUAL
+
+- Fonte: `assets/Personagem Base Montado.psd` (camadas: cabeça, cabelo, torso, ombro/braço/mão D e E, coxa/pé D e E; "Camada 0" é só referência). Peças `v_*` numa linha `Object.assign(RIG_SRC…)` própria (base64 — **não ler**); `HUMAN_SKINS.base` usa coxa + pé articulados no joelho e `wrist` (novo campo opcional: ponto do pulso no antebraço, padrão `[0, 64]`).
+- Escala: 0.92 px do PSD = 1 px da arte (imagens guardadas em meia resolução, como as outras). Os pivôs/articulações foram calculados medindo o rig no navegador para a pose parada (Santo, sem item) ficar idêntica à montagem do PSD. Olhos/boca foram apagados da arte (o rosto é desenhado por código, alinhado aos olhos do PSD).
+- Mapeamento: braço R do jogo = camadas "D" (lado esquerdo da tela); perna R do jogo = camadas "E" (a da esquerda, por cima).
+- Ajustes de articulação `*base.*` antigos (feitos para a arte velha) foram removidos de `SPR_ADJ_FILE`.
+- **Toda roupa nova deve seguir este corpo** (tamanho, proporção, posição). Para refazer: scripts `prep.py` → `fit.py` → `build.py` → `apply.py` (scratchpad da sessão; refazer igual se o PSD mudar).
+
 ## 4. Como testar
 
 - Teste headless com Edge: `msedge --headless --dump-dom` / `--screenshot` com `--user-data-dir` separado.
