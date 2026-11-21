@@ -176,3 +176,5 @@
 - Ajuste fino de timbre depende do ouvido do usuário (arco um pouco brilhante, soco um pouco grave).
 - Magia longa (~2.9 s): pode ser encurtada.
 - Uivo, urso e slime aguardam referências.
+
+- (2026-11-21) Grupos do PSD já encaixados: `guerreiro` → skin `knight` (peças `vg_*`, item novo `KNIGHT_HELM`), `monge` → skin `monkInit` (peças `mo_*`; itens MONK_INIT_*; cabeça própria careca, `noHair`). Script: `outfit.py <grupo> <prefixo>` usa as matrizes medidas do aldeão (fit.json) e apaga olhos/boca da cabeça.
