@@ -2435,7 +2435,8 @@
     function mobLevel(entity) { return zoneItemLevel() + (mobDropRule(entity.enemyKey).lvl | 0); }
     function rollProceduralDrop(entity) {
       const R = BAL.drops, db = ENEMIES_DB[entity.enemyKey] || {}, boss = !!(entity.isBoss || db.boss), D = curDiff();
-      if (Math.random() >= (boss ? R.bossChance : R.normalChance * D.drop)) return;
+      // alfa/chefe: drop GARANTIDO (prêmio por terminar a fase); comum: chance normal
+      if (!boss && Math.random() >= R.normalChance * D.drop) return;
       const weapon = boss && Math.random() < R.weaponPct;
       const ids = Object.keys(ITEMS_DB).filter(id => !R.exclude.includes(id) && isWeaponSlot(ITEMS_DB[id].slot) === weapon);
       if (!ids.length) return;
@@ -2504,7 +2505,7 @@
 
         // Drops físicos de itens no chão
         if (entity.isCursedSister) spawnPhysicalDrop('ITEM', 1, entity.x, entity.y, 'EMERALD_CLOAK');
-        else if (state.tutorialCompleted) rollProceduralDrop(entity);
+        else if (state.tutorialCompleted || entity.isBoss || (ENEMIES_DB[entity.enemyKey] || {}).boss) rollProceduralDrop(entity); // alfa do tutorial também premia
         checkWaveCleared();
       } else {
         state.anyAllyDied = true;

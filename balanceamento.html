@@ -481,7 +481,7 @@ function simulate(P, seed) {
         else if (!S.tutorial) {
           // drop procedural (igual ao jogo): comum só equipamento; alfa/chefe pode dar arma; tipo de dano pesa
           const DR = P.drops, rule = DR.mobs.find(m => m.id === e.key) || DR.mobs[0];
-          if (rnd() < (e.boss ? DR.bossChance : DR.normalChance)) {
+          if (e.boss || rnd() < DR.normalChance) { // alfa/chefe: drop garantido
             const ex = String(DR.exclude || '').split(',').map(x => x.trim());
             const weapon = e.boss && rnd() < DR.weaponPct;
             const ids = P.itemList.filter(i => !ex.includes(i.id) && ((i.slot === 'RIGHT_HAND' || i.slot === 'LEFT_HAND') === weapon) && itemsById[i.id]);
@@ -970,8 +970,8 @@ function renderTabs() {
     { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]);
   else if (activeTab === 'fases') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Ondas separadas por <b>|</b>, monstros por vírgula, usando o ID do monstro. Drop fixo no formato <b>ID_DO_MONSTRO:ID_DO_ITEM</b>.</p>` + tableEditor('stages', [
     { key: 'id', label: 'Fase', sm: true }, { key: 'scale', label: 'Escala', type: 'num' }, { key: 'waves', label: 'Ondas' }, { key: 'drop', label: 'Drop fixo' }]) + stageTable();
-  else if (activeTab === 'drops') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Drops 100% procedurais, sem drops fixos. <b>Monstros comuns</b> só dropam <b>equipamento</b> (cabeça, peito, pés). <b>Alfas e chefes</b> são os únicos que dropam <b>armas</b> (mãos). Todas as peças de todas as classes têm a mesma chance. Nas armas, o tipo de dano do monstro pesa: armas do mesmo tipo (Mágico = Santo, Exorcista, Mago; Físico = as outras) ficam “peso” vezes mais prováveis. Nível do item = nível do monstro = nível da zona + bônus do monstro. Dificuldades acima do Normal sobem a raridade sorteada em tiers.</p>
-    <div class="fields">${fld('drops.normalChance', 'Chance de drop — monstro comum (0–1)')}${fld('drops.bossChance', 'Chance de drop — alfa/chefe (0–1)')}${fld('drops.weaponPct', 'Alfa/chefe: chance de ser arma (0–1)')}${fld('drops.typeBias', 'Peso de arma do mesmo tipo de dano (×)')}</div>
+  else if (activeTab === 'drops') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Drops 100% procedurais, sem drops fixos. <b>Monstros comuns</b> só dropam <b>equipamento</b> (cabeça, peito, pés). <b>Alfas e chefes</b> dropam <b>sempre</b> (100%, prêmio por terminar a fase) e são os únicos que dropam <b>armas</b> (mãos). Todas as peças de todas as classes têm a mesma chance. Nas armas, o tipo de dano do monstro pesa: armas do mesmo tipo (Mágico = Santo, Exorcista, Mago; Físico = as outras) ficam “peso” vezes mais prováveis. Nível do item = nível do monstro = nível da zona + bônus do monstro. Dificuldades acima do Normal sobem a raridade sorteada em tiers.</p>
+    <div class="fields">${fld('drops.normalChance', 'Chance de drop — monstro comum (0–1)')}${fld('drops.weaponPct', 'Alfa/chefe: chance de ser arma (0–1)')}${fld('drops.typeBias', 'Peso de arma do mesmo tipo de dano (×)')}</div>
     <label class="field" style="margin:8px 0"><span>Itens que nunca caem (IDs, separados por vírgula: itens iniciais)</span><input type="text" data-path="drops.exclude" value="${esc(P.drops.exclude)}" style="width:100%"></label>
     <div class="group-title">Raridade (%) e nível por monstro</div>` + tableEditor('drops.mobs', [
     { key: 'id', label: 'Monstro (ID)', sm: true }, { key: 'type', label: 'Tipo de dano', type: 'select', opts: [['PHYS', 'Físico'], ['MAG', 'Mágico']] }, { key: 'lvl', label: '+Nível', type: 'num' },
