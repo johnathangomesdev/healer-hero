@@ -2435,8 +2435,12 @@
     function mobLevel(entity) { return zoneItemLevel() + (mobDropRule(entity.enemyKey).lvl | 0); }
     function rollProceduralDrop(entity) {
       const R = BAL.drops, db = ENEMIES_DB[entity.enemyKey] || {}, boss = !!(entity.isBoss || db.boss), D = curDiff();
-      // alfa/chefe: drop GARANTIDO (prêmio por terminar a fase); comum: chance normal
-      if (!boss && Math.random() >= R.normalChance * D.drop) return;
+      // alfa/chefe: drop GARANTIDO só na 1ª vitória dessa fase nessa dificuldade (prêmio); depois, chance normal
+      const fk = (state.cycle || 0) + ':' + state.stageId;
+      state.bossFirstKills = state.bossFirstKills || {};
+      const first = boss && !state.bossFirstKills[fk];
+      if (boss) state.bossFirstKills[fk] = true;
+      if (!first && Math.random() >= R.normalChance * D.drop) return;
       const weapon = boss && Math.random() < R.weaponPct;
       const ids = Object.keys(ITEMS_DB).filter(id => !R.exclude.includes(id) && isWeaponSlot(ITEMS_DB[id].slot) === weapon);
       if (!ids.length) return;
@@ -7977,6 +7981,7 @@
         frags: frags(),
         cycle: state.cycle || 0,
         maxCycle: state.maxCycle || 0,
+        bossFirstKills: state.bossFirstKills || {},
         playTime: Math.round(state.playTime || 0),
         cheated: !!state.cheated,
         rankedUpTo: state.rankedUpTo ?? -1,
@@ -8043,6 +8048,7 @@
         if (data.frags) for (const t of TIER_KEYS) state.frags[t] = Math.max(0, Math.floor(+data.frags[t] || 0));
         state.cycle = Math.max(0, data.cycle | 0);
         state.maxCycle = Math.max(state.cycle, data.maxCycle | 0);
+        state.bossFirstKills = (data.bossFirstKills && typeof data.bossFirstKills === 'object') ? data.bossFirstKills : {};
         state.playTime = +data.playTime || 0;
         state.cheated = !!data.cheated;
         state.rankedUpTo = typeof data.rankedUpTo === 'number' ? data.rankedUpTo : -1;
@@ -8109,6 +8115,7 @@
       flyingDrops = [];
       state.inv = [];
       state.frags = fragsInit();
+      state.bossFirstKills = {};
       state.cycle = 0; state.maxCycle = 0; state.playTime = 0; state.cheated = !!DEV.on; state.rankedUpTo = -1;
       state.formation = [2, 1, 0];
       state.equippedSlots = {
