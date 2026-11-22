@@ -4904,11 +4904,26 @@
       return function (g, ...args) {
         const prev = SPR_Q; SPR_Q = [];
         const prevOcc = SPR_OCC; SPR_OCC = {};
+        const prevGlow = SPR_WGLOW; SPR_WGLOW = null;
         const prevScope = SPR_SCOPE, prevAnim = SPR_ANIM; SPR_SCOPE = sprScopeOf(args[0], args[2], args[1]); SPR_ANIM = sprAnimOf(args[0]);
-        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; SPR_SCOPE = prevScope; SPR_ANIM = prevAnim; }
+        try { return fn(g, ...args); } finally { sprFlush(g, prev); SPR_OCC = prevOcc; SPR_SCOPE = prevScope; SPR_ANIM = prevAnim; SPR_WGLOW = prevGlow; }
       };
     }
+    // contorno brilhante das armas refinadas (+3 prata, +6 ouro, +9 diamante)
+    let SPR_WGLOW = null;
+    function refGlowFilter(plus) {
+      if (!(plus >= 3)) return null;
+      const p = 0.75 + 0.25 * Math.sin(performance.now() / (plus >= 9 ? 190 : 280));
+      const C = plus >= 9 ? ['#ffffff', '#67e8f9cc'] : plus >= 6 ? ['#fde68a', '#f59e0bbb'] : ['#f3f4f6', '#9ca3afaa'];
+      const b = plus >= 9 ? 1.4 : 1;
+      return `drop-shadow(0 0 ${0.6 * b}px ${C[0]}) drop-shadow(0 0 ${1.6 * b * p}px ${C[1]})`;
+    }
     function sprDraw(g, im, base, pvx, pvy) {
+      const gf = SPR_WGLOW && SPR_WGLOW[base];
+      if (gf) { const f0 = g.filter; g.filter = (f0 && f0 !== 'none' ? f0 + ' ' : '') + gf; try { sprDraw0(g, im, base, pvx, pvy, gf); } finally { g.filter = f0; } return; }
+      sprDraw0(g, im, base, pvx, pvy, null);
+    }
+    function sprDraw0(g, im, base, pvx, pvy, gf) {
       const name = sprKey(base);
       const A = sprAdjOf(name);
       if (A && A.hide && !SPR_REC) return; // peça deletada no editor
@@ -4918,7 +4933,7 @@
         g.save(); sprApply(g, name); const s = sprSnap(g); g.restore();
         if (ghost) s.a *= 0.18;
         const w = im.naturalWidth * 2, h = im.naturalHeight * 2;
-        SPR_Q.push({ name, s, fn: () => g.drawImage(im, -pvx, -pvy, w, h), rec: { name, img: im, M0, M: s.M, rx: -pvx, ry: -pvy, w, h } });
+        SPR_Q.push({ name, s, fn: gf ? () => { const f0 = g.filter; g.filter = (f0 && f0 !== 'none' ? f0 + ' ' : '') + gf; g.drawImage(im, -pvx, -pvy, w, h); g.filter = f0; } : () => g.drawImage(im, -pvx, -pvy, w, h), rec: { name, img: im, M0, M: s.M, rx: -pvx, ry: -pvy, w, h } });
         return;
       }
       if (!SPR_REC && !A) { g.drawImage(im, -pvx, -pvy, im.naturalWidth * 2, im.naturalHeight * 2); return; }
@@ -5264,6 +5279,16 @@
       // Roupa montada pelas peças EQUIPADAS: o corpo base (aldeão; arqueiras usam o corpo da irmã)
       // só troca peças quando o item correspondente está equipado (ver ITEM_SKIN).
       const SK = composeHumanSkin(isArcher ? 'sister' : 'base', eqSlots);
+      if (ent.slotIndex >= 0 && state.equippedSlots && state.equippedSlots[ent.slotIndex]) {
+        const es = state.equippedSlots[ent.slotIndex], pl = k => { const i = es[k] && invGet(es[k]); return (i && i.plus) || 0; };
+        const fR = refGlowFilter(pl('RIGHT_HAND')), fL = refGlowFilter(pl('LEFT_HAND'));
+        if (fR || fL) {
+          const W = {}, nm = v => v && (Array.isArray(v) ? v[0] : (v.img && v.img[0]));
+          for (const k of ['sword', 'staff', 'mstaff', 'bow', 'book']) if (fR && nm(SK[k])) W[nm(SK[k])] = fR;
+          for (const k of ['shield', 'tome', 'quiver']) if (fL && nm(SK[k])) W[nm(SK[k])] = fL;
+          SPR_WGLOW = W;
+        }
+      }
       const skinKey = SK.bodyKey;           // cintura, pescoço, ombros e quadris: presos ao CORPO (trocar equipamento não move as outras peças)
       const chestKey = SK.chestKey;         // cotovelos e pulsos (fazem parte da roupa do peito)
       const feetKey = SK.feetKey;           // joelhos (fazem parte da bota/calça)
