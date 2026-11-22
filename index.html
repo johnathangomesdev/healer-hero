@@ -3116,12 +3116,18 @@
         document.getElementById(`cd-mask-${s}`).style.height = `${Math.round((cd.rem / cd.total) * 100)}%`;
       }
 
-      tickMercUltimates(dt);
-      if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) tickArenaRivalSkills(dt);
-      if (state.isAutoSkill && !state.isDefeated && !state.isVictory && !state.awaitingAct2Lock) {
-        if (state.cooldowns[3].rem <= 0) tryCastHeroSkill(3);
-        else if (state.cooldowns[2].rem <= 0) tryCastHeroSkill(2);
-      }
+      // ARENA: os dois times são processados "ao mesmo tempo": a cada quadro a ordem (jogador/rival) é sorteada,
+      // então nenhum lado ganha os empates por agir primeiro (ataques, skills e ultimates)
+      const rivalFirst = !!state.arenaMode && Math.random() < 0.5;
+      const playerSkills = () => {
+        tickMercUltimates(dt);
+        if (state.isAutoSkill && !state.isDefeated && !state.isVictory && !state.awaitingAct2Lock) {
+          if (state.cooldowns[3].rem <= 0) tryCastHeroSkill(3);
+          else if (state.cooldowns[2].rem <= 0) tryCastHeroSkill(2);
+        }
+      };
+      const rivalSkills = () => { if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) tickArenaRivalSkills(dt); };
+      if (rivalFirst) { rivalSkills(); playerSkills(); } else { playerSkills(); rivalSkills(); }
 
       // Física & Coleta pelo Cursor do Mouse nos Drops (Moedas, DPE e Itens)
       for (let i = physicalDrops.length - 1; i >= 0; i--) {
@@ -3169,6 +3175,7 @@
       const enemies = getLivingEnemies();
       const allies = getLivingAllies();
 
+      const runAllies = () => {
       for (const s of [0, 1, 2]) {
         const a = partySlots[s];
         if (!a) continue;
@@ -3236,7 +3243,8 @@
           }
         }
       }
-
+      };
+      const runEnemies = () => {
       for (const e of activeEnemies) {
         if (e.isDead) continue;
         e.aliveTime += dt;
@@ -3308,6 +3316,8 @@
           }
         }
       }
+      };
+      if (rivalFirst) { runEnemies(); runAllies(); } else { runAllies(); runEnemies(); }
 
       particles.forEach(p => { p.ttl -= dt; p.vy += 210 * dt; p.x += p.vx * dt; p.y += p.vy * dt; });
       particles = particles.filter(p => p.ttl > 0);
