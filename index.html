@@ -9119,6 +9119,20 @@
       sprSave(); SE.sig = ''; seRenderSel();
       document.getElementById('se-save').click();
     };
+    function seHandleDB(op, val) {
+      return new Promise(res => {
+        try {
+          const rq = indexedDB.open('hh_editor', 1);
+          rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+          rq.onerror = () => res(null);
+          rq.onsuccess = () => {
+            const tx = rq.result.transaction('kv', op === 'get' ? 'readonly' : 'readwrite'), s = tx.objectStore('kv');
+            const r = op === 'get' ? s.get('indexHandle') : op === 'set' ? s.put(val, 'indexHandle') : s.delete('indexHandle');
+            r.onsuccess = () => res(op === 'get' ? (r.result || null) : true); r.onerror = () => res(null);
+          };
+        } catch (_e) { res(null); }
+      });
+    }
     document.getElementById('se-save').onclick = async () => {
       const st = document.getElementById('se-save-status');
       const setSt = (t, col) => { st.textContent = t; st.style.color = col; };
@@ -9128,15 +9142,18 @@
         return;
       }
       try {
+        // caminho lembrado entre recarregamentos (IndexedDB guarda o "handle" do arquivo)
+        if (!seFileHandle) seFileHandle = await seHandleDB('get');
         if (!seFileHandle) {
           const name = decodeURIComponent(location.pathname.split('/').pop() || '');
           window.alert(`Escolha o arquivo do jogo para gravar os ajustes:\n${name}\n(isso só é pedido na primeira vez)`);
           [seFileHandle] = await window.showOpenFilePicker({ types: [{ description: 'Jogo (HTML)', accept: { 'text/html': ['.html'] } }] });
+          seHandleDB('set', seFileHandle);
         }
         if ((await seFileHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('permissão negada');
         const src = await (await seFileHandle.getFile()).text();
         const re = /const SPR_ADJ_FILE = .*;/;
-        if (!re.test(src) || !src.includes('const RIG_SRC')) { seFileHandle = null; throw new Error('esse não é o arquivo do jogo'); }
+        if (!re.test(src) || !src.includes('const RIG_SRC')) { seFileHandle = null; seHandleDB('del'); throw new Error('esse não é o arquivo do jogo'); }
         const out = src.replace(re, () => 'const SPR_ADJ_FILE = ' + JSON.stringify(SPR_ADJ) + ';');
         const w = await seFileHandle.createWritable();
         await w.write(out); await w.close();
