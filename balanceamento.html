@@ -943,7 +943,7 @@ function renderTabs() {
     { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'pool', label: 'No sorteio', type: 'bool' }]);
   else if (activeTab === 'inimigos') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Status no nível 1. Cada fase multiplica VIT, POW, DEF, ouro, DPE e EXP pela escala da fase (velocidade de ataque não escala).</p>` + tableEditor('enemies', [
     { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'Ataques/s', type: 'num' },
-    { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]);
+    { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]) + monsterDropTable();
   else if (activeTab === 'fases') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Ondas separadas por <b>|</b>, monstros por vírgula, usando o ID do monstro. Drop fixo no formato <b>ID_DO_MONSTRO:ID_DO_ITEM</b>.</p>` + tableEditor('stages', [
     { key: 'id', label: 'Fase', sm: true }, { key: 'scale', label: 'Escala', type: 'num' }, { key: 'waves', label: 'Ondas' }, { key: 'drop', label: 'Drop fixo' }]) + stageTable();
   else if (activeTab === 'mercs') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Mercenários entram sempre no nível 1. As duas linhas “sugestão” não existem no jogo: ative para testar mercenários mais fortes liberados em fases mais adiante. Equipamento inicial: IDs de itens, que entram no tier Comum.</p>` + tableEditor('mercs', [
@@ -974,7 +974,21 @@ function expTable() {
   for (let lv = 2; lv <= 21; lv++) { acc += need; cells += `<tr><td>Nv ${lv}</td><td class="r">${Math.round(need)}</td><td class="r">${Math.round(acc)}</td></tr>`; need = Math.round(need * P.progression.expGrowth); }
   return `<div class="group-title">Curva de EXP resultante</div><div class="tbl-wrap tbl-scroll" style="max-height:260px"><table><thead><tr><th>Nível</th><th class="r">EXP do nível</th><th class="r">EXP acumulada</th></tr></thead><tbody>${cells}</tbody></table></div>`;
 }
-function stageTable() {
+// nível dos itens que caem (igual ao jogo: ACT_ITEM_LVL / zoneItemLevel do index.html — mude os dois juntos)
+const ACT_ITEM_LVL = [[1, 1, 10, 10, 10], [20, 20, 20, 20, 20], [20, 30, 30, 30, 30], [40, 40, 40, 40, 40]];
+const DIFF_NAMES = ['Normal', 'Difícil', 'Insano', 'Infernal'];
+function monsterDropTable() {
+  const acts = {};
+  P.stages.forEach(s => { const a = +String(s.id).split('-')[0]; String(s.waves).split('|').forEach(w => w.split(',').map(k => k.trim()).forEach(k => { if (k) (acts[k] = acts[k] || new Set()).add(a); })); });
+  const TN = ['Comum', 'Incomum', 'Raro', 'Mítico', 'Lendário'];
+  const rows = P.enemies.map(e => {
+    const as = [...(acts[e.id] || [])].sort((a, b) => a - b);
+    const cap = e.id === 'ZOMBIE_MAGE_BOSS' ? 4 : e.boss ? 3 : 2;
+    const lv = DIFF_NAMES.map((_, c) => { if (!as.length) return '—'; const v = [...new Set(as.map(a => ACT_ITEM_LVL[c][Math.min(4, a - 1)]))]; return v.length > 1 ? `${Math.min(...v)}–${Math.max(...v)}` : v[0]; });
+    return `<tr><td>${esc(e.name)}</td><td>${as.length ? as.join(', ') : '—'}</td>${lv.map(v => `<td class="r">${v}</td>`).join('')}<td>até ${TN[cap]}</td></tr>`;
+  }).join('');
+  return `<div class="group-title">Nível dos itens que cada monstro pode dropar</div><p class="sub" style="margin-bottom:8px">O nível do item depende do ato e da dificuldade onde o monstro aparece (o herói precisa ter esse nível para equipar). Infernal II, III… somam +10 por ciclo. No tutorial (Ato 1 Normal) não há drop aleatório.</p><div class="tbl-wrap"><table><thead><tr><th>Monstro</th><th>Atos</th>${DIFF_NAMES.map(d => `<th class="r">Nv. ${d}</th>`).join('')}<th>Tier máx.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}function stageTable() {
   const E = Object.fromEntries(P.enemies.map(e => [e.id, e]));
   let cg = 0, cd = 0, cx = 0;
   const rows = P.stages.map(s => {
