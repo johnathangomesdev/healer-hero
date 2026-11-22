@@ -200,7 +200,7 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 const DEFAULTS = {
   version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
   // Arena (igual a BAL.arena do index.html)
-  arena: { rivalHp: 1.2, rivalPow: 1.05, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+  arena: { rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
   // drops procedurais (igual a DROP_DEF do index.html). c,u,r,m,l,d = % de Comum, Incomum, Raro, Mítico, Lendário, Divino
   drops: { normalChance: 0.07, bossChance: 1, weaponPct: 0.6, typeBias: 3,
     exclude: 'CLOTH_SHIRT, CLOTH_BOOTS, OLD_SWORD, WOOD_BUCKLER, HUNTING_BOW, WOODEN_STAFF, EXORCIST_ORB, EMERALD_CLOAK',
@@ -979,8 +979,8 @@ function renderTabs() {
     <div class="group-title">Raridade (%) e nível por monstro</div>` + tableEditor('drops.mobs', [
     { key: 'id', label: 'Monstro (ID)', sm: true }, { key: 'type', label: 'Tipo de dano', type: 'select', opts: [['PHYS', 'Físico'], ['MAG', 'Mágico']] }, { key: 'lvl', label: '+Nível', type: 'num' },
     { key: 'c', label: 'Comum %', type: 'num' }, { key: 'u', label: 'Incomum %', type: 'num' }, { key: 'r', label: 'Raro %', type: 'num' }, { key: 'm', label: 'Mítico %', type: 'num' }, { key: 'l', label: 'Lendário %', type: 'num' }, { key: 'd', label: 'Divino %', type: 'num' }]) + dropPoolTable() + monsterDropTable();
-  else if (activeTab === 'arena') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Arena (menu inicial): o jogador registra o time de um save e luta contra um rival sorteado entre os times com pontuação perto da dele. Os <b>rivais são controlados pela IA</b> e usam as mesmas skills (Ativa, Ultimate, passiva de cura do Santo e ultimates dos mercenários). O bônus de <b>vida</b> e <b>dano</b> compensa a IA ser menos esperta. Calibrado no jogo real (simulação headless, nível 20, Santo/Exorcista/Monge), com poder igual: sem bônus o jogador vence ~85%; vida ×1,2 e dano ×1,05 ≈ 60%; vida ×1,3 e dano ×1,1 ≈ 30%; vida ×1,8 e dano ×1,25 = 0%.</p>
-    <div class="group-title">Bônus dos rivais</div>
+  else if (activeTab === 'arena') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Arena (menu inicial): o jogador registra o time de um save e luta contra um rival sorteado entre os times com pontuação perto da dele. Os <b>dois times usam exatamente a mesma IA</b> (andar, alvo, auto-ataque, passivas a cada 3 ataques, Ativa, Ultimate e ultimates dos mercenários), como uma luta entre dois jogadores reais. Por isso o bônus padrão do rival é <b>×1</b> (luta justa); mude só para testar handicap.</p>
+    <div class="group-title">Handicap do rival (1 = luta justa)</div>
     <div class="fields">${fld('arena.rivalHp', 'Vida do rival (×)')}${fld('arena.rivalPow', 'Dano do rival (×)')}</div>
     <div class="group-title">Times gerados (teste local)</div>
     <div class="fields">${fld('arena.botMin', 'Força do mais fraco (× poder do seu time)')}${fld('arena.botMax', 'Força do mais forte (× poder do seu time)')}</div>

@@ -1679,9 +1679,9 @@
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
         fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3, salvageCost: null,
         goldMult: 0.7, actBonus: 0.3,
-        // Arena: rivais usam as mesmas skills (tickArenaRivalSkills); rivalHp/rivalPow = bônus pequeno porque a IA
-        // é menos esperta que o jogador (poder igual ≈ 55-60% de vitória do jogador). botMin/botMax = força dos times gerados (× poder do seu time).
-        arena: { rivalHp: 1.2, rivalPow: 1.05, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+        // Arena: os dois times usam a MESMA IA (arenaRivalTick espelha o laço dos aliados). rivalHp/rivalPow = 1 (luta justa);
+        // só mude para testar handicap. botMin/botMax = força dos times gerados (× poder do seu time).
+        arena: { rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -1915,7 +1915,7 @@
     // tempos do golpe para um personagem: os dele ('ESCOPO@T.TIPO') > os comuns (ANIM_TIMING)
     function animTimingFor(ent, kind) {
       const T = ANIM_TIMING[kind] || ANIM_TIMING.ATTACK;
-      try { const sc = sprScopeOf(ent, ent && ent.isHealer ? state.stance : null), o = sc && (SPR_ADJ.anims || {})[sc + '@T.' + kind]; return o ? Object.assign({}, T, o) : T; } catch (_e) { return T; }
+      try { const sc = sprScopeOf(ent, ent && ent.isHealer ? state.stance : (ent && ent.arenaStance) || null), o = sc && (SPR_ADJ.anims || {})[sc + '@T.' + kind]; return o ? Object.assign({}, T, o) : T; } catch (_e) { return T; }
     }
     // tempos editados (SPR_ADJ.anims['T.TIPO'] = { a, i, f }) por cima do padrão
     function animApplyTiming() {
@@ -2187,12 +2187,12 @@
 
         this.hp = Math.max(0, this.hp - finalDmg);
         this.hurtFlash = 1.0;
-        if (this.faction === 'UNDEAD') this.hitReact = isCrit ? 1.0 : 0.8; // animação de take hit dos monstros
+        if (this.faction === 'UNDEAD' && !this.arena) this.hitReact = isCrit ? 1.0 : 0.8; // animação de take hit dos monstros
         this.hitstopTimer = 0.04;
         const pushDir = this.faction === 'UNDEAD' ? 1 : -1;
         // aliados recuam bem menos (vários monstros pequenos batendo rápido empurravam o boneco para trás); mini slimes não empurram
         // aliados só recuam (de leve) com golpe de alfa/chefe; monstro comum não empurra (vários lobos empurravam o mercenário até o herói)
-        const allyKb = this.faction === 'ALLY' ? (attacker && attacker.isBoss ? 0.3 : 0) : 1;
+        const allyKb = (this.faction === 'ALLY' || this.arena) ? (attacker && attacker.isBoss ? 0.3 : 0) : 1;
         this.knockbackVx = pushDir * (isCrit ? 125 : 65) * (this.isBoss ? 0.4 : 1.0) * allyKb;
 
         // som do golpe conforme a arma de quem bateu
@@ -2205,7 +2205,7 @@
 
         const pCol = isHoly ? '#38bdf8' : (isCrit ? '#facc15' : '#fb7185');
         spawnParticles(this.x, this.y - 16, pCol, isCrit ? 10 : 6, pushDir);
-        if (this.faction === 'UNDEAD') {
+        if (this.faction === 'UNDEAD' && !this.arena) {
           const bl = bloodColorsFor(this.rig);
           const bCount = isCrit ? 12 : 7;
           spawnBloodParticles(this.x, this.y - 16, bl[0], bl[1], bCount, pushDir);
@@ -2813,6 +2813,65 @@
         ctx.restore();
       }
     }
+    // ARENA — o rival usa a MESMA IA do time do jogador, espelhada (andar, alvo, ataque, passivas)
+    const arenaFront = () => getLivingAllies().reduce((m, a) => (!m || a.x > m.x ? a : m), null); // personagem do jogador mais à frente
+    function arenaMostInjured() { // igual a getMostInjuredAlly, no time rival
+      let best = null, lowest = 0.995;
+      for (const e of activeEnemies) if (e.arena && !e.isDead) { const r = e.hp / e.maxHp; if (r < lowest) { lowest = r; best = e; } }
+      return best;
+    }
+    function arenaRivalTick(e, dt, allies) {
+      if (e.buffTimer > 0) { e.buffTimer -= dt; if (e.buffTimer <= 0) e.buffSpd = 0; }
+      const front = arenaFront(); if (!front) { e.isMoving = false; return; }
+      e.facing = -1;
+      const melee = !e.isRanged;
+      let targetX = e.arenaHome;
+      if (melee) {
+        const offset = Math.min(e.arenaHealer ? 34 : 38 + (e.arenaRank || 0) * 8, (front.range || 42) - 8);
+        targetX = Math.max(90, Math.min(540, front.x + offset));
+      }
+      const dist = Math.abs(targetX - e.x);
+      if (dist > 3.5) { e.isMoving = true; e.x += (targetX > e.x ? 1 : -1) * e.speed * (e.arenaHealer && melee ? 1.25 : 1.0) * dt; }
+      else e.isMoving = false;
+      if (melee && Math.abs(front.x - e.x) > 64) return;
+      e.attackTimer += dt * e.getSpd();
+      if (e.attackTimer >= 1.0) { e.attackTimer = 0; arenaRivalAutoAttack(e, front); }
+    }
+    function arenaRivalAutoAttack(e, target) {
+      if (!e.arenaStance) { // mercenário: igual ao performAllyAutoAttack
+        const dmg = e.getPow() * 1.15, magic = e.dmgType === 'MAG';
+        e.triggerAttackAnim(() => {
+          if (target.isDead) return;
+          if (magic) return fireBolt(e, target, () => { if (!target.isDead) target.receiveDamage(dmg, e, true); });
+          if (e.isRanged) return fireArrow(e, target, () => { if (!target.isDead) target.receiveDamage(dmg, e, false); });
+          target.receiveDamage(dmg, e, false);
+        });
+        return;
+      }
+      // herói: auto-ataque + passiva a cada 3 ataques (mesmas fórmulas do herói do jogador)
+      const st = e.arenaStance, pow = e.getPow(), vit = e.getVit();
+      const pMult = BAL.passBase + ((e.arenaSk ? e.arenaSk.lv[1] : 1) - 1) * BAL.perLevel;
+      e.autoCounter++;
+      const isThird = e.autoCounter >= 3; if (isThird) e.autoCounter = 0;
+      const anim = cb => e.triggerAttackAnim(cb, isThird ? 'PASSIVE' : 'ATTACK');
+      if (st === 'SAINT') anim(() => {
+        if (!target.isDead) fireBolt(e, target, () => { if (!target.isDead) target.receiveDamage(pow * 1.15 + 8, e, true); }, MAGIC_COL.SAINT, true);
+        if (isThird) { const h = arenaMostInjured(); if (h) h.receiveHeal(pow * pMult, 0.2); }
+      });
+      else if (st === 'EXORCIST') anim(() => {
+        if (!target.isDead) fireBolt(e, target, () => {
+          if (!target.isDead) target.receiveDamage(pow * 1.35 + 10, e, true);
+          if (isThird) {
+            shockwaveRings.push({ x: target.x, y: target.y - 14, color: MAGIC_COL.EXORCIST, maxR: 60, ttl: 0.32, maxTtl: 0.32 });
+            for (const o of [...getLivingAllies()]) if (Math.abs(o.x - target.x) <= 105) o.receiveDamage(pow * pMult, e, true);
+          }
+        }, MAGIC_COL.EXORCIST, true);
+      });
+      else anim(() => {
+        if (!target.isDead) target.receiveDamage(pow * 1.18 + vit * 0.35 + 9, e, false);
+        if (isThird) e.receiveHeal(pow * pMult, 0.15);
+      });
+    }
     // ARENA: skills dos rivais (mesmas fórmulas do jogador, com os alvos invertidos)
     function tickArenaRivalSkills(dt) {
       const foes = getLivingAllies();                                    // inimigos do rival = o time do jogador
@@ -2821,18 +2880,17 @@
       const nearest = e => foes.slice().sort((a, b) => Math.abs(a.x - e.x) - Math.abs(b.x - e.x))[0];
       const shout = (e, txt, col) => { spawnFloatingText(e.x, e.y - 66, txt + '!', col); sfx.play('SKILL'); };
       for (const e of mates) {
-        if (e.hitstopTimer > 0 || (e.anim && e.anim.kind !== 'ATTACK')) { if (e.arenaSk) { e.arenaSk.cd2 -= dt; e.arenaSk.cd3 -= dt; } if (e.ultCd !== undefined) e.ultCd -= dt; continue; }
         const pow = e.getPow();
         // --- herói rival: Ativa 1 e Ultimate
         if (e.arenaSk) {
           const S = e.arenaSk, st = e.arenaStance, nm = SKILLS_DB[st] ? SKILLS_DB[st].nodes : {}, col = SKILLS_DB[st] ? SKILLS_DB[st].color : '#fff';
           S.cd2 -= dt; S.cd3 -= dt;
           const title = k => (nm[k] ? nm[k].title.replace(/\s*\(.*\)$/, '') : 'Skill');
-          const hurt = mates.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          const hurt = arenaMostInjured();
           if (S.cd3 <= 0) {
             const mult = BAL.ultBase + (S.lv[3] - 1) * BAL.perLevel;
             if (st === 'SAINT') {
-              if (!mates.some(a => a.hp < a.maxHp * 0.8)) { S.cd3 = 0.5; }
+              if (!hurt) { /* igual ao jogador: só conjura com alguém ferido */ }
               else { S.cd3 = BAL.cd3; shout(e, title(3), col); e.triggerAttackAnim(() => { for (const a of activeEnemies) if (a.arena && !a.isDead) a.receiveHeal(pow * mult * 0.85, 0.30); }, 'ULTIMATE'); continue; }
             } else {
               S.cd3 = BAL.cd3; shout(e, title(3), col);
@@ -2843,10 +2901,10 @@
           if (S.cd2 <= 0) {
             const mult = BAL.sk2Base + (S.lv[2] - 1) * BAL.perLevel;
             if (st === 'SAINT') {
-              if (!hurt || hurt.hp > hurt.maxHp * 0.7) { S.cd2 = 0.5; }
+              if (!hurt) { }
               else { S.cd2 = BAL.cd2; shout(e, title(2), col); e.triggerAttackAnim(() => { if (!hurt.isDead) hurt.receiveHeal(pow * mult, 0.25); }, 'SKILL'); continue; }
             } else {
-              const t = nearest(e); S.cd2 = BAL.cd2; shout(e, title(2), col);
+              const t = arenaFront(); S.cd2 = BAL.cd2; shout(e, title(2), col);
               const dmg = st === 'MONK' ? (pow + e.getVit() * 0.4) * mult : pow * mult;
               e.triggerAttackAnim(() => { if (!t.isDead) t.receiveDamage(dmg, e, st !== 'MONK', true); }, 'SKILL');
               continue;
@@ -2858,7 +2916,7 @@
         if (!U) continue;
         if (e.ultCd === undefined) e.ultCd = U.cd * 0.5;
         e.ultCd -= dt;
-        if (e.ultCd > 0) continue;
+        if (e.ultCd > 0 || (e.anim && e.anim.kind !== 'ATTACK')) continue;
         if (e.mercKey === 'PALADIN') {
           if (e.hp / e.maxHp > 0.55) continue;
           e.ultCd = U.cd; shout(e, U.name, '#fde68a');
@@ -3210,9 +3268,7 @@
         }
 
         if (allies.length === 0) { e.isMoving = false; continue; }
-        if (e.arenaHome != null && e.x > e.arenaHome + 1) { // rival da arena: entra andando até a sua posição na formação
-          e.isMoving = true; e.x = Math.max(e.arenaHome, e.x - e.speed * dt); continue;
-        }
+        if (e.arena) { arenaRivalTick(e, dt, allies); continue; } // rival da arena: mesma IA do time do jogador
         // alvo = o primeiro herói que entrar no alcance (o mais próximo), não o da posição 1 da formação.
         // Uma vez travado, o monstro continua nele enquanto ele estiver vivo e no alcance.
         const inRange = (a) => Math.abs(e.x - a.x) <= e.range;
@@ -3240,10 +3296,6 @@
             e.triggerAttackAnim(() => {
               if (e.isDead || victim.isDead) return;
               const hit = () => { if (!victim.isDead) victim.receiveDamage(dmg, e, e.dmgType === 'MAG'); };
-              if (e.arenaSk && e.arenaStance === 'SAINT' && ++e.arenaSk.hits % 3 === 0) { // passiva do Santo
-                const hurt = activeEnemies.filter(x => x.arena && !x.isDead).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-                if (hurt && hurt.hp < hurt.maxHp) hurt.receiveHeal(e.getPow() * (BAL.passBase + (e.arenaSk.lv[1] - 1) * BAL.perLevel) * 0.6, 0);
-              }
               if (e.arena && e.isRanged) { // rival à distância: flecha ou esfera mágica
                 if (e.rig === 'ARCHER') fireArrow(e, victim, hit);
                 else fireBolt(e, victim, hit, MAGIC_COL[e.arenaStance] || MAGIC_COL.MAGE, true);
@@ -6819,6 +6871,9 @@
       document.getElementById('modal-defeat').classList.add('hidden'); document.getElementById('modal-victory').classList.add('hidden');
       activeEnemies = []; arrowShots = []; physicalDrops = [];
       state.arenaMode.phase = 'enter'; state.arenaMode.t = 0;
+      state.isAutoSkill = true; // a arena é automática para os dois times
+      for (const k of [2, 3]) if (state.cooldowns[k]) state.cooldowns[k].rem = 0;
+      for (const s of [0, 1, 2]) if (partySlots[s]) { partySlots[s].ultCd = undefined; partySlots[s].autoCounter = 0; partySlots[s].attackTimer = 0.4; }
       document.getElementById('lbl-banner').style.opacity = '0'; state.bannerTimer = 0;
       const left = Math.min(0, VIEW.x0 || 0) - 40;
       for (const s of [0, 1, 2]) {
@@ -6834,12 +6889,13 @@
         const e = new CombatEntity({
           name: m.name, rig: m.rig, faction: 'UNDEAD', isVillager: m.villager, isRanged: m.ranged,
           stats: { vit: m.vit, pow: m.pow, def: m.def, res: m.res, spd: m.spd },
-          dmgType: m.dmg, x: edge + k * 45, y: GROUND_Y, range: m.range, speed: 110
+          dmgType: m.dmg, x: edge + k * 45, y: GROUND_Y, range: m.range, speed: 120
         });
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
         e.arenaHome = HOME[Math.min(k, 2)];
         e.mercKey = m.mercKey || (Object.keys(MERCENARIES_DB).find(q => MERCENARIES_DB[q].name === m.name) || null);
-        e.arenaSk = m.stance ? { lv: m.skLv || { 1: 1, 2: 1, 3: 1 }, cd2: BAL.cd2 * 0.6, cd3: BAL.cd3 * 0.7, hits: 0 } : null;
+        e.arenaSk = m.stance ? { lv: m.skLv || { 1: 1, 2: 1, 3: 1 }, cd2: 0, cd3: 0 } : null;
+        e.arenaRank = k; e.arenaHealer = !!m.healer;
         // compensação por lutar sem skills (BAL.arena)
         e.basePow *= BAL.arena.rivalPow; e.maxHp = Math.round(e.maxHp * BAL.arena.rivalHp); e.hp = e.maxHp;
         activeEnemies.push(e);
