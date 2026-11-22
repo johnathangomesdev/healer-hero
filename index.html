@@ -598,7 +598,7 @@
     <!-- =================================================================== -->
     <!-- BOTTOM-CENTER: 3 SKILL ICONS ONLY                                   -->
     <!-- =================================================================== -->
-    <div class="absolute bottom-2 glass-pill rounded-xl px-2.5 py-1.5 flex items-center gap-2 z-20" style="right:288px">
+    <div class="absolute bottom-2 glass-pill rounded-xl px-2.5 py-1.5 flex items-center gap-2 z-20" style="right:326px">
       <div id="act-skill-1" class="relative w-8 h-8 rounded-lg bg-slate-900/90 border border-emerald-400/80 flex items-center justify-center cursor-pointer overflow-hidden" data-tip="Passiva">
         <div id="cvs-skill-1" class="flex items-center justify-center pointer-events-none"></div>
         <span class="absolute top-0.5 left-1 ui-tiny text-white">P</span>
@@ -645,6 +645,9 @@
       <button data-drawer="6" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Coleção</b><br>Feitos conquistados e cosméticos: mudam só a aparência na luta, sem status.">
         <svg class="w-7 h-7" viewBox="0 0 32 32"><path d="M9 5h14v6a7 7 0 0 1-14 0z" fill="#fbbf24" stroke="#0d0b12" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 7H5.5a4 4 0 0 0 4.5 6M23 7h3.5a4 4 0 0 1-4.5 6" fill="none" stroke="#0d0b12" stroke-width="2.2"/><path d="M14 18h4v4h-4z" fill="#d97706" stroke="#0d0b12" stroke-width="2"/><rect x="9.5" y="22" width="13" height="5" rx="1.5" fill="#92400e" stroke="#0d0b12" stroke-width="2.2"/><path d="M12 8v3" stroke="#fffbeb" stroke-width="2" stroke-linecap="round"/></svg>
         <span id="notif-coll" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-slate-900"></span>
+      </button>
+      <button data-drawer="7" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Arena (teste local)</b><br>Registre seu time e lute contra times de outros jogadores. Ranking próprio.">
+        <svg class="w-7 h-7" viewBox="0 0 32 32"><path d="M6 4l14 14-3 3L3 7V4z" fill="#cbd5e1" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><path d="M26 4L12 18l3 3L29 7V4z" fill="#e2e8f0" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><path d="M9 21l-4 4 2 2 4-4M23 21l4 4-2 2-4-4" fill="#b45309" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="25" r="3" fill="#ef4444" stroke="#0d0b12" stroke-width="1.8"/></svg>
       </button>
     </div>
 
@@ -780,6 +783,9 @@
           </div>
         </div>
       </div>
+
+      <!-- DRAWER 7: ARENA (multiplayer assíncrono, teste local) -->
+      <div id="pane-7" class="drawer-pane hidden pr-6"><div id="arena-body"></div></div>
 
       <!-- DRAWER 6: COLEÇÃO (feitos + cosméticos) -->
       <div id="pane-6" class="drawer-pane hidden pr-6">
@@ -2510,6 +2516,13 @@
     }
 
     function handleEntityDeath(entity, killer, wasPurified) {
+      if (entity.faction === 'UNDEAD' && entity.arena) { // rival da arena: sem recompensa, sem drop
+        activeEnemies = activeEnemies.filter(e => e !== entity);
+        spawnMonsterGibs(entity.x, entity.y - 14, 'TANK', false);
+        if (state.arenaMode && !activeEnemies.some(e => e.arena && !e.isDead)) arenaEnd(true);
+        scheduleRefreshUI();
+        return;
+      }
       if (entity.faction === 'UNDEAD') {
         activeEnemies = activeEnemies.filter(e => e !== entity);
         spawnMonsterGibs(entity.x, entity.y - 14, entity.rig, entity.isBoss);
@@ -2556,6 +2569,7 @@
         checkWaveCleared();
       } else {
         state.anyAllyDied = true;
+        if (state.arenaMode && getLivingAllies().length === 0) { arenaEnd(false); scheduleRefreshUI(); return; }
         if (getLivingAllies().length === 0 && !state.isDefeated) {
           state.isDefeated = true;
           sfx.play('DEFEAT');
@@ -3108,6 +3122,9 @@
         }
 
         if (allies.length === 0) { e.isMoving = false; continue; }
+        if (e.arenaHome != null && e.x > e.arenaHome + 1) { // rival da arena: entra andando até a sua posição na formação
+          e.isMoving = true; e.x = Math.max(e.arenaHome, e.x - e.speed * dt); continue;
+        }
         // alvo = o primeiro herói que entrar no alcance (o mais próximo), não o da posição 1 da formação.
         // Uma vez travado, o monstro continua nele enquanto ele estiver vivo e no alcance.
         const inRange = (a) => Math.abs(e.x - a.x) <= e.range;
@@ -3133,7 +3150,12 @@
             const dmg = e.getPow();
             const victim = tgt;
             e.triggerAttackAnim(() => {
-              if (!e.isDead && !victim.isDead) victim.receiveDamage(dmg, e, e.dmgType === 'MAG');
+              if (e.isDead || victim.isDead) return;
+              const hit = () => { if (!victim.isDead) victim.receiveDamage(dmg, e, e.dmgType === 'MAG'); };
+              if (e.arena && e.isRanged) { // rival à distância: flecha ou esfera mágica
+                if (e.rig === 'ARCHER') fireArrow(e, victim, hit);
+                else fireBolt(e, victim, hit, MAGIC_COL[e.arenaStance] || MAGIC_COL.MAGE, true);
+              } else hit();
             });
           }
         }
@@ -4724,7 +4746,7 @@
       withStickerOutline(ctx, (lg) => {
         if (ent.rig.includes('SLIME')) drawSlimeRig(ent, lg);
         else if (ent.rig.includes('WOLF') || ent.rig.includes('BEAR')) drawBeastRig(ent, lg);
-        else drawCartoonHuman(lg, ent, ent.slotIndex >= 0 ? visEqOf(ent.slotIndex) : {}, ent.isHealer ? state.stance : null);
+        else drawCartoonHuman(lg, ent, ent.arenaEq || (ent.slotIndex >= 0 ? visEqOf(ent.slotIndex) : {}), ent.arenaEq ? (ent.arenaStance || null) : (ent.isHealer ? state.stance : null));
       });
 
       if (hitFlash) ctx.filter = 'none';
@@ -6331,11 +6353,11 @@
         const devMenu = document.getElementById('dev-menu');
         if (devMenu) devMenu.classList.add('hidden');
       }
-      document.querySelectorAll('.drawer-btn').forEach((b, i) => {
-        b.classList.toggle('icon-btn-active', i === state.activeDrawer);
+      document.querySelectorAll('.drawer-btn').forEach(b => {
+        b.classList.toggle('icon-btn-active', +b.dataset.drawer === state.activeDrawer);
       });
-      document.querySelectorAll('.drawer-pane').forEach((p, i) => {
-        p.classList.toggle('hidden', i !== state.activeDrawer);
+      document.querySelectorAll('.drawer-pane').forEach(p => {
+        p.classList.toggle('hidden', p.id !== 'pane-' + state.activeDrawer);
       });
       refreshAllUI();
     }
@@ -6385,6 +6407,7 @@
       else if (state.activeDrawer === 4) renderDrawer4Mercenaries();
       else if (state.activeDrawer === 5) renderDrawer5Craft();
       else if (state.activeDrawer === 6) renderDrawer6Collection();
+      else if (state.activeDrawer === 7) renderDrawer7Arena();
     }
 
     // =========================================================================
@@ -6576,6 +6599,147 @@
         renderDrawer6Collection();
       });
       if (ent) renderMiniCharacterPreview(document.getElementById('coll-prev'), ent.rig, visEqOf(sIdx), ent.isHealer ? state.stance : null, ent.isVillager, 1.9);
+    }
+
+    // =========================================================================
+    // ARENA (multiplayer assíncrono) — TESTE LOCAL: times registrados ficam no localStorage deste navegador.
+    // Para virar online, trocar arenaDB()/arenaSave() por um backend (Supabase/Firebase) mantendo o mesmo formato.
+    // =========================================================================
+    const ARENA_KEY = 'hh_arena_v1', ARENA_K = 32;
+    function arenaDB() {
+      let d = null; try { d = JSON.parse(localStorage.getItem(ARENA_KEY) || 'null'); } catch (e) { }
+      d = d && typeof d === 'object' ? d : {};
+      if (!Array.isArray(d.teams)) d.teams = [];
+      if (!Array.isArray(d.hist)) d.hist = [];
+      return d;
+    }
+    function arenaSave(d) { try { localStorage.setItem(ARENA_KEY, JSON.stringify(d)); } catch (e) { } }
+    const arenaPlayer = () => { try { return localStorage.getItem(NAME_KEY) || 'Jogador'; } catch (e) { return 'Jogador'; } };
+    // fotografia do time: formação, classe, nível, status finais, visual (com cosméticos)
+    function arenaSnapshot() {
+      const mem = [];
+      for (const s of [0, 1, 2]) {
+        const a = partySlots[s]; if (!a || a.faction !== 'ALLY') continue;
+        const ranged = !a.isCurrentlyMelee();
+        mem.push({
+          slot: s, name: a.name, rig: a.rig, healer: !!a.isHealer, stance: a.isHealer ? state.stance : null, villager: !!a.isVillager,
+          level: a.level, vit: Math.round(a.getVit()), pow: Math.round(a.getPow()), def: Math.round(a.getDef()), res: Math.round(a.getRes()),
+          spd: +(a.getSpd() - (a.buffSpd || 0)).toFixed(3), ranged, range: ranged ? Math.max(260, a.range || 0) : Math.min(60, a.range || 42),
+          dmg: dmgTypeOf(a), eq: Object.assign({}, visEqOf(s)), power: combatPower(a)
+        });
+      }
+      return mem;
+    }
+    const teamPower = mem => mem.reduce((t, m) => t + (m.power || 0), 0);
+    function arenaRegister() {
+      const d = arenaDB(), mem = arenaSnapshot();
+      if (!mem.length) return showBanner('Sem personagens para registrar.');
+      const id = d.myId || (d.myId = 'p' + Date.now().toString(36));
+      let t = d.teams.find(x => x.id === id);
+      if (!t) { t = { id, rating: d.rating || 1000, w: 0, l: 0 }; d.teams.push(t); }
+      Object.assign(t, { name: arenaPlayer(), members: mem, power: teamPower(mem), at: Date.now(), rating: d.rating || t.rating || 1000 });
+      arenaSave(d); showBanner('Time registrado na Arena!'); renderDrawer7Arena();
+    }
+    // rivais: times registrados (de outros saves neste navegador) + times gerados para teste
+    function arenaBots(d) {
+      const base = arenaSnapshot(); if (!base.length) return [];
+      const names = ['Lâmina Rubra', 'Guarda Cinzenta', 'Corvos da Névoa', 'Punho de Ferro', 'Ordem da Aurora', 'Sombras do Vale'];
+      const out = [];
+      for (let k = 0; k < 6; k++) {
+        const f = 0.7 + k * 0.12, seed = (d.botSeed || 1) * 31 + k;
+        const mem = base.map(m => Object.assign({}, m, {
+          name: m.name, vit: Math.round(m.vit * f), pow: Math.round(m.pow * f), def: Math.round(m.def * f), res: Math.round(m.res * f),
+          level: Math.max(1, Math.round(m.level * f)), power: Math.round(m.power * f * f)
+        }));
+        out.push({ id: 'bot' + k, bot: true, name: names[(seed) % names.length], members: mem, power: teamPower(mem), rating: Math.round(1000 + (f - 1) * 600), w: 0, l: 0 });
+      }
+      return out;
+    }
+    function arenaRivals(d) {
+      const me = d.rating || 1000;
+      const pool = d.teams.filter(t => t.id !== d.myId).concat(arenaBots(d));
+      pool.sort((a, b) => Math.abs(a.rating - me) - Math.abs(b.rating - me));
+      return pool.slice(0, 3).sort((a, b) => a.rating - b.rating);
+    }
+    // inicia a luta: guarda a fase atual, limpa o campo, cura o time e põe o rival entrando pela direita
+    function arenaStart(rivalId) {
+      const d = arenaDB(), rv = arenaRivals(d).find(r => r.id === rivalId);
+      if (!rv || state.arenaMode) return;
+      if (!getLivingAllies().length && !Object.values(partySlots).some(Boolean)) return;
+      state.arenaMode = { rival: rv, back: state.stageId };
+      toggleDrawer(7);
+      state.waveTrans = null; state.isScrolling = false; state.isDefeated = false; state.isVictory = false; state.waveClearing = false;
+      document.getElementById('modal-defeat').classList.add('hidden'); document.getElementById('modal-victory').classList.add('hidden');
+      activeEnemies = []; arrowShots = []; physicalDrops = [];
+      for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.faction === 'ALLY') { a.isDead = false; a.deathTimer = 0; a.recalcStats(true); a.x = a.homeX = slotHomeX(s); a.y = GROUND_Y; } }
+      const edge = Math.max(640, VIEW.x1) + 30;
+      for (const m of rv.members) {
+        const e = new CombatEntity({
+          name: m.name, rig: m.rig, faction: 'UNDEAD', isVillager: m.villager, isRanged: m.ranged,
+          stats: { vit: Math.max(1, (m.vit - 0)), pow: m.pow, def: m.def, res: m.res, spd: m.spd },
+          dmgType: m.dmg, x: edge + (2 - m.slot) * 40, y: GROUND_Y, range: m.range, speed: 110
+        });
+        // a vida do rival = mesma conta da vida do herói (getVit já é o valor final)
+        e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
+        e.arenaHome = 640 - slotHomeX(m.slot);
+        activeEnemies.push(e);
+      }
+      showBanner(`ARENA: ${rv.name} (${rv.rating}) entra em campo!`);
+      sfx.play('SKILL');
+      refreshAllUI();
+    }
+    function arenaEnd(win) {
+      const A = state.arenaMode; if (!A || A.ended) return;
+      A.ended = true;
+      const d = arenaDB(), me = d.rating || 1000, rv = A.rival;
+      const exp = 1 / (1 + Math.pow(10, (rv.rating - me) / 400));
+      const delta = Math.round(ARENA_K * ((win ? 1 : 0) - exp));
+      d.rating = me + delta; d.w = (d.w | 0) + (win ? 1 : 0); d.l = (d.l | 0) + (win ? 0 : 1);
+      const t = d.teams.find(x => x.id === d.myId); if (t) { t.rating = d.rating; t.w = d.w; t.l = d.l; }
+      const o = d.teams.find(x => x.id === rv.id); if (o) { o.rating -= delta; if (win) o.l = (o.l | 0) + 1; else o.w = (o.w | 0) + 1; }
+      d.hist.unshift({ at: Date.now(), rival: rv.name, rr: rv.rating, win, delta });
+      d.hist = d.hist.slice(0, 20);
+      arenaSave(d);
+      sfx.play(win ? 'STAGE_CLEAR' : 'DEFEAT');
+      showBanner(win ? `VITÓRIA na Arena! +${delta} pontos (${d.rating})` : `Derrota na Arena… ${delta} pontos (${d.rating})`);
+      setTimeout(() => {
+        const back = A.back; state.arenaMode = null;
+        activeEnemies = []; arrowShots = [];
+        for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.faction === 'ALLY') { a.isDead = false; a.recalcStats(true); } }
+        startStage(back);
+        toggleDrawer(7);
+      }, 2200);
+    }
+    function renderDrawer7Arena() {
+      const d = arenaDB(), body = document.getElementById('arena-body');
+      const me = d.teams.find(t => t.id === d.myId);
+      const rivals = arenaRivals(d);
+      const cls = m => m.healer ? ({ SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' }[m.stance] || 'Herói') : m.name.split(' ')[0];
+      const ranking = d.teams.slice().sort((a, b) => b.rating - a.rating).slice(0, 8);
+      body.innerHTML = `<div class="grid grid-cols-12 gap-2">
+        <div class="col-span-4 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-1">
+          <div class="ui-h2 text-amber-300">MEU TIME</div>
+          <div class="ui-tiny text-slate-300">Pontos: <b class="text-amber-200">${d.rating || 1000}</b> · ${d.w | 0}V ${d.l | 0}D</div>
+          <div class="ui-tiny ${me ? 'text-emerald-300' : 'text-slate-500'}">${me ? `Registrado · poder ${me.power.toLocaleString('pt-BR')}` : 'Time ainda não registrado'}</div>
+          <button id="arena-reg" class="icon-btn ui-btn py-0.5">${me ? 'Atualizar registro' : 'Registrar time'}</button>
+          <div class="ui-tiny text-slate-500 leading-tight">Teste local: os times ficam só neste navegador.</div>
+          <div class="ui-h2 text-sky-300 mt-0.5">HISTÓRICO</div>
+          <div class="flex flex-col gap-0.5 max-h-[44px] overflow-y-auto">${d.hist.slice(0, 6).map(h => `<div class="ui-tiny ${h.win ? 'text-emerald-300' : 'text-rose-300'}">${h.win ? 'V' : 'D'} · ${h.rival} · ${h.delta > 0 ? '+' : ''}${h.delta}</div>`).join('') || '<div class="ui-tiny text-slate-500">Nenhuma luta</div>'}</div>
+        </div>
+        <div class="col-span-5 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-1">
+          <div class="ui-h2 text-rose-300">RIVAIS</div>
+          ${rivals.map(r => `<div class="bg-slate-900/70 border border-slate-700/70 rounded-lg px-1.5 py-1 flex items-center gap-1.5">
+            <div class="flex-1 min-w-0"><div class="ui-tiny text-slate-100 truncate"><b>${r.name}</b>${r.bot ? ' <span class="text-slate-500">(gerado)</span>' : ''}</div>
+              <div class="ui-tiny text-slate-400 truncate">${r.rating} pts · poder ${r.power.toLocaleString('pt-BR')} · ${r.members.map(cls).join(', ')}</div></div>
+            <button data-fight="${r.id}" class="icon-btn ui-btn px-2 py-0.5 text-rose-200">Lutar</button></div>`).join('') || '<div class="ui-tiny text-slate-500">Sem rivais</div>'}
+        </div>
+        <div class="col-span-3 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-0.5">
+          <div class="ui-h2 text-amber-300">RANKING</div>
+          ${ranking.map((t, i) => `<div class="ui-tiny flex justify-between ${t.id === d.myId ? 'text-amber-200' : 'text-slate-300'}"><span class="truncate">${i + 1}. ${t.name}</span><b>${t.rating}</b></div>`).join('') || '<div class="ui-tiny text-slate-500">Ninguém registrado</div>'}
+        </div>
+      </div>`;
+      document.getElementById('arena-reg').onclick = arenaRegister;
+      body.querySelectorAll('[data-fight]').forEach(b => b.onclick = () => arenaStart(b.dataset.fight));
     }
 
     function renderDrawer5Craft() {
@@ -7728,7 +7892,7 @@
       putImg(document.getElementById('btn-advance-mode'), 'autoadvance', true);
       putImg(document.getElementById('btn-system-menu'), 'settings');
       put(document.getElementById('btn-open-map'), 'map', 'w-4 h-4');
-      const drawerImgs = ['team', 'quests', 'tree', 'bag', 'tavern', 'craft', null];
+      const drawerImgs = ['team', 'quests', 'tree', 'bag', 'tavern', 'craft', null, null];
       document.querySelectorAll('[data-lock-path]').forEach(b => {
         const old = b.querySelector('svg');
         if (old) old.outerHTML = classIconHtml(b.dataset.lockPath, 'w-14 h-14');
@@ -8881,6 +9045,7 @@
       }
     }
     function robotTick(dt) {
+      if (state.arenaMode) return;
       if (!ROBOT.on || state.inMainMenu || SE.open) return;
       if (guideActive()) { guideFinish(); return; }
       state.isAutoSkill = true;
