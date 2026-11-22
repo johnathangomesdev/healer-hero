@@ -389,7 +389,11 @@
       background: rgba(212, 175, 55, 0.45);
       border-radius: 4px;
     }
-  </style>
+      .ref-glow-3{filter:drop-shadow(0 0 1px #e5e7eb) drop-shadow(0 0 3px #9ca3af);animation:refPulse 1.8s ease-in-out infinite}
+    .ref-glow-6{filter:drop-shadow(0 0 1px #fde68a) drop-shadow(0 0 4px #f59e0b);animation:refPulse 1.6s ease-in-out infinite}
+    .ref-glow-9{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 3px #a5f3fc) drop-shadow(0 0 6px #67e8f9);animation:refPulse 1.2s ease-in-out infinite}
+    @keyframes refPulse{0%,100%{opacity:1}50%{opacity:.82}}
+</style>
 </head>
 <body>
   <div id="rotate-overlay">
@@ -1793,7 +1797,7 @@
     let partySlots = { 0: null, 1: null, 2: null };
     let activeEnemies = [];
     // ícones de ouro e DPE no estilo do jogo (contorno preto, brilho), usados no HUD e no canvas
-    const GOLD_SVG = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="17" r="13" fill="#0d0b12"/><circle cx="16" cy="15.5" r="13" fill="#d97706" stroke="#0d0b12" stroke-width="2.4"/><circle cx="16" cy="15.5" r="9.6" fill="#fcd34d" stroke="#b45309" stroke-width="1.6"/><path d="M16 9.5v12M10.5 14.5h11" stroke="#d97706" stroke-width="3" stroke-linecap="round"/><path d="M8.2 11.5a8.6 8.6 0 0 1 6-5.2" stroke="#fffbeb" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".9"/></svg>', DPE_SVG = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polygon points="16,3 27,12.5 16,30 5,12.5" fill="#0e7490" stroke="#0d0b12" stroke-width="2.4" stroke-linejoin="round"/><polygon points="16,3 27,12.5 16,12.5" fill="#a5f3fc"/><polygon points="16,3 5,12.5 16,12.5" fill="#67e8f9"/><polygon points="5,12.5 16,12.5 16,30" fill="#22d3ee"/><polygon points="27,12.5 16,12.5 16,30" fill="#0891b2"/><polygon points="16,3 27,12.5 16,30 5,12.5" fill="none" stroke="#0d0b12" stroke-width="2.4" stroke-linejoin="round"/><path d="M5 12.5h22" stroke="#0d0b12" stroke-width="1.2"/><path d="M10 11l4-4.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".9"/></svg>';
+    const GOLD_SVG = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="17" r="13" fill="#0d0b12"/><circle cx="16" cy="15.5" r="13" fill="#d97706" stroke="#0d0b12" stroke-width="2.4"/><circle cx="16" cy="15.5" r="9.6" fill="#fcd34d" stroke="#b45309" stroke-width="1.6"/><path d="M16 9.5v12M10.5 14.5h11" stroke="#d97706" stroke-width="3" stroke-linecap="round"/><path d="M8.2 11.5a8.6 8.6 0 0 1 6-5.2" stroke="#fffbeb" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".9"/></svg>', DPE_SVG = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polygon points="16,3 27,12.5 16,30 5,12.5" fill="#581c87" stroke="#0d0b12" stroke-width="2.4" stroke-linejoin="round"/><polygon points="16,3 27,12.5 16,12.5" fill="#e9d5ff"/><polygon points="16,3 5,12.5 16,12.5" fill="#c084fc"/><polygon points="5,12.5 16,12.5 16,30" fill="#a855f7"/><polygon points="27,12.5 16,12.5 16,30" fill="#7e22ce"/><polygon points="16,3 27,12.5 16,30 5,12.5" fill="none" stroke="#0d0b12" stroke-width="2.4" stroke-linejoin="round"/><path d="M5 12.5h22" stroke="#0d0b12" stroke-width="1.2"/><path d="M10 11l4-4.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".9"/></svg>';
     const svgImg = s => { const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); return im; };
     const GOLD_IMG = svgImg(GOLD_SVG), DPE_IMG = svgImg(DPE_SVG);
     let physicalDrops = []; // Moedas, DPE e Itens caídos no chão para coleta com o mouse
@@ -6976,7 +6980,8 @@
     function itemIconHtml(it, sizeCls) {
       const t = itemTier(it);
       const url = getItemIconUrl(it.id);
-      const img = url ? `<img src="${url}" draggable="false" class="${sizeCls} object-contain pointer-events-none drop-shadow">`
+      const rg = (isWeaponSlot(it.slot) && (it.plus || 0) >= 3) ? ' ref-glow-' + ((it.plus >= 9) ? 9 : (it.plus >= 6 ? 6 : 3)) : '';
+      const img = url ? `<img src="${url}" draggable="false" class="${sizeCls} object-contain pointer-events-none drop-shadow${rg}">`
         : `<span class="ui-h2" style="color:${t.color}">${t.label[0]}</span>`;
       const sparks = t.sparkle
         ? '<span class="tier-spark" style="left:8%;top:10%"></span><span class="tier-spark" style="right:10%;top:30%;animation-delay:.55s"></span><span class="tier-spark" style="left:30%;bottom:8%;animation-delay:1.1s"></span>'
