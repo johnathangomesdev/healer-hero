@@ -512,7 +512,7 @@
         <div class="grid grid-cols-2 gap-1 mt-1">
           <button id="se-save" class="icon-btn dev-btn col-span-2 toggle-on" style="font-size:12px;padding:6px">💾 Salvar</button>
           <div id="se-save-status" class="col-span-2 text-[10px] text-slate-400 text-center">tudo salvo</div>
-          <button id="se-reset-all" class="icon-btn dev-btn col-span-2 text-rose-300 border-rose-500/50">Resetar todos os ajustes</button>
+          <button id="se-reset-all" class="icon-btn dev-btn col-span-2 text-rose-300 border-rose-500/50">Voltar ao último Salvar</button>
         </div>
         <div class="se-help">
           Clique numa peça ou num ponto laranja (articulação) para selecionar e arraste para mover. Arraste o fundo para mover a câmera; a roda do mouse dá zoom.<br>
@@ -9132,8 +9132,11 @@
       }
     };
     document.getElementById('se-reset-all').onclick = () => {
-      if (!window.confirm('Apagar TODOS os ajustes de sprites?')) return;
-      SPR_ADJ.parts = {}; SPR_ADJ.joints = {}; sprSave(); SE.sig = ''; seRenderSel();
+      // volta para o que está SALVO NO ARQUIVO (descarta só as mudanças feitas no navegador depois do último Salvar)
+      if (!window.confirm('Descartar as mudanças não salvas e voltar aos ajustes salvos no arquivo?')) return;
+      SPR_ADJ.parts = Object.assign({}, SPR_ADJ_FILE.parts); SPR_ADJ.joints = Object.assign({}, SPR_ADJ_FILE.joints); SPR_ADJ.anims = Object.assign({}, SPR_ADJ_FILE.anims);
+      try { localStorage.removeItem(SPR_ADJ_KEY); } catch (_e) {}
+      SPR_ADJ.t = SPR_ADJ_FILE.t || 0; animApplyTiming(); SE.sig = ''; seRenderSel();
     };
     function showBannerSafe(msg) { if (!state.inMainMenu) showBanner(msg); }
     document.getElementById('menu-btn-sprites').onclick = () => seOpen();
