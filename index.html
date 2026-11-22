@@ -1681,7 +1681,7 @@
         goldMult: 0.7, actBonus: 0.3,
         // Arena: os dois times usam a MESMA IA (arenaRivalTick espelha o laço dos aliados). rivalHp/rivalPow = 1 (luta justa);
         // só mude para testar handicap. botMin/botMax = força dos times gerados (× poder do seu time).
-        arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+        arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -6866,8 +6866,39 @@
       return near.length ? near[Math.floor(Math.random() * near.length)] : null;
     }
     function arenaRanking(d) { return d.teams.concat(arenaBots(d)).sort((a, b) => b.rating - a.rating); }
+    // TESTE LOCAL: a cada luta do jogador, os outros times disputam entre si (BAL.arena.aiMatches lutas)
+    // para o ranking não depender só das lutas do jogador. Resultado sorteado pela força:
+    // chance de A vencer = poderA^x / (poderA^x + poderB^x), x = BAL.arena.aiPowExp. Pontos pelo mesmo Elo.
+    function arenaAiRound(d) {
+      const pool = arenaRanking(d).filter(t => t.id !== d.myId);
+      if (pool.length < 2) return;
+      const X = BAL.arena.aiPowExp, K = BAL.arena.k;
+      d.bots = d.bots || {}; d.aiHist = Array.isArray(d.aiHist) ? d.aiHist : [];
+      const store = t => {
+        if (t.bot) { const k = +t.id.slice(3); return d.bots[k] || (d.bots[k] = { rating: t.rating, w: 0, l: 0 }); }
+        return d.teams.find(x => x.id === t.id);
+      };
+      for (let n = 0; n < BAL.arena.aiMatches; n++) {
+        // adversários com pontuação parecida (igual ao sorteio do jogador)
+        const a = pool[Math.floor(Math.random() * pool.length)];
+        const near = pool.filter(t => t !== a && Math.abs(t.rating - a.rating) <= BAL.arena.matchRange);
+        const opp = near.length ? near : pool.filter(t => t !== a);
+        const b = opp[Math.floor(Math.random() * opp.length)];
+        const pa = Math.pow(Math.max(1, a.power), X), pb = Math.pow(Math.max(1, b.power), X);
+        const aWins = Math.random() < pa / (pa + pb);
+        const exp = 1 / (1 + Math.pow(10, (b.rating - a.rating) / 400));
+        const delta = Math.round(K * ((aWins ? 1 : 0) - exp));
+        const A = store(a), B = store(b); if (!A || !B) continue;
+        A.rating = (A.rating || a.rating) + delta; B.rating = (B.rating || b.rating) - delta;
+        if (aWins) { A.w = (A.w | 0) + 1; B.l = (B.l | 0) + 1; } else { A.l = (A.l | 0) + 1; B.w = (B.w | 0) + 1; }
+        a.rating = A.rating; b.rating = B.rating; // a próxima disputa já usa os pontos novos
+        d.aiHist.unshift({ at: Date.now(), win: aWins ? a.name : b.name, lose: aWins ? b.name : a.name, delta: Math.abs(delta) });
+      }
+      d.aiHist = d.aiHist.slice(0, 12);
+    }
     // luta: carrega o save registrado (cópia temporária, nada é salvo) e põe o rival em campo
     function arenaFight() {
+      const d0 = arenaDB(); arenaAiRound(d0); arenaSave(d0);
       const d = arenaDB(), rv = arenaPickRival(d);
       if (!rv || !d.mySave) return;
       try { localStorage.setItem(ARENA_TMP, d.mySave); } catch (e) { return; }
@@ -7013,6 +7044,7 @@
           <div style="flex:1;min-width:0">${t.name}${t.bot ? ' <small>(gerado)</small>' : ''}${t.id === d.myId ? ' <small>(você)</small>' : ''}<br>
             <small>${t.rating} pts · ${t.w | 0}V ${t.l | 0}D · poder ${t.power.toLocaleString('pt-BR')} · ${t.members.map(cls).join(', ')}</small></div>
         </div>`).join('') || '<div class="ar-sub">Registre um time para ver o ranking.</div>'}
+        ${(d.aiHist || []).length ? `<h4>DISPUTAS ENTRE OS OUTROS TIMES</h4><div class="ar-sub">${d.aiHist.slice(0, 6).map(h => `${h.win} venceu ${h.lose} (±${h.delta})`).join(' · ')}</div>` : ''}
         ${d.hist.length ? `<h4>ÚLTIMAS LUTAS</h4><div class="ar-sub">${d.hist.slice(0, 5).map(h => `<span style="color:${h.win ? '#86efac' : '#fda4af'}">${h.win ? 'V' : 'D'} ${h.rival} (${h.delta > 0 ? '+' : ''}${h.delta})</span>`).join(' · ')}</div>` : ''}`;
       document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterFromSave(b.dataset.reg));
       document.getElementById('arena-fight').onclick = () => arenaFight();

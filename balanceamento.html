@@ -200,7 +200,7 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 const DEFAULTS = {
   version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
   // Arena (igual a BAL.arena do index.html)
-  arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+  arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
   // drops procedurais (igual a DROP_DEF do index.html). c,u,r,m,l,d = % de Comum, Incomum, Raro, Mítico, Lendário, Divino
   drops: { normalChance: 0.07, bossChance: 1, weaponPct: 0.6, typeBias: 3,
     exclude: 'CLOTH_SHIRT, CLOTH_BOOTS, OLD_SWORD, WOOD_BUCKLER, HUNTING_BOW, WOODEN_STAFF, EXORCIST_ORB, EMERALD_CLOAK',
@@ -986,6 +986,9 @@ function renderTabs() {
     <div class="fields">${fld('arena.rivalHp', 'Vida do rival (×)')}${fld('arena.rivalPow', 'Dano do rival (×)')}</div>
     <div class="group-title">Times gerados (teste local)</div>
     <div class="fields">${fld('arena.botMin', 'Força do mais fraco (× poder do seu time)')}${fld('arena.botMax', 'Força do mais forte (× poder do seu time)')}</div>
+    <div class="group-title">Disputas entre os times da IA (teste local)</div>
+    <p class="sub">A cada luta do jogador, os outros times disputam entre si para o ranking se mexer. O resultado é sorteado pela força: chance de A vencer = poderA<sup>x</sup> / (poderA<sup>x</sup> + poderB<sup>x</sup>).</p>
+    <div class="fields">${fld('arena.aiMatches', 'Disputas por luta do jogador', 1)}${fld('arena.aiPowExp', 'Expoente x (maior = o mais forte vence mais)')}</div>
     <div class="group-title">Pontuação e sorteio</div>
     <div class="fields">${fld('arena.k', 'K do Elo (pontos por luta)', 1)}${fld('arena.matchRange', 'Faixa do sorteio (± pontos)', 1)}</div>
     <div class="group-title">Pontos por luta (Elo)</div>${(() => {
