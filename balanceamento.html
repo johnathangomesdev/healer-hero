@@ -200,7 +200,7 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 const DEFAULTS = {
   version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
   // Arena (igual a BAL.arena do index.html)
-  arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
+  arena: { dmgMult: 0.5, suddenAt: 60, suddenRate: 0.05, gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
   // drops procedurais (igual a DROP_DEF do index.html). c,u,r,m,l,d = % de Comum, Incomum, Raro, Mítico, Lendário, Divino
   drops: { normalChance: 0.07, bossChance: 1, weaponPct: 0.6, typeBias: 3,
     exclude: 'CLOTH_SHIRT, CLOTH_BOOTS, OLD_SWORD, WOOD_BUCKLER, HUNTING_BOW, WOODEN_STAFF, EXORCIST_ORB, EMERALD_CLOAK',
@@ -981,7 +981,7 @@ function renderTabs() {
     { key: 'c', label: 'Comum %', type: 'num' }, { key: 'u', label: 'Incomum %', type: 'num' }, { key: 'r', label: 'Raro %', type: 'num' }, { key: 'm', label: 'Mítico %', type: 'num' }, { key: 'l', label: 'Lendário %', type: 'num' }, { key: 'd', label: 'Divino %', type: 'num' }]) + dropPoolTable() + monsterDropTable();
   else if (activeTab === 'arena') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Arena (menu inicial): o jogador registra o time de um save e luta contra um rival sorteado entre os times com pontuação perto da dele. Os <b>dois times usam exatamente a mesma IA</b> (andar, alvo, auto-ataque, passivas a cada 3 ataques, Ativa, Ultimate e ultimates dos mercenários), como uma luta entre dois jogadores reais. Por isso o bônus padrão do rival é <b>×1</b> (luta justa); mude só para testar handicap.</p>
     <div class="group-title">Skills</div>
-    <div class="fields">${fld('arena.gcd', 'Cooldown global entre skills do herói (s) — só na arena; a passiva não conta')}</div>
+    <div class="fields">${fld('arena.dmgMult', 'Dano na arena (×) — aplicado depois da Defesa/Resistência, para os dois times')}${fld('arena.suddenAt', 'Morte súbita a partir de (s de luta)', 1)}${fld('arena.suddenRate', 'Morte súbita: +dano por segundo (0,05 = +5%/s)')}${fld('arena.gcd', 'Cooldown global entre skills do herói (s) — só na arena; a passiva não conta')}</div>
     <div class="group-title">Handicap do rival (1 = luta justa)</div>
     <div class="fields">${fld('arena.rivalHp', 'Vida do rival (×)')}${fld('arena.rivalPow', 'Dano do rival (×)')}</div>
     <div class="group-title">Times gerados (teste local)</div>

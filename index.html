@@ -1681,7 +1681,7 @@
         goldMult: 0.7, actBonus: 0.3,
         // Arena: os dois times usam a MESMA IA (arenaRivalTick espelha o laço dos aliados). rivalHp/rivalPow = 1 (luta justa);
         // só mude para testar handicap. botMin/botMax = força dos times gerados (× poder do seu time).
-        arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
+        arena: { dmgMult: 0.5, suddenAt: 60, suddenRate: 0.05, gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150, aiMatches: 4, aiPowExp: 3 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -2183,7 +2183,10 @@
         let dmg = raw * (isCrit ? BAL.critMult : 1.0);
         if ((this.rig === 'CORRUPTED_SLIME' || this.rig === 'SLIME_ALPHA') && !isHoly) dmg *= 0.8;
         const mit = isHoly ? this.getRes() * BAL.resMit : this.getDef() * BAL.defMit;
-        const finalDmg = Math.max(2, Math.round(dmg - mit));
+        // arena: dano reduzido (BAL.arena.dmgMult) DEPOIS da defesa/resistência, para a luta durar mais sem mudar o peso delas
+        const AM = state.arenaMode;
+        const arenaK = AM ? BAL.arena.dmgMult * (1 + Math.max(0, (AM.ft || 0) - BAL.arena.suddenAt) * BAL.arena.suddenRate) : 1; // + morte súbita
+        const finalDmg = Math.max(2, Math.round((dmg - mit) * arenaK));
 
         this.hp = Math.max(0, this.hp - finalDmg);
         this.hurtFlash = 1.0;
@@ -3127,6 +3130,10 @@
         }
       };
       const rivalSkills = () => { if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) tickArenaRivalSkills(dt); };
+      if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) { // tempo de luta → morte súbita
+        const AM = state.arenaMode; AM.ft = (AM.ft || 0) + dt;
+        if (AM.ft >= BAL.arena.suddenAt && !AM.sudden) { AM.sudden = true; arenaOverlay('<div style="font-size:34px;color:#f87171;-webkit-text-stroke:1.5px #1b1220">MORTE SÚBITA</div><div style="font-size:10px;color:#fecaca">o dano aumenta a cada segundo</div>', 1800); }
+      }
       if (rivalFirst) { rivalSkills(); playerSkills(); } else { playerSkills(); rivalSkills(); }
 
       // Física & Coleta pelo Cursor do Mouse nos Drops (Moedas, DPE e Itens)
