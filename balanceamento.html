@@ -199,6 +199,8 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
   version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  // Arena (igual a BAL.arena do index.html)
+  arena: { rivalHp: 1.8, rivalPow: 1.25, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
   // drops procedurais (igual a DROP_DEF do index.html). c,u,r,m,l,d = % de Comum, Incomum, Raro, Mítico, Lendário, Divino
   drops: { normalChance: 0.07, bossChance: 1, weaponPct: 0.6, typeBias: 3,
     exclude: 'CLOTH_SHIRT, CLOTH_BOOTS, OLD_SWORD, WOOD_BUCKLER, HUNTING_BOW, WOODEN_STAFF, EXORCIST_ORB, EMERALD_CLOAK',
@@ -931,7 +933,7 @@ function drawHp(rep) {
 // ============================================================================
 const TABS = [
   ['geral', 'Geral'], ['prog', 'Nível & atributos'], ['skills', 'Skills'], ['itens', 'Itens & craft'], ['lista', 'Lista de itens'],
-  ['inimigos', 'Monstros'], ['fases', 'Fases'], ['mercs', 'Mercenários'], ['herois', 'Família (tutorial)'], ['drops', 'Drops'], ['estrategia', 'Estratégia do jogador']
+  ['inimigos', 'Monstros'], ['fases', 'Fases'], ['mercs', 'Mercenários'], ['herois', 'Família (tutorial)'], ['drops', 'Drops'], ['arena', 'Arena'], ['estrategia', 'Estratégia do jogador']
 ];
 let activeTab = 'geral';
 try { activeTab = localStorage.getItem('hh_balance_tab') || 'geral'; } catch (e) {}
@@ -977,6 +979,17 @@ function renderTabs() {
     <div class="group-title">Raridade (%) e nível por monstro</div>` + tableEditor('drops.mobs', [
     { key: 'id', label: 'Monstro (ID)', sm: true }, { key: 'type', label: 'Tipo de dano', type: 'select', opts: [['PHYS', 'Físico'], ['MAG', 'Mágico']] }, { key: 'lvl', label: '+Nível', type: 'num' },
     { key: 'c', label: 'Comum %', type: 'num' }, { key: 'u', label: 'Incomum %', type: 'num' }, { key: 'r', label: 'Raro %', type: 'num' }, { key: 'm', label: 'Mítico %', type: 'num' }, { key: 'l', label: 'Lendário %', type: 'num' }, { key: 'd', label: 'Divino %', type: 'num' }]) + dropPoolTable() + monsterDropTable();
+  else if (activeTab === 'arena') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Arena (menu inicial): o jogador registra o time de um save e luta contra um rival sorteado entre os times com pontuação perto da dele. Os <b>rivais são controlados pela IA sem skills, curas nem ultimates</b>, então recebem um bônus de <b>vida</b> e de <b>dano</b> para compensar. Calibrado no jogo real (simulação headless, nível 20, Santo/Exorcista/Monge): com poder igual, vida ×1,8 e dano ×1,25 dão ~50% de vitória (sem bônus o jogador vencia 100%; com vida ×3 e dano ×2, 0%).</p>
+    <div class="group-title">Bônus dos rivais</div>
+    <div class="fields">${fld('arena.rivalHp', 'Vida do rival (×)')}${fld('arena.rivalPow', 'Dano do rival (×)')}</div>
+    <div class="group-title">Times gerados (teste local)</div>
+    <div class="fields">${fld('arena.botMin', 'Força do mais fraco (× poder do seu time)')}${fld('arena.botMax', 'Força do mais forte (× poder do seu time)')}</div>
+    <div class="group-title">Pontuação e sorteio</div>
+    <div class="fields">${fld('arena.k', 'K do Elo (pontos por luta)', 1)}${fld('arena.matchRange', 'Faixa do sorteio (± pontos)', 1)}</div>
+    <div class="group-title">Pontos por luta (Elo)</div>${(() => {
+      const K = +P.arena.k || 32, rows = [-300, -150, 0, 150, 300].map(dr => { const e = 1 / (1 + Math.pow(10, dr / 400)); return `<tr><td>${dr > 0 ? '+' : ''}${dr}</td><td class="r">+${Math.round(K * (1 - e))}</td><td class="r">${Math.round(-K * e)}</td></tr>`; }).join('');
+      return `<table><thead><tr><th>Rival (pts acima de você)</th><th class="r">Vitória</th><th class="r">Derrota</th></tr></thead><tbody>${rows}</tbody></table>`;
+    })()}`;
   else if (activeTab === 'mercs') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Mercenários entram sempre no nível 1. As duas linhas “sugestão” não existem no jogo: ative para testar mercenários mais fortes liberados em fases mais adiante. Equipamento inicial: IDs de itens, que entram no tier Comum.</p>` + tableEditor('mercs', [
     { key: 'active', label: 'Ativo', type: 'bool' }, { key: 'name', label: 'Nome', sm: true }, { key: 'role', label: 'Função', type: 'select', opts: [['TANK', 'Tanque'], ['ARCHER', 'Arqueiro']] }, { key: 'cost', label: 'Preço', type: 'num' },
     { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'unlock', label: 'Liberado em', type: 'select', opts: stageOpts }, { key: 'gear', label: 'Equipamento inicial' }]);

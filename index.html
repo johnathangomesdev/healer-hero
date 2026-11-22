@@ -1679,6 +1679,9 @@
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
         fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3, salvageCost: null,
         goldMult: 0.7, actBonus: 0.3,
+        // Arena: rivais lutam SEM skills/curas/ultimates, então recebem um bônus de vida e de dano (rivalHp/rivalPow)
+        // para poder igual dar ~50% de vitória. botMin/botMax = força dos times gerados (× poder do seu time).
+        arena: { rivalHp: 1.8, rivalPow: 1.25, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -1721,6 +1724,7 @@
           const pool = P.itemList.filter(r => r.pool && ITEMS_DB[r.id]).map(r => r.id);
           if (pool.length) B.pool = pool;
         }
+        if (P.arena && typeof P.arena === 'object') for (const k in B.arena) B.arena[k] = num(P.arena[k], B.arena[k]);
         if (P.drops && typeof P.drops === 'object') {
           const PD = P.drops, d = { normalChance: num(PD.normalChance, DROP_DEF.normalChance), bossChance: num(PD.bossChance, DROP_DEF.bossChance), weaponPct: num(PD.weaponPct, DROP_DEF.weaponPct), typeBias: num(PD.typeBias, DROP_DEF.typeBias),
             exclude: typeof PD.exclude === 'string' ? PD.exclude.split(',').map(x => x.trim()).filter(Boolean) : (Array.isArray(PD.exclude) ? PD.exclude : DROP_DEF.exclude), mobs: {} };
@@ -6617,7 +6621,7 @@
     // ARENA (multiplayer assíncrono) — TESTE LOCAL: times registrados ficam no localStorage deste navegador.
     // Para virar online, trocar arenaDB()/arenaSave() por um backend (Supabase/Firebase) mantendo o mesmo formato.
     // =========================================================================
-    const ARENA_KEY = 'hh_arena_v1', ARENA_K = 32;
+    const ARENA_KEY = 'hh_arena_v1';
     function arenaDB() {
       let d = null; try { d = JSON.parse(localStorage.getItem(ARENA_KEY) || 'null'); } catch (e) { }
       d = d && typeof d === 'object' ? d : {};
@@ -6698,7 +6702,7 @@
       const pairs = []; for (let a = 0; a < mk.length; a++) for (let b = a + 1; b < mk.length; b++) pairs.push([mk[a], mk[b]]);
       let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
       return ARENA_BOT_NAMES.map((nm, k) => {
-        const f = 0.7 + 0.65 * k / (ARENA_BOT_NAMES.length - 1);
+        const f = BAL.arena.botMin + (BAL.arena.botMax - BAL.arena.botMin) * k / (ARENA_BOT_NAMES.length - 1);
         const stance = heroes[k % heroes.length], mercs = pairs[Math.floor(rnd() * pairs.length)];
         if (rnd() < 0.5) mercs.reverse();
         let mem = arenaBotMembers(stance, mercs.slice(), Math.max(1, Math.round(lvl0 * f)));
@@ -6714,7 +6718,7 @@
     // adversário ALEATÓRIO: sorteado entre os times com pontuação perto da sua (±150; se não houver, os 5 mais próximos)
     function arenaPickRival(d) {
       const me = d.rating || 1000, pool = arenaRanking(d).filter(t => t.id !== d.myId);
-      let near = pool.filter(t => Math.abs(t.rating - me) <= 150);
+      let near = pool.filter(t => Math.abs(t.rating - me) <= BAL.arena.matchRange);
       if (near.length < 2) near = pool.slice().sort((a, b) => Math.abs(a.rating - me) - Math.abs(b.rating - me)).slice(0, 5);
       return near.length ? near[Math.floor(Math.random() * near.length)] : null;
     }
@@ -6757,6 +6761,8 @@
         });
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
         e.arenaHome = HOME[Math.min(k, 2)];
+        // compensação por lutar sem skills (BAL.arena)
+        e.basePow *= BAL.arena.rivalPow; e.maxHp = Math.round(e.maxHp * BAL.arena.rivalHp); e.hp = e.maxHp;
         activeEnemies.push(e);
       });
       arenaOverlay(`<div style="font-size:22px;color:#fecaca">${rv.name}</div><div style="font-size:11px;color:#fde68a">${rv.rating} pts · poder ${rv.power.toLocaleString('pt-BR')}</div>`, 0);
@@ -6809,7 +6815,7 @@
       A.ended = true;
       const d = arenaDB(), me = d.rating || 1000, rv = A.rival;
       const exp = 1 / (1 + Math.pow(10, (rv.rating - me) / 400));
-      const delta = Math.round(ARENA_K * ((win ? 1 : 0) - exp));
+      const delta = Math.round(BAL.arena.k * ((win ? 1 : 0) - exp));
       d.rating = me + delta; d.w = (d.w | 0) + (win ? 1 : 0); d.l = (d.l | 0) + (win ? 0 : 1);
       const t = d.teams.find(x => x.id === d.myId); if (t) { t.rating = d.rating; t.w = d.w; t.l = d.l; }
       const o = d.teams.find(x => x.id === rv.id);
