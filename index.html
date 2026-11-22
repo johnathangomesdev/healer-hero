@@ -8485,6 +8485,8 @@
       return b.vit * w.vit + b.pow * w.pow + b.def * w.def + (b.res || 0) * (w.res || 0) + b.spd * w.spd;
     }
     function robotPower(e) { return Math.sqrt(e.maxHp * Math.max(1, e.getPow()) * e.getSpd()); }
+    // Exorcista: o tanque do time é o Paladino (cura e protege), nunca o Guerreiro Vanguarda
+    function robotMercOk(k) { return !(state.stance === 'EXORCIST' && k === 'VANGUARD_WARRIOR'); }
     function robotMercPower(m) { return Math.sqrt((BAL.hpBase + m.stats.vit * BAL.hpPerVit) * m.stats.pow * m.stats.spd); }
     function robotSpendPoints() {
       for (const s of [0, 1, 2]) {
@@ -8531,7 +8533,7 @@
       if (!state.tavernUnlocked || !state.isPathLocked) return 0;
       let reserve = 0;
       for (let guard = 0; guard < 4; guard++) {
-        const av = Object.keys(MERCENARIES_DB).filter(k => !isMercHired(k));
+        const av = Object.keys(MERCENARIES_DB).filter(k => !isMercHired(k) && robotMercOk(k));
         if (!av.length) break;
         const free = firstFreeTeamSlot();
         if (free !== null) {
@@ -8638,9 +8640,9 @@
         return;
       }
       if (state.awaitingAct2Lock && state.isPathLocked) {
-        let k = Object.keys(MERCENARIES_DB).filter(k => mercCost(k) <= state.gold).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
+        let k = Object.keys(MERCENARIES_DB).filter(k => mercCost(k) <= state.gold && robotMercOk(k)).sort((a, b) => robotMercPower(MERCENARIES_DB[b]) - robotMercPower(MERCENARIES_DB[a]))[0];
         if (!k) { // sem ouro para nenhum: o jogo garante o primeiro mercenário do Ato II
-          k = Object.keys(MERCENARIES_DB).sort((a, b) => mercCost(a) - mercCost(b))[0];
+          k = Object.keys(MERCENARIES_DB).filter(robotMercOk).sort((a, b) => mercCost(a) - mercCost(b))[0];
           state.gold = Math.max(state.gold, mercCost(k));
         }
         hireMercenaryLv1(firstFreeTeamSlot(), k);
