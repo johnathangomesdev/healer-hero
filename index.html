@@ -2534,21 +2534,28 @@
       for (const d of physicalDrops) d.x = Math.max(30, d.x - dx);
       for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.isDead) a.x -= dx; }
     }
+    // transição: o time anda para a frente (quem está na frente NUNCA para), os de trás correm até a formação
+    // e a câmera acompanha um pouco mais rápido até todos voltarem à posição inicial da tela
     function tickWaveTransition(dt) {
       const W = state.waveTrans; W.t += dt;
+      const V = 120, RUN = V * 1.9;
       const al = [0, 1, 2].map(s => partySlots[s]).filter(a => a && !a.isDead);
-      if (W.off === null) W.off = Math.max(0, ...al.map(a => a.x - a.homeX), 0);
-      if (W.phase === 'regroup') {
-        const ok = al.every(a => Math.abs(a.x - (a.homeX + W.off)) < 8);
-        if (ok || W.t > 1.8) { W.phase = 'pan'; W.t = 0; }
-        return;
+      if (!al.length) { const done = W.done; state.waveTrans = null; done(); return; }
+      // quem está mais à frente da sua posição na formação puxa o grupo
+      const off = Math.max(0, ...al.map(a => a.x - a.homeX));
+      // câmera: anda junto (V) + um pouco mais para trazer o grupo de volta à posição inicial
+      const cam = V + Math.min(70, off / Math.max(dt, 1e-3));
+      for (const a of al) {
+        const target = a.homeX + off;                 // lugar dele na formação, em volta de quem puxa
+        const behind = target - a.x;
+        const w = behind > 1 ? Math.min(RUN, V + behind / Math.max(dt, 1e-3)) : V; // atrás: corre; no lugar: anda
+        a.x += (w - cam) * dt;
+        a.isMoving = true; a.facing = 1;
       }
-      // câmera: anda até o time voltar à posição inicial (mínimo de 0,6 s de caminhada, como antes)
-      const step = Math.min(W.off, dt * 170);
-      W.off -= step;
-      for (const a of al) a.x -= step;
-      shiftWorld(W.t < 0.6 ? Math.max(step, dt * 130) : step);
-      if (W.off <= 0.01 && W.t >= 0.6) { const done = W.done; state.waveTrans = null; done(); }
+      shiftWorld(cam * dt);
+      const settled = al.every(a => Math.abs(a.x - a.homeX) < 2);
+      if (settled && W.t >= 0.6) { for (const a of al) a.x = a.homeX; const done = W.done; state.waveTrans = null; done(); }
+      else if (W.t > 5) { for (const a of al) a.x = a.homeX; const done = W.done; state.waveTrans = null; done(); }
     }
     function checkWaveCleared() {
       // waveClearing: impede contar a mesma onda duas vezes quando vários inimigos morrem no mesmo quadro
@@ -2563,7 +2570,7 @@
         // transição com câmera: 1) quem ficou para trás corre até a formação (em volta de quem está mais à frente);
         // 2) a câmera anda até o time voltar à posição inicial; 3) a próxima onda começa
         state.isScrolling = true;
-        state.waveTrans = { phase: 'regroup', t: 0, off: null, pan: 0, done: () => {
+        state.waveTrans = { t: 0, done: () => {
           state.isScrolling = false;
           if (state.stageId !== stageAtClear) return; // a fase mudou durante a transição
           state.waveClearing = false;
@@ -2584,10 +2591,10 @@
       if (cfg.sub < 5) {
         state.isScrolling = true;
         const from = state.stageId;
-        setTimeout(() => {
+        state.waveTrans = { t: 0, done: () => {
           state.isScrolling = false;
           if (state.stageId === from) startStage(cfg.next);
-        }, 950);
+        } };
         return;
       }
 
@@ -2997,7 +3004,7 @@
         let targetX = a.homeX;
         // transição de onda: formação montada em volta de quem está mais à frente; quem está atrás corre
         const WT = state.waveTrans;
-        if (WT && WT.off !== null) targetX = a.homeX + WT.off;
+        if (WT) targetX = a.x; // a transição move o time (tickWaveTransition)
         // sem monstros (fim de wave / transição): ninguém anda para trás para voltar à formação;
         // quem está à frente fica onde está e continua "andando" para a frente com o cenário
         if (!WT && enemies.length === 0 && a.x > a.homeX) targetX = a.x;
@@ -3011,7 +3018,7 @@
         if (dist > 3.5) {
           a.isMoving = true;
           const dir = targetX > a.x ? 1 : -1;
-          a.x += dir * a.speed * (a.isHealer && a.isCurrentlyMelee() ? 1.25 : 1.0) * (WT && WT.phase === 'regroup' ? 1.9 : 1) * dt;
+          a.x += dir * a.speed * (a.isHealer && a.isCurrentlyMelee() ? 1.25 : 1.0) * dt;
           // (rastro atrás do herói ao correr removido)
         } else {
           a.isMoving = state.isScrolling;
