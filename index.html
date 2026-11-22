@@ -80,7 +80,17 @@
       font-family: 'Lilita One', sans-serif; color: #dcfce7; font-size: clamp(0.7rem, min(1.9cqw, 3.4cqh), 1.1rem);
     }
     #menu-note { top: auto; bottom: 6%; text-align: center; }
-    #menu-buttons.hidden, #menu-saves.hidden { display: none; }
+    #menu-buttons.hidden, #menu-saves.hidden, #menu-arena.hidden { display: none; }
+    #menu-arena {
+      position: absolute; right: 3%; top: 14%; width: clamp(300px, 56%, 700px); max-height: 82%; overflow-y: auto; padding: 1.2cqh 1.4cqw; border-radius: 0.9em;
+      background: rgba(18, 8, 10, 0.94); border: 2px solid rgba(248, 113, 113, 0.6); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      font-family: 'Lilita One', sans-serif; color: #fee2e2; font-size: clamp(11px, 3cqh, 19px);
+    }
+    #menu-arena h4 { font-size: .8em; letter-spacing: .12em; color: #fca5a5; margin: .45em 0 .25em; font-weight: normal; }
+    #menu-arena .ar-row { display: flex; align-items: center; gap: .5em; padding: .3em .5em; border-radius: .5em; background: rgba(40, 16, 20, 0.85); border: 1px solid rgba(248, 113, 113, 0.25); margin-bottom: .25em; }
+    #menu-arena .ar-row small, #menu-arena .ar-sub { font-family: 'Inter', sans-serif; font-weight: 600; font-size: .62em; color: #fecaca; }
+    #menu-arena .ar-btn { padding: .2em .8em; border-radius: .5em; border: 2px solid rgba(248, 113, 113, 0.7); background: rgba(127, 29, 29, 0.7); color: #fff; font-family: 'Lilita One', sans-serif; cursor: pointer; }
+    #menu-arena .ar-btn:disabled { opacity: .35; cursor: not-allowed; }
     #hud-root .sys-save-slot { flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 9px; text-align: left; width: 100%; }
     #hud-root .sys-save-slot small { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 8px; color: #cbd5e1; letter-spacing: 0; text-shadow: none; }
     #hud-root .sys-save-slot:disabled { opacity: .45; }
@@ -424,6 +434,7 @@
       <div id="menu-buttons">
         <button id="menu-btn-start" class="menu-btn primary">Iniciar</button>
         <button id="menu-btn-continue" class="menu-btn">Continuar</button>
+        <button id="menu-btn-arena" class="menu-btn">Arena</button>
         <button id="menu-btn-settings" class="menu-btn">Configurações</button>
         <button id="menu-btn-exit" class="menu-btn">Sair</button>
       </div>
@@ -460,6 +471,13 @@
         <div style="text-align:center;letter-spacing:.15em;margin-bottom:.6em;color:#86efac">ESCOLHA O SAVE</div>
         <div id="menu-saves-list" style="display:flex;flex-direction:column;gap:.5em;margin-bottom:.7em"></div>
         <button id="menu-saves-back" class="menu-btn" style="width:100%">Voltar</button>
+      </div>
+      <div id="menu-arena" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4em">
+          <span style="letter-spacing:.15em;color:#fca5a5">ARENA</span><span id="arena-me" style="font-size:.75em;color:#fde68a"></span>
+        </div>
+        <div id="arena-body"></div>
+        <button id="menu-arena-back" class="menu-btn" style="width:100%;margin-top:.5em">Voltar</button>
       </div>
       <div id="menu-note" class="hidden"></div>
     </div>
@@ -598,7 +616,7 @@
     <!-- =================================================================== -->
     <!-- BOTTOM-CENTER: 3 SKILL ICONS ONLY                                   -->
     <!-- =================================================================== -->
-    <div class="absolute bottom-2 glass-pill rounded-xl px-2.5 py-1.5 flex items-center gap-2 z-20" style="right:326px">
+    <div class="absolute bottom-2 glass-pill rounded-xl px-2.5 py-1.5 flex items-center gap-2 z-20" style="right:288px">
       <div id="act-skill-1" class="relative w-8 h-8 rounded-lg bg-slate-900/90 border border-emerald-400/80 flex items-center justify-center cursor-pointer overflow-hidden" data-tip="Passiva">
         <div id="cvs-skill-1" class="flex items-center justify-center pointer-events-none"></div>
         <span class="absolute top-0.5 left-1 ui-tiny text-white">P</span>
@@ -645,9 +663,6 @@
       <button data-drawer="6" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Coleção</b><br>Feitos conquistados e cosméticos: mudam só a aparência na luta, sem status.">
         <svg class="w-7 h-7" viewBox="0 0 32 32"><path d="M9 5h14v6a7 7 0 0 1-14 0z" fill="#fbbf24" stroke="#0d0b12" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 7H5.5a4 4 0 0 0 4.5 6M23 7h3.5a4 4 0 0 1-4.5 6" fill="none" stroke="#0d0b12" stroke-width="2.2"/><path d="M14 18h4v4h-4z" fill="#d97706" stroke="#0d0b12" stroke-width="2"/><rect x="9.5" y="22" width="13" height="5" rx="1.5" fill="#92400e" stroke="#0d0b12" stroke-width="2.2"/><path d="M12 8v3" stroke="#fffbeb" stroke-width="2" stroke-linecap="round"/></svg>
         <span id="notif-coll" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-slate-900"></span>
-      </button>
-      <button data-drawer="7" class="drawer-btn icon-btn w-8 h-8 relative" data-tip="<b>Arena (teste local)</b><br>Registre seu time e lute contra times de outros jogadores. Ranking próprio.">
-        <svg class="w-7 h-7" viewBox="0 0 32 32"><path d="M6 4l14 14-3 3L3 7V4z" fill="#cbd5e1" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><path d="M26 4L12 18l3 3L29 7V4z" fill="#e2e8f0" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><path d="M9 21l-4 4 2 2 4-4M23 21l4 4-2 2-4-4" fill="#b45309" stroke="#0d0b12" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="25" r="3" fill="#ef4444" stroke="#0d0b12" stroke-width="1.8"/></svg>
       </button>
     </div>
 
@@ -783,9 +798,6 @@
           </div>
         </div>
       </div>
-
-      <!-- DRAWER 7: ARENA (multiplayer assíncrono, teste local) -->
-      <div id="pane-7" class="drawer-pane hidden pr-6"><div id="arena-body"></div></div>
 
       <!-- DRAWER 6: COLEÇÃO (feitos + cosméticos) -->
       <div id="pane-6" class="drawer-pane hidden pr-6">
@@ -6407,7 +6419,6 @@
       else if (state.activeDrawer === 4) renderDrawer4Mercenaries();
       else if (state.activeDrawer === 5) renderDrawer5Craft();
       else if (state.activeDrawer === 6) renderDrawer6Collection();
-      else if (state.activeDrawer === 7) renderDrawer7Arena();
     }
 
     // =========================================================================
@@ -6631,43 +6642,55 @@
       return mem;
     }
     const teamPower = mem => mem.reduce((t, m) => t + (m.power || 0), 0);
-    function arenaRegister() {
-      const d = arenaDB(), mem = arenaSnapshot();
-      if (!mem.length) return showBanner('Sem personagens para registrar.');
+    // registra o time de um SAVE (manual ou autosave): carrega o save escondido atrás do menu, fotografa o time e guarda o save junto
+    const ARENA_TMP = 'hh_arena_tmp_save';
+    function arenaRegisterFromSave(key) {
+      const raw = localStorage.getItem(key); if (!raw) return;
+      if (!loadSavedGame(key)) return;
+      activeEnemies = []; arrowShots = []; physicalDrops = [];
+      const mem = arenaSnapshot();
+      if (!mem.length) { openArenaMenu(); return; }
+      const d = arenaDB();
       const id = d.myId || (d.myId = 'p' + Date.now().toString(36));
       let t = d.teams.find(x => x.id === id);
-      if (!t) { t = { id, rating: d.rating || 1000, w: 0, l: 0 }; d.teams.push(t); }
-      Object.assign(t, { name: arenaPlayer(), members: mem, power: teamPower(mem), at: Date.now(), rating: d.rating || t.rating || 1000 });
-      arenaSave(d); showBanner('Time registrado na Arena!'); renderDrawer7Arena();
+      if (!t) { t = { id, rating: d.rating || 1000, w: d.w | 0, l: d.l | 0 }; d.teams.push(t); }
+      const sm = saveSummary(key);
+      Object.assign(t, { name: arenaPlayer(), members: mem, power: teamPower(mem), at: Date.now(), rating: d.rating || t.rating || 1000,
+        info: sm ? `Ato ${sm.act} · ${sm.cls} Nv ${sm.lvl}` : '' });
+      d.mySave = raw;
+      arenaSave(d);
+      openArenaMenu();
     }
-    // rivais: times registrados (de outros saves neste navegador) + times gerados para teste
+    // times gerados para teste (a partir do time registrado), para sempre ter com quem lutar
     function arenaBots(d) {
-      const base = arenaSnapshot(); if (!base.length) return [];
+      const me = d.teams.find(t => t.id === d.myId); if (!me) return [];
       const names = ['Lâmina Rubra', 'Guarda Cinzenta', 'Corvos da Névoa', 'Punho de Ferro', 'Ordem da Aurora', 'Sombras do Vale'];
-      const out = [];
-      for (let k = 0; k < 6; k++) {
-        const f = 0.7 + k * 0.12, seed = (d.botSeed || 1) * 31 + k;
-        const mem = base.map(m => Object.assign({}, m, {
-          name: m.name, vit: Math.round(m.vit * f), pow: Math.round(m.pow * f), def: Math.round(m.def * f), res: Math.round(m.res * f),
+      return names.map((nm, k) => {
+        const f = 0.7 + k * 0.12;
+        const mem = me.members.map(m => Object.assign({}, m, {
+          vit: Math.round(m.vit * f), pow: Math.round(m.pow * f), def: Math.round(m.def * f), res: Math.round(m.res * f),
           level: Math.max(1, Math.round(m.level * f)), power: Math.round(m.power * f * f)
         }));
-        out.push({ id: 'bot' + k, bot: true, name: names[(seed) % names.length], members: mem, power: teamPower(mem), rating: Math.round(1000 + (f - 1) * 600), w: 0, l: 0 });
-      }
-      return out;
+        const st = (d.bots && d.bots[k]) || {};
+        return { id: 'bot' + k, bot: true, name: nm, members: mem, power: teamPower(mem), rating: st.rating || Math.round(1000 + (f - 1) * 600), w: st.w | 0, l: st.l | 0 };
+      });
     }
-    function arenaRivals(d) {
-      const me = d.rating || 1000;
-      const pool = d.teams.filter(t => t.id !== d.myId).concat(arenaBots(d));
-      pool.sort((a, b) => Math.abs(a.rating - me) - Math.abs(b.rating - me));
-      return pool.slice(0, 3).sort((a, b) => a.rating - b.rating);
+    function arenaRanking(d) { return d.teams.concat(arenaBots(d)).sort((a, b) => b.rating - a.rating); }
+    // luta: carrega o save registrado (cópia temporária, nada é salvo) e põe o rival em campo
+    function arenaFight(rivalId) {
+      const d = arenaDB(), rv = arenaRanking(d).find(r => r.id === rivalId);
+      if (!rv || !d.mySave) return;
+      try { localStorage.setItem(ARENA_TMP, d.mySave); } catch (e) { return; }
+      const ok = loadSavedGame(ARENA_TMP);
+      try { localStorage.removeItem(ARENA_TMP); } catch (e) { }
+      if (!ok) return;
+      state.inMainMenu = false;
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('menu-arena').classList.add('hidden');
+      arenaStart(rv);
     }
-    // inicia a luta: guarda a fase atual, limpa o campo, cura o time e põe o rival entrando pela direita
-    function arenaStart(rivalId) {
-      const d = arenaDB(), rv = arenaRivals(d).find(r => r.id === rivalId);
-      if (!rv || state.arenaMode) return;
-      if (!getLivingAllies().length && !Object.values(partySlots).some(Boolean)) return;
-      state.arenaMode = { rival: rv, back: state.stageId };
-      toggleDrawer(7);
+    function arenaStart(rv) {
+      state.arenaMode = { rival: rv };
       state.waveTrans = null; state.isScrolling = false; state.isDefeated = false; state.isVictory = false; state.waveClearing = false;
       document.getElementById('modal-defeat').classList.add('hidden'); document.getElementById('modal-victory').classList.add('hidden');
       activeEnemies = []; arrowShots = []; physicalDrops = [];
@@ -6676,10 +6699,9 @@
       for (const m of rv.members) {
         const e = new CombatEntity({
           name: m.name, rig: m.rig, faction: 'UNDEAD', isVillager: m.villager, isRanged: m.ranged,
-          stats: { vit: Math.max(1, (m.vit - 0)), pow: m.pow, def: m.def, res: m.res, spd: m.spd },
+          stats: { vit: m.vit, pow: m.pow, def: m.def, res: m.res, spd: m.spd },
           dmgType: m.dmg, x: edge + (2 - m.slot) * 40, y: GROUND_Y, range: m.range, speed: 110
         });
-        // a vida do rival = mesma conta da vida do herói (getVit já é o valor final)
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
         e.arenaHome = 640 - slotHomeX(m.slot);
         activeEnemies.push(e);
@@ -6696,50 +6718,52 @@
       const delta = Math.round(ARENA_K * ((win ? 1 : 0) - exp));
       d.rating = me + delta; d.w = (d.w | 0) + (win ? 1 : 0); d.l = (d.l | 0) + (win ? 0 : 1);
       const t = d.teams.find(x => x.id === d.myId); if (t) { t.rating = d.rating; t.w = d.w; t.l = d.l; }
-      const o = d.teams.find(x => x.id === rv.id); if (o) { o.rating -= delta; if (win) o.l = (o.l | 0) + 1; else o.w = (o.w | 0) + 1; }
+      const o = d.teams.find(x => x.id === rv.id);
+      if (o) { o.rating -= delta; if (win) o.l = (o.l | 0) + 1; else o.w = (o.w | 0) + 1; }
+      else if (rv.bot) { d.bots = d.bots || {}; const k = +rv.id.slice(3), b = d.bots[k] || (d.bots[k] = { rating: rv.rating, w: 0, l: 0 }); b.rating -= delta; if (win) b.l++; else b.w++; }
       d.hist.unshift({ at: Date.now(), rival: rv.name, rr: rv.rating, win, delta });
       d.hist = d.hist.slice(0, 20);
       arenaSave(d);
       sfx.play(win ? 'STAGE_CLEAR' : 'DEFEAT');
       showBanner(win ? `VITÓRIA na Arena! +${delta} pontos (${d.rating})` : `Derrota na Arena… ${delta} pontos (${d.rating})`);
-      setTimeout(() => {
-        const back = A.back; state.arenaMode = null;
-        activeEnemies = []; arrowShots = [];
-        for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.faction === 'ALLY') { a.isDead = false; a.recalcStats(true); } }
-        startStage(back);
-        toggleDrawer(7);
-      }, 2200);
+      setTimeout(arenaExit, 2400);
     }
-    function renderDrawer7Arena() {
-      const d = arenaDB(), body = document.getElementById('arena-body');
-      const me = d.teams.find(t => t.id === d.myId);
-      const rivals = arenaRivals(d);
+    // volta para a tela da Arena no menu inicial (o estado carregado do save é descartado)
+    function arenaExit() {
+      state.arenaMode = null; activeEnemies = []; arrowShots = [];
+      state.inMainMenu = true;
+      if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);
+      refreshMainMenuState();
+      document.getElementById('main-menu').classList.remove('hidden');
+      openArenaMenu();
+    }
+    function openArenaMenu() {
+      const d = arenaDB(), me = d.teams.find(t => t.id === d.myId);
+      document.getElementById('menu-buttons').classList.add('hidden');
+      document.getElementById('menu-saves').classList.add('hidden');
+      document.getElementById('menu-arena').classList.remove('hidden');
+      document.getElementById('arena-me').textContent = `${d.rating || 1000} pts · ${d.w | 0}V ${d.l | 0}D`;
       const cls = m => m.healer ? ({ SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' }[m.stance] || 'Herói') : m.name.split(' ')[0];
-      const ranking = d.teams.slice().sort((a, b) => b.rating - a.rating).slice(0, 8);
-      body.innerHTML = `<div class="grid grid-cols-12 gap-2">
-        <div class="col-span-4 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-1">
-          <div class="ui-h2 text-amber-300">MEU TIME</div>
-          <div class="ui-tiny text-slate-300">Pontos: <b class="text-amber-200">${d.rating || 1000}</b> · ${d.w | 0}V ${d.l | 0}D</div>
-          <div class="ui-tiny ${me ? 'text-emerald-300' : 'text-slate-500'}">${me ? `Registrado · poder ${me.power.toLocaleString('pt-BR')}` : 'Time ainda não registrado'}</div>
-          <button id="arena-reg" class="icon-btn ui-btn py-0.5">${me ? 'Atualizar registro' : 'Registrar time'}</button>
-          <div class="ui-tiny text-slate-500 leading-tight">Teste local: os times ficam só neste navegador.</div>
-          <div class="ui-h2 text-sky-300 mt-0.5">HISTÓRICO</div>
-          <div class="flex flex-col gap-0.5 max-h-[44px] overflow-y-auto">${d.hist.slice(0, 6).map(h => `<div class="ui-tiny ${h.win ? 'text-emerald-300' : 'text-rose-300'}">${h.win ? 'V' : 'D'} · ${h.rival} · ${h.delta > 0 ? '+' : ''}${h.delta}</div>`).join('') || '<div class="ui-tiny text-slate-500">Nenhuma luta</div>'}</div>
-        </div>
-        <div class="col-span-5 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-1">
-          <div class="ui-h2 text-rose-300">RIVAIS</div>
-          ${rivals.map(r => `<div class="bg-slate-900/70 border border-slate-700/70 rounded-lg px-1.5 py-1 flex items-center gap-1.5">
-            <div class="flex-1 min-w-0"><div class="ui-tiny text-slate-100 truncate"><b>${r.name}</b>${r.bot ? ' <span class="text-slate-500">(gerado)</span>' : ''}</div>
-              <div class="ui-tiny text-slate-400 truncate">${r.rating} pts · poder ${r.power.toLocaleString('pt-BR')} · ${r.members.map(cls).join(', ')}</div></div>
-            <button data-fight="${r.id}" class="icon-btn ui-btn px-2 py-0.5 text-rose-200">Lutar</button></div>`).join('') || '<div class="ui-tiny text-slate-500">Sem rivais</div>'}
-        </div>
-        <div class="col-span-3 bg-slate-950/60 border border-slate-700/70 rounded-xl p-1.5 flex flex-col gap-0.5">
-          <div class="ui-h2 text-amber-300">RANKING</div>
-          ${ranking.map((t, i) => `<div class="ui-tiny flex justify-between ${t.id === d.myId ? 'text-amber-200' : 'text-slate-300'}"><span class="truncate">${i + 1}. ${t.name}</span><b>${t.rating}</b></div>`).join('') || '<div class="ui-tiny text-slate-500">Ninguém registrado</div>'}
-        </div>
-      </div>`;
-      document.getElementById('arena-reg').onclick = arenaRegister;
-      body.querySelectorAll('[data-fight]').forEach(b => b.onclick = () => arenaStart(b.dataset.fight));
+      const saves = [[SAVE_KEY, 'Save manual'], [AUTOSAVE_KEY, 'Autosave']].map(([k, title]) => {
+        const sm = saveSummary(k);
+        return `<button class="ar-btn" data-reg="${k}" ${sm ? '' : 'disabled'} style="flex:1;text-align:left">${title}<br><span class="ar-sub">${sm ? `Ato ${sm.act} · ${sm.cls} Nv ${sm.lvl}` : 'Vazio'}</span></button>`;
+      }).join('');
+      const rank = arenaRanking(d);
+      document.getElementById('arena-body').innerHTML = `
+        <h4>SEU TIME</h4>
+        <div class="ar-row"><div style="flex:1">${me ? `${me.members.map(cls).join(' · ')}<br><small>${me.info || ''} · poder ${me.power.toLocaleString('pt-BR')}</small>` : '<small>Nenhum time registrado. Escolha um save abaixo.</small>'}</div></div>
+        <h4>REGISTRAR TIME DO SAVE</h4>
+        <div style="display:flex;gap:.4em">${saves}</div>
+        <h4>RANKING <span class="ar-sub">(teste local · times "gerados" são para teste)</span></h4>
+        ${rank.map((t, i) => `<div class="ar-row" style="${t.id === d.myId ? 'border-color:#fde68a' : ''}">
+          <span style="width:1.6em;color:#fde68a">${i + 1}</span>
+          <div style="flex:1;min-width:0">${t.name}${t.bot ? ' <small>(gerado)</small>' : ''}${t.id === d.myId ? ' <small>(você)</small>' : ''}<br>
+            <small>${t.rating} pts · ${t.w | 0}V ${t.l | 0}D · poder ${t.power.toLocaleString('pt-BR')} · ${t.members.map(cls).join(', ')}</small></div>
+          ${t.id === d.myId ? '' : `<button class="ar-btn" data-fight="${t.id}" ${me ? '' : 'disabled'}>Lutar</button>`}
+        </div>`).join('') || '<div class="ar-sub">Registre um time para ver o ranking.</div>'}
+        ${d.hist.length ? `<h4>ÚLTIMAS LUTAS</h4><div class="ar-sub">${d.hist.slice(0, 5).map(h => `<span style="color:${h.win ? '#86efac' : '#fda4af'}">${h.win ? 'V' : 'D'} ${h.rival} (${h.delta > 0 ? '+' : ''}${h.delta})</span>`).join(' · ')}</div>` : ''}`;
+      document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterFromSave(b.dataset.reg));
+      document.querySelectorAll('#arena-body [data-fight]').forEach(b => b.onclick = () => arenaFight(b.dataset.fight));
     }
 
     function renderDrawer5Craft() {
@@ -8371,6 +8395,7 @@
     function openRanking() { renderRanking(); document.getElementById('modal-ranking').classList.remove('hidden'); }
 
     function saveGameProgress(key = SAVE_KEY) {
+      if (state.arenaMode) return; // luta de arena usa uma cópia do save: nada é gravado
       const savePayload = {
         savedAt: Date.now(),
         guideSeen: state.guideSeen || {},
@@ -8592,6 +8617,7 @@
       if (note) note.classList.add('hidden');
       document.getElementById('menu-settings').classList.add('hidden');
       document.getElementById('menu-saves').classList.add('hidden');
+      document.getElementById('menu-arena').classList.add('hidden');
       document.getElementById('menu-buttons').classList.remove('hidden');
     }
 
@@ -8670,6 +8696,7 @@
     };
     document.getElementById('btn-sys-quit').onclick = () => {
       document.getElementById('modal-system-menu').classList.add('hidden');
+      state.arenaMode = null; // sair no meio da arena: luta abandonada
       state.inMainMenu = true;
       refreshMainMenuState();
       document.getElementById('main-menu').classList.remove('hidden');
@@ -8681,6 +8708,11 @@
       startFromMainMenu();
     };
     document.getElementById('menu-btn-continue').onclick = openSavePicker;
+    document.getElementById('menu-btn-arena').onclick = openArenaMenu;
+    document.getElementById('menu-arena-back').onclick = () => {
+      document.getElementById('menu-arena').classList.add('hidden');
+      document.getElementById('menu-buttons').classList.remove('hidden');
+    };
     document.getElementById('menu-btn-settings').onclick = () => {
       syncSettingsUI();
       document.getElementById('menu-buttons').classList.add('hidden');
@@ -10013,7 +10045,7 @@
     // Autosave: salva a cada 30s em jogo e sempre que a página vai para segundo plano
     // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
     function autoSave() {
-      if (state.inMainMenu || SE.open) return;
+      if (state.inMainMenu || SE.open || state.arenaMode) return;
       try { saveGameProgress(AUTOSAVE_KEY); } catch (_e) {}
     }
     setInterval(autoSave, 30000);
