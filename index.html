@@ -2377,7 +2377,9 @@
       const list = cfg.waves[state.waveIdx];
       list.forEach((key, idx) => {
         const db = ENEMIES_DB[key];
-        const sx = db.boss ? 545 : 505 + idx * 46;
+        // nascem FORA da tela (à direita) e entram andando até o time
+        const edge = Math.max(640, VIEW.x1) + 30;
+        const sx = db.boss ? edge + 40 : edge + idx * 46;
         const sy = GROUND_Y; // todos na mesma linha do chão que os aliados
         spawnEnemy(key, sx, sy, cfg.scale);
       });
@@ -3026,6 +3028,7 @@
 
         if (enemies.length > 0) {
           if (a.isCurrentlyMelee() && Math.abs(enemies[0].x - a.x) > 64) continue;
+          if (!a.isCurrentlyMelee() && enemies[0].x > VIEW.x1 - 12) continue; // monstro ainda fora da tela
           a.attackTimer += dt * a.getSpd();
           if (a.attackTimer >= 1.0) {
             a.attackTimer = 0;
@@ -8510,6 +8513,9 @@
       return st;
     }
     function robotRole(s) { const t = state.slotClassTags[s]; return s === 2 ? 'HERO' : (t === 'ARCHER' ? 'ARCHER' : (t === 'MAGE' ? 'MAGE' : 'TANK')); }
+    // potencial do item: valor que ele teria no refino máximo. O robô compara por isso, para não ficar preso
+    // num item fraco muito refinado quando cai um item forte (que, refinado, fica melhor)
+    function robotPotential(inst, role) { return robotScore(Object.assign({}, inst, { plus: BAL.refineMax }), role); }
     function robotScore(inst, role) {
       const w = ROBOT.st.weights[role] || ROBOT.st.weights.HERO, b = instBonuses(inst);
       return b.vit * w.vit + b.pow * w.pow + b.def * w.def + (b.res || 0) * (w.res || 0) + b.spd * w.spd;
@@ -8555,8 +8561,8 @@
         const role = robotRole(s);
         for (const slot of ['HEAD', 'CHEST', 'RIGHT_HAND', 'LEFT_HAND', 'FEET']) {
           const curUid = state.equippedSlots[s][slot], cur = invGet(curUid);
-          let best = cur && canEquipItem(s, cur.id) ? cur : null, bs = best ? robotScore(best, role) : 0;
-          for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id) && levelOkFor(s, i)) { const sc = robotScore(i, role); if (sc > bs) { bs = sc; best = i; } }
+          let best = cur && canEquipItem(s, cur.id) ? cur : null, bs = best ? robotPotential(best, role) : 0;
+          for (const i of getBagItems()) if (ITEMS_DB[i.id].slot === slot && canEquipItem(s, i.id) && levelOkFor(s, i)) { const sc = robotPotential(i, role); if (sc > bs + 1e-6) { bs = sc; best = i; } }
           if (slot === 'LEFT_HAND' && isTwoHanded(state.equippedSlots[s].RIGHT_HAND)) continue;
           if (best && best.uid !== curUid) state.equippedSlots[s][slot] = best.uid;
           if (slot === 'RIGHT_HAND') fixTwoHanded(s, 'RIGHT_HAND');
@@ -8601,7 +8607,7 @@
             if (tier === 'DIVINE' && !(COMBINE_UP_CHANCE[tier] > 0)) continue;
             const bag = getBagItems().filter(i => i.tier === tier), cost = COMBINE_COST[tier];
             if (bag.length >= 3 && state.gold - cost >= reserve) {
-              bag.sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
+              bag.sort((a, b) => robotPotential(a, 'HERO') - robotPotential(b, 'HERO'));
               const three = bag.slice(0, 3); state.gold -= cost;
               const pick = three[Math.floor(Math.random() * 3)];
               const up = Math.random() < COMBINE_UP_CHANCE[tier];
@@ -8617,7 +8623,7 @@
       while (getBagItems().length >= bagCapacity()) {
         const c = INV_TAB_COST[state.invTabs];
         if (state.invTabs < 4 && c !== undefined && state.gold - c >= reserve) { state.gold -= c; state.invTabs++; continue; }
-        const bag = getBagItems().sort((a, b) => robotScore(a, 'HERO') - robotScore(b, 'HERO'));
+        const bag = getBagItems().sort((a, b) => robotPotential(a, 'HERO') - robotPotential(b, 'HERO'));
         if (!bag.length) break;
         if (!robotSalvage(bag[0])) destroyItem(bag[0].uid); // quebra o pior em fragmentos (sem ouro: joga fora)
       }
