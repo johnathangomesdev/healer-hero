@@ -6783,7 +6783,7 @@
           level: a.level, vit: Math.round(a.getVit()), pow: Math.round(a.getPow()), def: Math.round(a.getDef()), res: Math.round(a.getRes()),
           spd: +(a.getSpd() - (a.buffSpd || 0)).toFixed(3), ranged, range: ranged ? Math.max(260, a.range || 0) : Math.min(60, a.range || 42),
           dmg: dmgTypeOf(a), eq: Object.assign({}, visEqOf(s)), power: combatPower(a),
-          mercKey: a.mercKey || null, skLv: a.isHealer ? Object.assign({}, state.skillLevels[state.stance]) : null
+          mercKey: a.mercKey || null, homeX: slotHomeX(s), skLv: a.isHealer ? Object.assign({}, state.skillLevels[state.stance]) : null
         });
       }
       return mem;
@@ -6917,8 +6917,8 @@
       activeEnemies = []; arrowShots = []; physicalDrops = [];
       state.arenaMode.phase = 'enter'; state.arenaMode.t = 0;
       state.isAutoSkill = true; // a arena é automática para os dois times
-      state.cooldowns[2].rem = BAL.cd2 * 0.5; state.cooldowns[3].rem = BAL.cd3; state.arenaSkillLock = 0;
-      for (const s of [0, 1, 2]) if (partySlots[s]) { partySlots[s].ultCd = undefined; partySlots[s].autoCounter = 0; partySlots[s].attackTimer = 0.4; }
+      state.cooldowns[2].rem = 0; state.cooldowns[3].rem = 0; state.arenaSkillLock = 0; // toda luta começa com as skills prontas
+      for (const s of [0, 1, 2]) if (partySlots[s]) { partySlots[s].ultCd = 0; partySlots[s].autoCounter = 0; partySlots[s].attackTimer = 0.4; }
       document.getElementById('lbl-banner').style.opacity = '0'; state.bannerTimer = 0;
       const left = Math.min(0, VIEW.x0 || 0) - 40;
       for (const s of [0, 1, 2]) {
@@ -6937,10 +6937,12 @@
           dmgType: m.dmg, x: edge + k * 45, y: GROUND_Y, range: m.range, speed: 120
         });
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
-        e.arenaHome = HOME[Math.min(k, 2)];
+        // time de jogador: mantém a formação que ele montou (espelhada); times gerados: tanque → corpo a corpo → à distância
+        e.arenaHome = (!rv.bot && Number.isFinite(m.homeX)) ? 640 - m.homeX : HOME[Math.min(k, 2)];
         e.mercKey = m.mercKey || (Object.keys(MERCENARIES_DB).find(q => MERCENARIES_DB[q].name === m.name) || null);
-        e.arenaSk = m.stance ? { lv: m.skLv || { 1: 1, 2: 1, 3: 1 }, cd2: BAL.cd2 * 0.5, cd3: BAL.cd3, lock: 0 } : null;
-        e.arenaRank = k; e.arenaHealer = !!m.healer;
+        e.arenaSk = m.stance ? { lv: m.skLv || { 1: 1, 2: 1, 3: 1 }, cd2: 0, cd3: 0, lock: 0 } : null;
+        e.arenaRank = rv.bot ? k : m.slot; e.arenaHealer = !!m.healer; // recuo do corpo a corpo = o do aliado (38 + 8 × posição)
+        e.ultCd = 0; // ultimate do mercenário pronta no início, igual ao time do jogador
         // compensação por lutar sem skills (BAL.arena)
         e.basePow *= BAL.arena.rivalPow; e.maxHp = Math.round(e.maxHp * BAL.arena.rivalHp); e.hp = e.maxHp;
         activeEnemies.push(e);
