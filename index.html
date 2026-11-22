@@ -6546,6 +6546,7 @@
               <span class="ui-num text-amber-300">Lv.${ally.level}</span>
             </div>
             <canvas class="team-preview-cvs my-0.5" width="44" height="50"></canvas>
+            <div class="w-full flex justify-between ui-num text-rose-300 mb-0.5" data-tip="<b>Poder de combate</b><br>Resumo da força: vida × dano × velocidade de ataque, com bônus da defesa e resistência."><span>⚔ Poder</span><span>${combatPower(ally).toLocaleString('pt-BR')}</span></div>
             <div class="w-full space-y-1">
               <div>
                 <div class="flex justify-between ui-num text-emerald-300"><span>HP</span><span>${Math.ceil(ally.hp)}/${ally.maxHp}</span></div>
@@ -8491,6 +8492,11 @@
     function robotScore(inst, role) {
       const w = ROBOT.st.weights[role] || ROBOT.st.weights.HERO, b = instBonuses(inst);
       return b.vit * w.vit + b.pow * w.pow + b.def * w.def + (b.res || 0) * (w.res || 0) + b.spd * w.spd;
+    }
+    // poder de combate exibido no card do Time: vida × dano × ataques/s, com bônus de DEF/RES
+    function combatPower(a) {
+      const def = (a.getDef ? a.getDef() : 0) + (a.getRes ? a.getRes() : 0) * 0.5;
+      return Math.round(Math.sqrt(Math.max(1, a.maxHp) * Math.max(1, a.getPow()) * Math.max(0.1, a.getSpd())) * (1 + def * 0.02) * 10);
     }
     function robotPower(e) { return Math.sqrt(e.maxHp * Math.max(1, e.getPow()) * e.getSpd()); }
     // Exorcista: o tanque do time é o Paladino (cura e protege), nunca o Guerreiro Vanguarda
