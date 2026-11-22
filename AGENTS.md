@@ -186,3 +186,5 @@
 - (2026-11-22) Grupos do PSD `barbaro` → skin `barbarian` (`bb_*`, itens LEATHER_HELM/ARMOR/BOOTS), `santo` → `saintPsd` (`sn_*`, SAINT_HOOD/ROBE/BOOTS; no PSD os dois pés estavam no mesmo lugar, o `outfit.py` joga o duplicado para o outro lado), `exorcista` → `exorcistPsd` (`xo_*`, EXO_HOOD/ROBE/BOOTS; cabeça do grupo ignorada = igual à do aldeão). Mãos e coxas = as do aldeão.
 
 - (2026-11-22) **Modelos fixos do editor**: Herói Santo/Exorcista/Monge (HEALER.*), Pai (FATHER: também Vanguarda e Paladino), Arqueiro (ARCHER: também a Filha e a arqueira mercenária), Bárbaro (BARBARIAN: tanque com LEATHER_ARMOR). `sprScopeOf(ent, stance, eq)`. O resto são equipamentos. Filha = corpo do aldeão (`HUMAN_SKINS.sister` = base + `s_hair`, cílios e `s_torso`; torso feminino pendente).
+
+- (2026-11-22) Grupo `mago` do PSD → `HUMAN_SKINS.mage` (`mz_*`; chapéu = `cowl` com cabelo próprio; luvas = `knight.hand`; cabeça/coxas do aldeão). Itens MAGE_HAT/ROBE/BOOTS. Modelo fixo `MAGE` no editor. `outfit.py` agora reconhece a camada `chapel`/`chapeu` como elmo.
