@@ -2864,6 +2864,7 @@
     let finalBlowDone = false;
     function startSlowMo(sec, scale, cb) { SLOWMO.t = sec; SLOWMO.scale = scale; SLOWMO.cb = cb; }
     function updateSimulation(dt) {
+      if (state.arenaMode && state.arenaMode.phase !== 'fight') { arenaIntroTick(dt); return; }
       if (SLOWMO.t > 0) {
         SLOWMO.t -= dt;
         dt *= SLOWMO.scale;
@@ -6736,21 +6737,72 @@
       state.waveTrans = null; state.isScrolling = false; state.isDefeated = false; state.isVictory = false; state.waveClearing = false;
       document.getElementById('modal-defeat').classList.add('hidden'); document.getElementById('modal-victory').classList.add('hidden');
       activeEnemies = []; arrowShots = []; physicalDrops = [];
-      for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.faction === 'ALLY') { a.isDead = false; a.deathTimer = 0; a.recalcStats(true); a.x = a.homeX = slotHomeX(s); a.y = GROUND_Y; } }
+      state.arenaMode.phase = 'enter'; state.arenaMode.t = 0;
+      document.getElementById('lbl-banner').style.opacity = '0'; state.bannerTimer = 0;
+      const left = Math.min(0, VIEW.x0 || 0) - 40;
+      for (const s of [0, 1, 2]) {
+        const a = partySlots[s];
+        if (a && a.faction === 'ALLY') { a.isDead = false; a.deathTimer = 0; a.recalcStats(true); a.homeX = slotHomeX(s); a.x = left - (2 - s) * 0 - (300 - a.homeX) * 0.35; a.y = GROUND_Y; a.facing = 1; a.anim = null; }
+      }
       const edge = Math.max(640, VIEW.x1) + 30;
-      for (const m of rv.members) {
+      // formação do rival: Guerreiro/Paladino na frente, depois o resto do corpo a corpo, à distância atrás
+      const rank = m => (m.ranged ? 2 : 0) + (m.rig === 'TANK' ? 0 : 1);
+      const order = rv.members.slice().sort((a, b) => rank(a) - rank(b));
+      const HOME = [640 - POS_X[2], 640 - POS_X[1], 640 - POS_X[0]]; // frente → trás (espelho da nossa formação)
+      order.forEach((m, k) => {
         const e = new CombatEntity({
           name: m.name, rig: m.rig, faction: 'UNDEAD', isVillager: m.villager, isRanged: m.ranged,
           stats: { vit: m.vit, pow: m.pow, def: m.def, res: m.res, spd: m.spd },
-          dmgType: m.dmg, x: edge + (2 - m.slot) * 40, y: GROUND_Y, range: m.range, speed: 110
+          dmgType: m.dmg, x: edge + k * 45, y: GROUND_Y, range: m.range, speed: 110
         });
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
-        e.arenaHome = 640 - slotHomeX(m.slot);
+        e.arenaHome = HOME[Math.min(k, 2)];
         activeEnemies.push(e);
-      }
-      showBanner(`ARENA: ${rv.name} (${rv.rating}) entra em campo!`);
-      sfx.play('SKILL');
+      });
+      arenaOverlay(`<div style="font-size:22px;color:#fecaca">${rv.name}</div><div style="font-size:11px;color:#fde68a">${rv.rating} pts · poder ${rv.power.toLocaleString('pt-BR')}</div>`, 0);
       refreshAllUI();
+    }
+    // texto grande no centro da tela (contagem, VITÓRIA/DERROTA). ttl > 0 some sozinho.
+    function arenaOverlay(html, ttl) {
+      let el = document.getElementById('arena-overlay');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'arena-overlay';
+        el.style.cssText = 'position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;z-index:25;font-family:"Lilita One",sans-serif;color:#fff;text-shadow:0 3px 0 #1b1220,0 0 10px rgba(0,0,0,.6)';
+        document.getElementById('hud-root').appendChild(el);
+      }
+      el.innerHTML = html; el.style.display = html ? '' : 'none';
+      clearTimeout(el._t); if (html && ttl) el._t = setTimeout(() => { el.style.display = 'none'; }, ttl);
+    }
+    // entrada: os dois times andam até a formação → contagem 3, 2, 1 → LUTEM!
+    function arenaIntroTick(dt) {
+      const A = state.arenaMode; if (A.ended) return; A.t += dt;
+      const walk = (e, home, dir) => {
+        const left = (home - e.x) * dir;
+        if (left > 0.5) { e.x += dir * Math.min(left, 120 * dt); e.isMoving = true; e.animTime += dt * 7.5; }
+        else { e.x = home; e.isMoving = false; e.animTime += dt * 2.6; }
+        e.facing = e.faction === 'ALLY' ? 1 : -1;
+        if (e.isMoving) { e.dustT = (e.dustT || 0) - dt; if (e.dustT <= 0) { e.dustT = 0.18; spawnDust(e.x - e.facing * 6, GROUND_Y, -e.facing, 2); } }
+        return !e.isMoving;
+      };
+      let ready = true;
+      for (const a of getLivingAllies()) ready = walk(a, a.homeX, 1) && ready;
+      for (const e of activeEnemies) ready = walk(e, e.arenaHome, -1) && ready;
+      dustPuffs.forEach(p => { p.ttl -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.r += p.grow * dt; });
+      dustPuffs = dustPuffs.filter(p => p.ttl > 0);
+      if (A.phase === 'enter' && (ready || A.t > 6)) { A.phase = 'count'; A.t = 0; A.shown = 0; }
+      if (A.phase === 'count') {
+        const n = 3 - Math.floor(A.t);
+        if (n >= 1 && A.shown !== n) {
+          A.shown = n; sfx.play('HIT');
+          arenaOverlay(`<div style="font-size:72px;line-height:1;color:#fde68a;-webkit-text-stroke:2px #1b1220">${n}</div>`, 0);
+        }
+        if (A.t >= 3) {
+          A.phase = 'fight';
+          for (const e of activeEnemies) e.attackTimer = 0.4;
+          sfx.play('SKILL');
+          arenaOverlay('<div style="font-size:56px;line-height:1;color:#f87171;-webkit-text-stroke:2px #1b1220">LUTEM!</div>', 700);
+        }
+      }
     }
     function arenaEnd(win) {
       const A = state.arenaMode; if (!A || A.ended) return;
@@ -6767,12 +6819,14 @@
       d.hist = d.hist.slice(0, 20);
       arenaSave(d);
       sfx.play(win ? 'STAGE_CLEAR' : 'DEFEAT');
-      showBanner(win ? `VITÓRIA na Arena! +${delta} pontos (${d.rating})` : `Derrota na Arena… ${delta} pontos (${d.rating})`);
-      setTimeout(arenaExit, 2400);
+      arenaOverlay(`<div style="display:inline-block;padding:8px 36px 10px;border-radius:14px;background:radial-gradient(ellipse at center,rgba(10,8,16,.82),rgba(10,8,16,.55) 70%,rgba(10,8,16,0))"><div style="font-size:64px;line-height:1;color:${win ? '#fde047' : '#f87171'};-webkit-text-stroke:2px #1b1220;text-shadow:0 0 18px ${win ? '#f59e0b' : '#b91c1c'},0 4px 0 #1b1220">${win ? 'VITÓRIA' : 'DERROTA'}</div>
+        <div style="font-size:16px;margin-top:6px;color:${delta >= 0 ? '#86efac' : '#fda4af'}">${delta >= 0 ? '+' : ''}${delta} pts</div><div style="font-size:10px;color:#e2e8f0">${d.rating} pts · ${d.w}V ${d.l}D</div></div>`, 0);
+      setTimeout(arenaExit, 3200);
     }
     // volta para a tela da Arena no menu inicial (o estado carregado do save é descartado)
     function arenaExit() {
       state.arenaMode = null; activeEnemies = []; arrowShots = [];
+      arenaOverlay('');
       state.inMainMenu = true;
       if (state.activeDrawer >= 0) toggleDrawer(state.activeDrawer);
       refreshMainMenuState();
@@ -8567,7 +8621,7 @@
         updateSkillBarIcons();
         startStage(data.stageId || (state.tutorialCompleted ? '2-1' : '1-1'));
         sfx.play('STAGE_CLEAR');
-        showBanner(key === AUTOSAVE_KEY ? 'Autosave carregado!' : 'Progresso carregado!');
+        if (key !== 'hh_arena_tmp_save') showBanner(key === AUTOSAVE_KEY ? 'Autosave carregado!' : 'Progresso carregado!');
         return true;
       } catch (_err) {
         showBanner('Erro ao carregar o save.');
