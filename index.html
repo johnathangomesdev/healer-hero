@@ -1679,9 +1679,9 @@
         cost1: 12, cost2: 18, cost3: 30, costGrowth: 1.5, passBase: 1.25, sk2Base: 1.65, ultBase: 2.40, perLevel: 0.35, cd2: 6, cd3: 14,
         fragYield: 5, fragPerPlus: 2, fragRefine: 1, fragTrade: 3, salvageCost: null,
         goldMult: 0.7, actBonus: 0.3,
-        // Arena: rivais lutam SEM skills/curas/ultimates, então recebem um bônus de vida e de dano (rivalHp/rivalPow)
-        // para poder igual dar ~50% de vitória. botMin/botMax = força dos times gerados (× poder do seu time).
-        arena: { rivalHp: 1.8, rivalPow: 1.25, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+        // Arena: rivais usam as mesmas skills (tickArenaRivalSkills); rivalHp/rivalPow = bônus pequeno porque a IA
+        // é menos esperta que o jogador (poder igual ≈ 55-60% de vitória do jogador). botMin/botMax = força dos times gerados (× poder do seu time).
+        arena: { rivalHp: 1.2, rivalPow: 1.05, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -2813,6 +2813,76 @@
         ctx.restore();
       }
     }
+    // ARENA: skills dos rivais (mesmas fórmulas do jogador, com os alvos invertidos)
+    function tickArenaRivalSkills(dt) {
+      const foes = getLivingAllies();                                    // inimigos do rival = o time do jogador
+      const mates = activeEnemies.filter(e => e.arena && !e.isDead);     // aliados do rival
+      if (!foes.length) return;
+      const nearest = e => foes.slice().sort((a, b) => Math.abs(a.x - e.x) - Math.abs(b.x - e.x))[0];
+      const shout = (e, txt, col) => { spawnFloatingText(e.x, e.y - 66, txt + '!', col); sfx.play('SKILL'); };
+      for (const e of mates) {
+        if (e.hitstopTimer > 0 || (e.anim && e.anim.kind !== 'ATTACK')) { if (e.arenaSk) { e.arenaSk.cd2 -= dt; e.arenaSk.cd3 -= dt; } if (e.ultCd !== undefined) e.ultCd -= dt; continue; }
+        const pow = e.getPow();
+        // --- herói rival: Ativa 1 e Ultimate
+        if (e.arenaSk) {
+          const S = e.arenaSk, st = e.arenaStance, nm = SKILLS_DB[st] ? SKILLS_DB[st].nodes : {}, col = SKILLS_DB[st] ? SKILLS_DB[st].color : '#fff';
+          S.cd2 -= dt; S.cd3 -= dt;
+          const title = k => (nm[k] ? nm[k].title.replace(/\s*\(.*\)$/, '') : 'Skill');
+          const hurt = mates.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (S.cd3 <= 0) {
+            const mult = BAL.ultBase + (S.lv[3] - 1) * BAL.perLevel;
+            if (st === 'SAINT') {
+              if (!mates.some(a => a.hp < a.maxHp * 0.8)) { S.cd3 = 0.5; }
+              else { S.cd3 = BAL.cd3; shout(e, title(3), col); e.triggerAttackAnim(() => { for (const a of activeEnemies) if (a.arena && !a.isDead) a.receiveHeal(pow * mult * 0.85, 0.30); }, 'ULTIMATE'); continue; }
+            } else {
+              S.cd3 = BAL.cd3; shout(e, title(3), col);
+              e.triggerAttackAnim(() => { for (const a of getLivingAllies()) a.receiveDamage(pow * mult * 0.85, e, st !== 'MONK', true); }, 'ULTIMATE');
+              continue;
+            }
+          }
+          if (S.cd2 <= 0) {
+            const mult = BAL.sk2Base + (S.lv[2] - 1) * BAL.perLevel;
+            if (st === 'SAINT') {
+              if (!hurt || hurt.hp > hurt.maxHp * 0.7) { S.cd2 = 0.5; }
+              else { S.cd2 = BAL.cd2; shout(e, title(2), col); e.triggerAttackAnim(() => { if (!hurt.isDead) hurt.receiveHeal(pow * mult, 0.25); }, 'SKILL'); continue; }
+            } else {
+              const t = nearest(e); S.cd2 = BAL.cd2; shout(e, title(2), col);
+              const dmg = st === 'MONK' ? (pow + e.getVit() * 0.4) * mult : pow * mult;
+              e.triggerAttackAnim(() => { if (!t.isDead) t.receiveDamage(dmg, e, st !== 'MONK', true); }, 'SKILL');
+              continue;
+            }
+          }
+        }
+        // --- mercenário rival: ultimate
+        const U = e.mercKey && MERC_ULT[e.mercKey];
+        if (!U) continue;
+        if (e.ultCd === undefined) e.ultCd = U.cd * 0.5;
+        e.ultCd -= dt;
+        if (e.ultCd > 0) continue;
+        if (e.mercKey === 'PALADIN') {
+          if (e.hp / e.maxHp > 0.55) continue;
+          e.ultCd = U.cd; shout(e, U.name, '#fde68a');
+          e.triggerAttackAnim(() => { e.receiveHeal(e.maxHp * 0.3 + pow * 1.6, 0); shockwaveRings.push({ x: e.x, y: e.y - 18, color: '#fde68a', maxR: 46, ttl: 0.5, maxTtl: 0.5 }); }, 'ULTIMATE');
+        } else if (e.mercKey === 'MAGE') {
+          e.ultCd = U.cd; shout(e, U.name, '#93c5fd');
+          e.triggerAttackAnim(() => { for (const a of getLivingAllies()) { a.receiveDamage(pow * 1.6, e, true, false); shockwaveRings.push({ x: a.x, y: a.y - 16, color: '#60a5fa', maxR: 40, ttl: 0.45, maxTtl: 0.45 }); beams.push({ x: a.x, y: a.y, color: '#93c5fd', w: 14, ttl: 0.5, maxTtl: 0.5 }); } }, 'ULTIMATE');
+        } else if (e.mercKey === 'ELVEN_ARCHER') {
+          e.ultCd = U.cd; shout(e, U.name, '#fde047');
+          e.triggerAttackAnim(() => {
+            const tg = getLivingAllies();
+            for (const a of tg) for (let k = 0; k < 5; k++) arrowRain.push({ x: a.x + (Math.random() - 0.5) * 40, t: -k * 0.05 - Math.random() * 0.05, fall: 0.32 });
+            setTimeout(() => { for (const a of tg) if (!a.isDead) a.receiveDamage(pow * 1.7, e, false, false); }, 360);
+          }, 'ULTIMATE');
+        } else {
+          if (!foes.some(a => Math.abs(a.x - e.x) <= 95)) continue;
+          e.ultCd = U.cd; shout(e, U.name, '#e0f2fe');
+          e.triggerAttackAnim(() => {
+            for (const a of getLivingAllies()) if (Math.abs(a.x - e.x) <= 95) a.receiveDamage(pow * 2.3, e, false, true);
+            shockwaveRings.push({ x: e.x + 30 * e.facing, y: e.y - 14, color: '#e0f2fe', maxR: 80, ttl: 0.45, maxTtl: 0.45 }); triggerShake(3, 0.2);
+          }, 'ULTIMATE');
+        }
+      }
+    }
     function tryCastHeroSkill(slot) {
       const healer = partySlots[2];
       if (!healer || healer.isDead) return false;
@@ -2985,6 +3055,7 @@
       }
 
       tickMercUltimates(dt);
+      if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) tickArenaRivalSkills(dt);
       if (state.isAutoSkill && !state.isDefeated && !state.isVictory && !state.awaitingAct2Lock) {
         if (state.cooldowns[3].rem <= 0) tryCastHeroSkill(3);
         else if (state.cooldowns[2].rem <= 0) tryCastHeroSkill(2);
@@ -3169,6 +3240,10 @@
             e.triggerAttackAnim(() => {
               if (e.isDead || victim.isDead) return;
               const hit = () => { if (!victim.isDead) victim.receiveDamage(dmg, e, e.dmgType === 'MAG'); };
+              if (e.arenaSk && e.arenaStance === 'SAINT' && ++e.arenaSk.hits % 3 === 0) { // passiva do Santo
+                const hurt = activeEnemies.filter(x => x.arena && !x.isDead).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+                if (hurt && hurt.hp < hurt.maxHp) hurt.receiveHeal(e.getPow() * (BAL.passBase + (e.arenaSk.lv[1] - 1) * BAL.perLevel) * 0.6, 0);
+              }
               if (e.arena && e.isRanged) { // rival à distância: flecha ou esfera mágica
                 if (e.rig === 'ARCHER') fireArrow(e, victim, hit);
                 else fireBolt(e, victim, hit, MAGIC_COL[e.arenaStance] || MAGIC_COL.MAGE, true);
@@ -6641,7 +6716,8 @@
           slot: s, name: a.name, rig: a.rig, healer: !!a.isHealer, stance: a.isHealer ? state.stance : null, villager: !!a.isVillager,
           level: a.level, vit: Math.round(a.getVit()), pow: Math.round(a.getPow()), def: Math.round(a.getDef()), res: Math.round(a.getRes()),
           spd: +(a.getSpd() - (a.buffSpd || 0)).toFixed(3), ranged, range: ranged ? Math.max(260, a.range || 0) : Math.min(60, a.range || 42),
-          dmg: dmgTypeOf(a), eq: Object.assign({}, visEqOf(s)), power: combatPower(a)
+          dmg: dmgTypeOf(a), eq: Object.assign({}, visEqOf(s)), power: combatPower(a),
+          mercKey: a.mercKey || null, skLv: a.isHealer ? Object.assign({}, state.skillLevels[state.stance]) : null
         });
       }
       return mem;
@@ -6682,14 +6758,15 @@
     function arenaBotMembers(heroStance, mercs, lvl) {
       const out = [];
       const H = ARENA_HERO[heroStance], hs = BAL.hero;
-      out.push({ slot: 2, name: 'Herói', rig: 'HEALER', healer: true, stance: heroStance, villager: true, level: lvl,
+      const sl = Math.min(10, 1 + Math.floor(lvl / 8));
+      out.push({ slot: 2, name: 'Herói', rig: 'HEALER', healer: true, stance: heroStance, villager: true, level: lvl, skLv: { 1: sl, 2: sl, 3: sl },
         vit: hs.vit, pow: hs.pow, def: hs.def, res: Number.isFinite(hs.res) ? hs.res : Math.round(hs.def * 0.5), spd: hs.spd,
         ranged: H.ranged, range: H.ranged ? 420 : 42, dmg: H.dmg, eq: Object.assign({ LEFT_HAND: '' }, H.eq) });
       mercs.forEach((k, idx) => {
         const m = MERCENARIES_DB[k], eq = { HEAD: '', CHEST: '', RIGHT_HAND: '', LEFT_HAND: '', FEET: '' };
         for (const id of m.gear || []) if (ITEMS_DB[id]) eq[ITEMS_DB[id].slot] = id;
         const rg = mercIsRanged(m);
-        out.push({ slot: idx, name: m.name, rig: m.rig, healer: false, stance: null, villager: false, level: lvl,
+        out.push({ slot: idx, name: m.name, rig: m.rig, healer: false, stance: null, villager: false, level: lvl, mercKey: k,
           vit: m.stats.vit, pow: m.stats.pow, def: m.stats.def, res: Number.isFinite(m.stats.res) ? m.stats.res : Math.round(m.stats.def * 0.5), spd: m.stats.spd,
           ranged: rg, range: rg ? mercRange(m) : 42, dmg: m.dmgType || 'PHYS', eq });
       });
@@ -6761,6 +6838,8 @@
         });
         e.arena = true; e.arenaEq = m.eq; e.arenaStance = m.stance; e.level = m.level;
         e.arenaHome = HOME[Math.min(k, 2)];
+        e.mercKey = m.mercKey || (Object.keys(MERCENARIES_DB).find(q => MERCENARIES_DB[q].name === m.name) || null);
+        e.arenaSk = m.stance ? { lv: m.skLv || { 1: 1, 2: 1, 3: 1 }, cd2: BAL.cd2 * 0.6, cd3: BAL.cd3 * 0.7, hits: 0 } : null;
         // compensação por lutar sem skills (BAL.arena)
         e.basePow *= BAL.arena.rivalPow; e.maxHp = Math.round(e.maxHp * BAL.arena.rivalHp); e.hp = e.maxHp;
         activeEnemies.push(e);
