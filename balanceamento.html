@@ -199,6 +199,20 @@ const ROLE_PT = { TANK: 'Tanque', ARCHER: 'Arqueiro' };
 
 const DEFAULTS = {
   version: 7, // mude junto com BAL_VERSION do jogo quando as regras mudarem
+  // drops procedurais (igual a DROP_DEF do index.html). c,u,r,m,l,d = % de Comum, Incomum, Raro, Mítico, Lendário, Divino
+  drops: { normalChance: 0.07, bossChance: 1, weaponPct: 0.6, typeBias: 3,
+    exclude: 'CLOTH_SHIRT, CLOTH_BOOTS, OLD_SWORD, WOOD_BUCKLER, HUNTING_BOW, WOODEN_STAFF, EXORCIST_ORB, EMERALD_CLOAK',
+    mobs: [
+      { id: 'CORRUPTED_SLIME', type: 'PHYS', lvl: 0, c: 80, u: 15, r: 5, m: 0, l: 0, d: 0 },
+      { id: 'MINI_CORRUPTED_SLIME', type: 'PHYS', lvl: 0, c: 90, u: 9, r: 1, m: 0, l: 0, d: 0 },
+      { id: 'TUTORIAL_WOLF', type: 'PHYS', lvl: 0, c: 80, u: 15, r: 5, m: 0, l: 0, d: 0 },
+      { id: 'ZOMBIE_WOLF', type: 'PHYS', lvl: 1, c: 70, u: 22, r: 8, m: 0, l: 0, d: 0 },
+      { id: 'CORRUPTED_BEAR', type: 'PHYS', lvl: 2, c: 60, u: 28, r: 12, m: 0, l: 0, d: 0 },
+      { id: 'SLIME_ALPHA', type: 'PHYS', lvl: 3, c: 40, u: 35, r: 20, m: 5, l: 0, d: 0 },
+      { id: 'ALPHA_DEMON_WOLF', type: 'PHYS', lvl: 3, c: 35, u: 35, r: 22, m: 8, l: 0, d: 0 },
+      { id: 'BEAR_ALPHA', type: 'PHYS', lvl: 4, c: 30, u: 35, r: 25, m: 10, l: 0, d: 0 },
+      { id: 'ZOMBIE_MAGE_BOSS', type: 'MAG', lvl: 5, c: 10, u: 25, r: 30, m: 25, l: 10, d: 0 }
+    ] },
   general: { goldMult: 0.7, actBonus: 0.3, secondMercMin: 1000, targetMin: 30, runs: 30, actTargets: [4, 6, 6, 7, 7], timeFactor: 1.0, collectPct: 100, startDpe: 15,
     waveGap: 0.95, stageGap: 0.95, actEndSec: 4, tutorialSec: 45, menuSecPerAct: 15, critChance: 0.22, critMult: 1.65, defMit: 0.62, hpBase: 45, hpPerVit: 9.5 },
   progression: { expBase: 60, expGrowth: 1.40, ptsPerLevel: 3, vitPerPt: 3, powPerPt: 3, defPerPt: 2, spdPerPt: 0.08 },
@@ -464,15 +478,25 @@ function simulate(P, seed) {
         if (e.splits && e.alive > 4.5) { enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x - 16)); enemies.push(mkEnemy('MINI_CORRUPTED_SLIME', 1, e.x + 16)); }
         // drops de item
         if (e.sister) giveItem('EMERALD_CLOAK');
-        else if (stage.drops[e.key]) { const it = itemsById[stage.drops[e.key]]; const c = Math.min(TIERS.indexOf(it.tier), e.key === 'ZOMBIE_MAGE_BOSS' ? 5 : dropCap(e.key)); giveItem(it.id, TIERS[c]); }
-        else if (stage.id === '1-1' && !S.owned.has('WOODEN_ROSARY') && rnd() < 0.7) giveItem('WOODEN_ROSARY');
-        else if (stage.id === '2-1' && !S.owned.has('PILGRIM_SANDALS') && rnd() < 0.6) giveItem('PILGRIM_SANDALS');
-        else if (!S.tutorial && rnd() < IT.dropChance) {
-          const pool = P.itemList.filter(i => i.pool).map(i => i.id);
-          if (pool.length) { const fresh = pool.filter(id => !S.owned.has(id)); const list = fresh.length ? fresh : pool; giveItem(list[Math.floor(rnd() * list.length)], rollTier(dropCap(e.key))); }
+        else if (!S.tutorial) {
+          // drop procedural (igual ao jogo): comum só equipamento; alfa/chefe pode dar arma; tipo de dano pesa
+          const DR = P.drops, rule = DR.mobs.find(m => m.id === e.key) || DR.mobs[0];
+          if (rnd() < (e.boss ? DR.bossChance : DR.normalChance)) {
+            const ex = String(DR.exclude || '').split(',').map(x => x.trim());
+            const weapon = e.boss && rnd() < DR.weaponPct;
+            const ids = P.itemList.filter(i => !ex.includes(i.id) && ((i.slot === 'RIGHT_HAND' || i.slot === 'LEFT_HAND') === weapon) && itemsById[i.id]);
+            if (ids.length) {
+              const isMag = i => String(i.classes).split(',').some(c => ['SAINT', 'EXORCIST', 'MAGE'].includes(c.trim()));
+              const w = ids.map(i => weapon && (isMag(i) ? 'MAG' : 'PHYS') === rule.type ? (+DR.typeBias || 1) : 1);
+              let r = rnd() * w.reduce((s, v) => s + v, 0), pick = ids[0];
+              for (let k = 0; k < ids.length; k++) { r -= w[k]; if (r <= 0) { pick = ids[k]; break; } }
+              const rar = ['c', 'u', 'r', 'm', 'l', 'd'].map(k => +rule[k] || 0); let q = rnd() * (rar.reduce((s, v) => s + v, 0) || 1), ti = 0;
+              for (let k = 0; k < rar.length; k++) { q -= rar[k]; if (q <= 0) { ti = k; break; } }
+              giveItem(pick.id, TIERS[Math.min(ti, TIERS.length - 1)]);
+            }
+          }
         }
-      }
-      function hit(e, raw, holy, forceCrit, byHero) {
+      }      function hit(e, raw, holy, forceCrit, byHero) {
         if (e.dead) return;
         let dmg = raw * (forceCrit ? G.critMult : critExp);
         if (e.key.includes('SLIME') && !holy) dmg *= 0.8;
@@ -906,7 +930,7 @@ function drawHp(rep) {
 // ============================================================================
 const TABS = [
   ['geral', 'Geral'], ['prog', 'Nível & atributos'], ['skills', 'Skills'], ['itens', 'Itens & craft'], ['lista', 'Lista de itens'],
-  ['inimigos', 'Monstros'], ['fases', 'Fases'], ['mercs', 'Mercenários'], ['herois', 'Família (tutorial)'], ['estrategia', 'Estratégia do jogador']
+  ['inimigos', 'Monstros'], ['fases', 'Fases'], ['mercs', 'Mercenários'], ['herois', 'Família (tutorial)'], ['drops', 'Drops'], ['estrategia', 'Estratégia do jogador']
 ];
 let activeTab = 'geral';
 try { activeTab = localStorage.getItem('hh_balance_tab') || 'geral'; } catch (e) {}
@@ -943,9 +967,15 @@ function renderTabs() {
     { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'pool', label: 'No sorteio', type: 'bool' }]);
   else if (activeTab === 'inimigos') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Status no nível 1. Cada fase multiplica VIT, POW, DEF, ouro, DPE e EXP pela escala da fase (velocidade de ataque não escala).</p>` + tableEditor('enemies', [
     { key: 'name', label: 'Nome', sm: true }, { key: 'id', label: 'ID', sm: true }, { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'Ataques/s', type: 'num' },
-    { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]) + monsterDropTable();
+    { key: 'speed', label: 'Andar (px/s)', type: 'num' }, { key: 'range', label: 'Alcance', type: 'num' }, { key: 'gold', label: 'Ouro', type: 'num' }, { key: 'dpe', label: 'DPE', type: 'num' }, { key: 'exp', label: 'EXP', type: 'num' }, { key: 'splits', label: 'Divide', type: 'bool' }, { key: 'boss', label: 'Chefe', type: 'bool' }]);
   else if (activeTab === 'fases') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Ondas separadas por <b>|</b>, monstros por vírgula, usando o ID do monstro. Drop fixo no formato <b>ID_DO_MONSTRO:ID_DO_ITEM</b>.</p>` + tableEditor('stages', [
     { key: 'id', label: 'Fase', sm: true }, { key: 'scale', label: 'Escala', type: 'num' }, { key: 'waves', label: 'Ondas' }, { key: 'drop', label: 'Drop fixo' }]) + stageTable();
+  else if (activeTab === 'drops') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Drops 100% procedurais, sem drops fixos. <b>Monstros comuns</b> só dropam <b>equipamento</b> (cabeça, peito, pés). <b>Alfas e chefes</b> são os únicos que dropam <b>armas</b> (mãos). Todas as peças de todas as classes têm a mesma chance. Nas armas, o tipo de dano do monstro pesa: armas do mesmo tipo (Mágico = Santo, Exorcista, Mago; Físico = as outras) ficam “peso” vezes mais prováveis. Nível do item = nível do monstro = nível da zona + bônus do monstro. Dificuldades acima do Normal sobem a raridade sorteada em tiers.</p>
+    <div class="fields">${fld('drops.normalChance', 'Chance de drop — monstro comum (0–1)')}${fld('drops.bossChance', 'Chance de drop — alfa/chefe (0–1)')}${fld('drops.weaponPct', 'Alfa/chefe: chance de ser arma (0–1)')}${fld('drops.typeBias', 'Peso de arma do mesmo tipo de dano (×)')}</div>
+    <label class="field" style="margin:8px 0"><span>Itens que nunca caem (IDs, separados por vírgula: itens iniciais)</span><input type="text" data-path="drops.exclude" value="${esc(P.drops.exclude)}" style="width:100%"></label>
+    <div class="group-title">Raridade (%) e nível por monstro</div>` + tableEditor('drops.mobs', [
+    { key: 'id', label: 'Monstro (ID)', sm: true }, { key: 'type', label: 'Tipo de dano', type: 'select', opts: [['PHYS', 'Físico'], ['MAG', 'Mágico']] }, { key: 'lvl', label: '+Nível', type: 'num' },
+    { key: 'c', label: 'Comum %', type: 'num' }, { key: 'u', label: 'Incomum %', type: 'num' }, { key: 'r', label: 'Raro %', type: 'num' }, { key: 'm', label: 'Mítico %', type: 'num' }, { key: 'l', label: 'Lendário %', type: 'num' }, { key: 'd', label: 'Divino %', type: 'num' }]) + dropPoolTable() + monsterDropTable();
   else if (activeTab === 'mercs') b.innerHTML = `<p class="sub" style="margin-bottom:8px">Mercenários entram sempre no nível 1. As duas linhas “sugestão” não existem no jogo: ative para testar mercenários mais fortes liberados em fases mais adiante. Equipamento inicial: IDs de itens, que entram no tier Comum.</p>` + tableEditor('mercs', [
     { key: 'active', label: 'Ativo', type: 'bool' }, { key: 'name', label: 'Nome', sm: true }, { key: 'role', label: 'Função', type: 'select', opts: [['TANK', 'Tanque'], ['ARCHER', 'Arqueiro']] }, { key: 'cost', label: 'Preço', type: 'num' },
     { key: 'vit', label: 'VIT', type: 'num' }, { key: 'pow', label: 'POW', type: 'num' }, { key: 'def', label: 'DEF', type: 'num' }, { key: 'spd', label: 'SPD', type: 'num' }, { key: 'unlock', label: 'Liberado em', type: 'select', opts: stageOpts }, { key: 'gear', label: 'Equipamento inicial' }]);
@@ -980,14 +1010,31 @@ const DIFF_NAMES = ['Normal', 'Difícil', 'Insano', 'Infernal'];
 function monsterDropTable() {
   const acts = {};
   P.stages.forEach(s => { const a = +String(s.id).split('-')[0]; String(s.waves).split('|').forEach(w => w.split(',').map(k => k.trim()).forEach(k => { if (k) (acts[k] = acts[k] || new Set()).add(a); })); });
-  const TN = ['Comum', 'Incomum', 'Raro', 'Mítico', 'Lendário'];
-  const rows = P.enemies.map(e => {
+    const rows = P.enemies.map(e => {
     const as = [...(acts[e.id] || [])].sort((a, b) => a - b);
-    const cap = e.id === 'ZOMBIE_MAGE_BOSS' ? 4 : e.boss ? 3 : 2;
-    const lv = DIFF_NAMES.map((_, c) => { if (!as.length) return '—'; const v = [...new Set(as.map(a => ACT_ITEM_LVL[c][Math.min(4, a - 1)]))]; return v.length > 1 ? `${Math.min(...v)}–${Math.max(...v)}` : v[0]; });
-    return `<tr><td>${esc(e.name)}</td><td>${as.length ? as.join(', ') : '—'}</td>${lv.map(v => `<td class="r">${v}</td>`).join('')}<td>até ${TN[cap]}</td></tr>`;
+    const dm = (P.drops.mobs.find(m => m.id === e.id) || {}), add = +dm.lvl || 0;
+    const sum = ['c', 'u', 'r', 'm', 'l', 'd'].reduce((s, k) => s + (+dm[k] || 0), 0);
+        const lv = DIFF_NAMES.map((_, c) => { if (!as.length) return '—'; const v = [...new Set(as.map(a => ACT_ITEM_LVL[c][Math.min(4, a - 1)] + add))]; return v.length > 1 ? `${Math.min(...v)}–${Math.max(...v)}` : v[0]; });
+    return `<tr><td>${esc(e.name)}</td><td>${as.length ? as.join(', ') : '—'}</td>${lv.map(v => `<td class="r">${v}</td>`).join('')}<td>${e.boss ? 'Arma ou equip.' : 'Só equip.'}</td><td class="r"${Math.abs(sum - 100) > 0.01 ? ' style="color:#f87171"' : ''}>${sum}%</td></tr>`;
   }).join('');
-  return `<div class="group-title">Nível dos itens que cada monstro pode dropar</div><p class="sub" style="margin-bottom:8px">O nível do item depende do ato e da dificuldade onde o monstro aparece (o herói precisa ter esse nível para equipar). Infernal II, III… somam +10 por ciclo. No tutorial (Ato 1 Normal) não há drop aleatório.</p><div class="tbl-wrap"><table><thead><tr><th>Monstro</th><th>Atos</th>${DIFF_NAMES.map(d => `<th class="r">Nv. ${d}</th>`).join('')}<th>Tier máx.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="group-title">Nível dos itens que cada monstro pode dropar</div><p class="sub" style="margin-bottom:8px">Nível do item = nível da zona (ato e dificuldade onde o monstro aparece) + bônus do monstro (o herói precisa ter esse nível para equipar). Infernal II, III… somam +10 por ciclo. No tutorial (Ato 1 Normal) não há drop aleatório.</p><div class="tbl-wrap"><table><thead><tr><th>Monstro</th><th>Atos</th>${DIFF_NAMES.map(d => `<th class="r">Nv. ${d}</th>`).join('')}<th>Pode dropar</th><th class="r">Soma raridade</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}function dropPoolTable() {
+  const ex = String(P.drops.exclude || '').split(',').map(x => x.trim());
+  const L = P.itemList.filter(i => !ex.includes(i.id));
+  const W = L.filter(i => i.slot === 'RIGHT_HAND' || i.slot === 'LEFT_HAND'), E = L.filter(i => !W.includes(i));
+  const mag = i => String(i.classes).split(',').some(c => ['SAINT', 'EXORCIST', 'MAGE'].includes(c.trim()));
+  const wm = W.filter(mag).length, wp = W.length - wm, b = +P.drops.typeBias || 1;
+  const pct = v => (v * 100).toFixed(2) + '%';
+  const pE = E.length ? 1 / E.length : 0;
+  const pW = (same, n) => { const tot = same ? n * b + (W.length - n) : n + (W.length - n) * b; return tot ? (same ? b : 1) / tot : 0; };
+  return `<div class="group-title">Sorteio</div><p class="sub">${E.length} equipamentos e ${W.length} armas (${wp} físicas, ${wm} mágicas) podem cair. A lista de itens vem da aba “Lista de itens”.</p>
+  <div class="tbl-wrap"><table><thead><tr><th>Caso</th><th class="r">Chance de UM item específico</th></tr></thead><tbody>
+  <tr><td>Equipamento (qualquer monstro), dado que caiu equipamento</td><td class="r">${pct(pE)}</td></tr>
+  <tr><td>Arma física, dado que um alfa FÍSICO dropou arma</td><td class="r">${pct(pW(true, wp))}</td></tr>
+  <tr><td>Arma mágica, dado que um alfa FÍSICO dropou arma</td><td class="r">${pct(pW(false, wp))}</td></tr>
+  <tr><td>Arma mágica, dado que o chefe MÁGICO dropou arma</td><td class="r">${pct(pW(true, wm))}</td></tr>
+  <tr><td>Arma física, dado que o chefe MÁGICO dropou arma</td><td class="r">${pct(pW(false, wm))}</td></tr>
+  </tbody></table></div>`;
 }function stageTable() {
   const E = Object.fromEntries(P.enemies.map(e => [e.id, e]));
   let cg = 0, cd = 0, cx = 0;
