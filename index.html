@@ -2239,6 +2239,7 @@
     }
 
     function startStage(stageId) {
+      state.waveTrans = null; // cancela transição de onda em andamento
       // vida e mortes continuam de uma fase para a outra; só cura/revive no início do ato ou ao tentar de novo após derrota
       const wasDefeated = state.isDefeated || getLivingAllies().length === 0;
       if (stageId === 'NEXT_CYCLE') { // venceu o Necromante: sobe a dificuldade e volta ao "Ato 1"
@@ -2526,6 +2527,29 @@
       scheduleRefreshUI();
     }
 
+    // move o mundo (cenário, restos, drops, mortos) dx para a esquerda = a câmera anda dx para a frente
+    function shiftWorld(dx) {
+      state.scrollOffset += dx;
+      for (const arr of [bodyGibs, slimePuddles, particles, dustPuffs]) for (const o of arr) o.x -= dx;
+      for (const d of physicalDrops) d.x = Math.max(30, d.x - dx);
+      for (const s of [0, 1, 2]) { const a = partySlots[s]; if (a && a.isDead) a.x -= dx; }
+    }
+    function tickWaveTransition(dt) {
+      const W = state.waveTrans; W.t += dt;
+      const al = [0, 1, 2].map(s => partySlots[s]).filter(a => a && !a.isDead);
+      if (W.off === null) W.off = Math.max(0, ...al.map(a => a.x - a.homeX), 0);
+      if (W.phase === 'regroup') {
+        const ok = al.every(a => Math.abs(a.x - (a.homeX + W.off)) < 8);
+        if (ok || W.t > 1.8) { W.phase = 'pan'; W.t = 0; }
+        return;
+      }
+      // câmera: anda até o time voltar à posição inicial (mínimo de 0,6 s de caminhada, como antes)
+      const step = Math.min(W.off, dt * 170);
+      W.off -= step;
+      for (const a of al) a.x -= step;
+      shiftWorld(W.t < 0.6 ? Math.max(step, dt * 130) : step);
+      if (W.off <= 0.01 && W.t >= 0.6) { const done = W.done; state.waveTrans = null; done(); }
+    }
     function checkWaveCleared() {
       // waveClearing: impede contar a mesma onda duas vezes quando vários inimigos morrem no mesmo quadro
       // (ex.: explosão do Exorcista matando o último) — isso pulava ondas ou concluía a fase 2x e travava o avanço
@@ -2536,14 +2560,16 @@
       state.waveIdx++;
       if (state.waveIdx < cfg.waves.length) {
         sfx.play('STAGE_CLEAR');
+        // transição com câmera: 1) quem ficou para trás corre até a formação (em volta de quem está mais à frente);
+        // 2) a câmera anda até o time voltar à posição inicial; 3) a próxima onda começa
         state.isScrolling = true;
-        setTimeout(() => {
+        state.waveTrans = { phase: 'regroup', t: 0, off: null, pan: 0, done: () => {
           state.isScrolling = false;
           if (state.stageId !== stageAtClear) return; // a fase mudou durante a transição
           state.waveClearing = false;
           spawnWave();
           refreshAllUI();
-        }, 950);
+        } };
       } else {
         onStageCompleted();
       }
@@ -2857,7 +2883,8 @@
         if (state.bannerTimer <= 0) document.getElementById('lbl-banner').style.opacity = '0';
       }
       if (state.shakeTimer > 0) state.shakeTimer = Math.max(0, state.shakeTimer - dt);
-      if (state.isScrolling) {
+      if (state.waveTrans) tickWaveTransition(dt);
+      else if (state.isScrolling) {
         state.scrollOffset += dt * 130;
         // o mundo passa: corpos, restos, poças, poeira e drops ficam para trás (só os vivos acompanham a câmera)
         const wdx = dt * 130;
@@ -2968,9 +2995,12 @@
         }
 
         let targetX = a.homeX;
+        // transição de onda: formação montada em volta de quem está mais à frente; quem está atrás corre
+        const WT = state.waveTrans;
+        if (WT && WT.off !== null) targetX = a.homeX + WT.off;
         // sem monstros (fim de wave / transição): ninguém anda para trás para voltar à formação;
         // quem está à frente fica onde está e continua "andando" para a frente com o cenário
-        if (enemies.length === 0 && a.x > a.homeX) targetX = a.x;
+        if (!WT && enemies.length === 0 && a.x > a.homeX) targetX = a.x;
         if (a.isCurrentlyMelee() && enemies.length > 0) {
           // fica DENTRO do alcance do monstro (antes a distância passava do alcance: o monstro andava e o aliado recuava, parecendo empurrado)
           const offset = Math.min(a.isHealer ? 34 : 38 + s * 8, (enemies[0].range || 42) - 8);
@@ -2981,7 +3011,7 @@
         if (dist > 3.5) {
           a.isMoving = true;
           const dir = targetX > a.x ? 1 : -1;
-          a.x += dir * a.speed * (a.isHealer && a.isCurrentlyMelee() ? 1.25 : 1.0) * dt;
+          a.x += dir * a.speed * (a.isHealer && a.isCurrentlyMelee() ? 1.25 : 1.0) * (WT && WT.phase === 'regroup' ? 1.9 : 1) * dt;
           // (rastro atrás do herói ao correr removido)
         } else {
           a.isMoving = state.isScrolling;
