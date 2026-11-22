@@ -6661,24 +6661,66 @@
       arenaSave(d);
       openArenaMenu();
     }
-    // times gerados para teste (a partir do time registrado), para sempre ter com quem lutar
+    // times gerados para teste: composições variadas com TODAS as classes (Santo/Exorcista/Monge + 2 mercenários),
+    // força espalhada em volta do time registrado (70%..135% do poder). Sempre os mesmos (semente fixa).
+    const ARENA_HERO = {
+      SAINT: { eq: { HEAD: 'SAINT_HOOD', CHEST: 'SAINT_ROBE', RIGHT_HAND: 'SAINT_STAFF', FEET: 'SAINT_BOOTS' }, dmg: 'MAG', ranged: true },
+      EXORCIST: { eq: { HEAD: 'EXO_HOOD', CHEST: 'EXO_ROBE', RIGHT_HAND: 'EXORCIST_ORB', FEET: 'EXO_BOOTS' }, dmg: 'MAG', ranged: true },
+      MONK: { eq: { HEAD: 'MONK_INIT_BEADS', CHEST: 'MONK_INIT_TUNIC', RIGHT_HAND: 'MONK_INIT_WRAPS', FEET: 'MONK_INIT_SANDALS' }, dmg: 'PHYS', ranged: false },
+    };
+    const ARENA_BOT_NAMES = ['Lâmina Rubra', 'Guarda Cinzenta', 'Corvos da Névoa', 'Punho de Ferro', 'Ordem da Aurora', 'Sombras do Vale',
+      'Chama Sagrada', 'Lobos do Norte', 'Véu Arcano', 'Escudo de Prata', 'Filhos da Lua', 'Martelo Dourado'];
+    function memPower(m) {
+      const hp = BAL.hpBase + m.vit * BAL.hpPerVit;
+      return Math.round(Math.sqrt(Math.max(1, hp) * Math.max(1, m.pow) * Math.max(0.1, m.spd)) * (1 + (m.def + m.res * 0.5) * 0.02) * 10);
+    }
+    function arenaBotMembers(heroStance, mercs, lvl) {
+      const out = [];
+      const H = ARENA_HERO[heroStance], hs = BAL.hero;
+      out.push({ slot: 2, name: 'Herói', rig: 'HEALER', healer: true, stance: heroStance, villager: true, level: lvl,
+        vit: hs.vit, pow: hs.pow, def: hs.def, res: Number.isFinite(hs.res) ? hs.res : Math.round(hs.def * 0.5), spd: hs.spd,
+        ranged: H.ranged, range: H.ranged ? 420 : 42, dmg: H.dmg, eq: Object.assign({ LEFT_HAND: '' }, H.eq) });
+      mercs.forEach((k, idx) => {
+        const m = MERCENARIES_DB[k], eq = { HEAD: '', CHEST: '', RIGHT_HAND: '', LEFT_HAND: '', FEET: '' };
+        for (const id of m.gear || []) if (ITEMS_DB[id]) eq[ITEMS_DB[id].slot] = id;
+        const rg = mercIsRanged(m);
+        out.push({ slot: idx, name: m.name, rig: m.rig, healer: false, stance: null, villager: false, level: lvl,
+          vit: m.stats.vit, pow: m.stats.pow, def: m.stats.def, res: Number.isFinite(m.stats.res) ? m.stats.res : Math.round(m.stats.def * 0.5), spd: m.stats.spd,
+          ranged: rg, range: rg ? mercRange(m) : 42, dmg: m.dmgType || 'PHYS', eq });
+      });
+      return out;
+    }
     function arenaBots(d) {
       const me = d.teams.find(t => t.id === d.myId); if (!me) return [];
-      const names = ['Lâmina Rubra', 'Guarda Cinzenta', 'Corvos da Névoa', 'Punho de Ferro', 'Ordem da Aurora', 'Sombras do Vale'];
-      return names.map((nm, k) => {
-        const f = 0.7 + k * 0.12;
-        const mem = me.members.map(m => Object.assign({}, m, {
-          vit: Math.round(m.vit * f), pow: Math.round(m.pow * f), def: Math.round(m.def * f), res: Math.round(m.res * f),
-          level: Math.max(1, Math.round(m.level * f)), power: Math.round(m.power * f * f)
-        }));
+      const lvl0 = Math.max(1, Math.round(me.members.reduce((t, m) => t + m.level, 0) / me.members.length));
+      const heroes = Object.keys(ARENA_HERO), mk = Object.keys(MERCENARIES_DB);
+      const pairs = []; for (let a = 0; a < mk.length; a++) for (let b = a + 1; b < mk.length; b++) pairs.push([mk[a], mk[b]]);
+      let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      return ARENA_BOT_NAMES.map((nm, k) => {
+        const f = 0.7 + 0.65 * k / (ARENA_BOT_NAMES.length - 1);
+        const stance = heroes[k % heroes.length], mercs = pairs[Math.floor(rnd() * pairs.length)];
+        if (rnd() < 0.5) mercs.reverse();
+        let mem = arenaBotMembers(stance, mercs.slice(), Math.max(1, Math.round(lvl0 * f)));
+        // escala vit/pow/def/res até o poder do time ficar ≈ f × o seu
+        const target = me.power * f, at = g => mem.reduce((t, m) => t + memPower({ vit: m.vit * g, pow: m.pow * g, def: m.def * g, res: m.res * g, spd: m.spd }), 0);
+        let lo = 0.05, hi = 200; for (let it = 0; it < 40; it++) { const mid = (lo + hi) / 2; if (at(mid) < target) lo = mid; else hi = mid; }
+        mem = mem.map(m => Object.assign(m, { vit: Math.round(m.vit * lo), pow: Math.round(m.pow * lo), def: Math.round(m.def * lo), res: Math.round(m.res * lo) }));
+        mem.forEach(m => m.power = memPower(m));
         const st = (d.bots && d.bots[k]) || {};
         return { id: 'bot' + k, bot: true, name: nm, members: mem, power: teamPower(mem), rating: st.rating || Math.round(1000 + (f - 1) * 600), w: st.w | 0, l: st.l | 0 };
       });
     }
+    // adversário ALEATÓRIO: sorteado entre os times com pontuação perto da sua (±150; se não houver, os 5 mais próximos)
+    function arenaPickRival(d) {
+      const me = d.rating || 1000, pool = arenaRanking(d).filter(t => t.id !== d.myId);
+      let near = pool.filter(t => Math.abs(t.rating - me) <= 150);
+      if (near.length < 2) near = pool.slice().sort((a, b) => Math.abs(a.rating - me) - Math.abs(b.rating - me)).slice(0, 5);
+      return near.length ? near[Math.floor(Math.random() * near.length)] : null;
+    }
     function arenaRanking(d) { return d.teams.concat(arenaBots(d)).sort((a, b) => b.rating - a.rating); }
     // luta: carrega o save registrado (cópia temporária, nada é salvo) e põe o rival em campo
-    function arenaFight(rivalId) {
-      const d = arenaDB(), rv = arenaRanking(d).find(r => r.id === rivalId);
+    function arenaFight() {
+      const d = arenaDB(), rv = arenaPickRival(d);
       if (!rv || !d.mySave) return;
       try { localStorage.setItem(ARENA_TMP, d.mySave); } catch (e) { return; }
       const ok = loadSavedGame(ARENA_TMP);
@@ -6743,7 +6785,7 @@
       document.getElementById('menu-saves').classList.add('hidden');
       document.getElementById('menu-arena').classList.remove('hidden');
       document.getElementById('arena-me').textContent = `${d.rating || 1000} pts · ${d.w | 0}V ${d.l | 0}D`;
-      const cls = m => m.healer ? ({ SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' }[m.stance] || 'Herói') : m.name.split(' ')[0];
+      const cls = m => m.healer ? ({ SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' }[m.stance] || 'Herói') : ({ TANK: m.name.includes('Paladino') ? 'Paladino' : 'Guerreiro', ARCHER: 'Arqueira', MAGE: 'Mago' }[m.rig] || m.name.split(' ')[0]);
       const saves = [[SAVE_KEY, 'Save manual'], [AUTOSAVE_KEY, 'Autosave']].map(([k, title]) => {
         const sm = saveSummary(k);
         return `<button class="ar-btn" data-reg="${k}" ${sm ? '' : 'disabled'} style="flex:1;text-align:left">${title}<br><span class="ar-sub">${sm ? `Ato ${sm.act} · ${sm.cls} Nv ${sm.lvl}` : 'Vazio'}</span></button>`;
@@ -6754,16 +6796,17 @@
         <div class="ar-row"><div style="flex:1">${me ? `${me.members.map(cls).join(' · ')}<br><small>${me.info || ''} · poder ${me.power.toLocaleString('pt-BR')}</small>` : '<small>Nenhum time registrado. Escolha um save abaixo.</small>'}</div></div>
         <h4>REGISTRAR TIME DO SAVE</h4>
         <div style="display:flex;gap:.4em">${saves}</div>
+        <button id="arena-fight" class="ar-btn" ${me ? '' : 'disabled'} style="width:100%;margin-top:.6em;padding:.45em;font-size:1.1em">⚔ Procurar luta</button>
+        <div class="ar-sub" style="text-align:center;margin-top:.2em">O adversário é sorteado entre os times com pontuação perto da sua.</div>
         <h4>RANKING <span class="ar-sub">(teste local · times "gerados" são para teste)</span></h4>
         ${rank.map((t, i) => `<div class="ar-row" style="${t.id === d.myId ? 'border-color:#fde68a' : ''}">
           <span style="width:1.6em;color:#fde68a">${i + 1}</span>
           <div style="flex:1;min-width:0">${t.name}${t.bot ? ' <small>(gerado)</small>' : ''}${t.id === d.myId ? ' <small>(você)</small>' : ''}<br>
             <small>${t.rating} pts · ${t.w | 0}V ${t.l | 0}D · poder ${t.power.toLocaleString('pt-BR')} · ${t.members.map(cls).join(', ')}</small></div>
-          ${t.id === d.myId ? '' : `<button class="ar-btn" data-fight="${t.id}" ${me ? '' : 'disabled'}>Lutar</button>`}
         </div>`).join('') || '<div class="ar-sub">Registre um time para ver o ranking.</div>'}
         ${d.hist.length ? `<h4>ÚLTIMAS LUTAS</h4><div class="ar-sub">${d.hist.slice(0, 5).map(h => `<span style="color:${h.win ? '#86efac' : '#fda4af'}">${h.win ? 'V' : 'D'} ${h.rival} (${h.delta > 0 ? '+' : ''}${h.delta})</span>`).join(' · ')}</div>` : ''}`;
       document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterFromSave(b.dataset.reg));
-      document.querySelectorAll('#arena-body [data-fight]').forEach(b => b.onclick = () => arenaFight(b.dataset.fight));
+      document.getElementById('arena-fight').onclick = () => arenaFight();
     }
 
     function renderDrawer5Craft() {
