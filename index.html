@@ -1681,7 +1681,7 @@
         goldMult: 0.7, actBonus: 0.3,
         // Arena: os dois times usam a MESMA IA (arenaRivalTick espelha o laço dos aliados). rivalHp/rivalPow = 1 (luta justa);
         // só mude para testar handicap. botMin/botMax = força dos times gerados (× poder do seu time).
-        arena: { rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
+        arena: { gcd: 1, rivalHp: 1, rivalPow: 1, botMin: 0.7, botMax: 1.35, k: 32, matchRange: 150 },
         ilvlMult: 1.3, expGrowthHigh: 1.10, expSoftLvl: 20,
         tierDecay: 0.3, dropChance: 0.07, refinePct: 0.12, refineMax: 10, bagPerTab: 12, tabCosts: [300, 800, 2000], fatherBonusVit: 25, secondMercMin: 1000,
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
@@ -2892,9 +2892,9 @@
             const mult = BAL.ultBase + (S.lv[3] - 1) * BAL.perLevel;
             if (st === 'SAINT') {
               if (!hurt) { /* igual ao jogador: só conjura com alguém ferido */ }
-              else { S.cd3 = BAL.cd3; S.lock = 2; shout(e, title(3), col); e.triggerAttackAnim(() => { for (const a of activeEnemies) if (a.arena && !a.isDead) a.receiveHeal(pow * mult * 0.85, 0.30); }, 'ULTIMATE'); continue; }
+              else { S.cd3 = BAL.cd3; S.lock = BAL.arena.gcd; shout(e, title(3), col); e.triggerAttackAnim(() => { for (const a of activeEnemies) if (a.arena && !a.isDead) a.receiveHeal(pow * mult * 0.85, 0.30); }, 'ULTIMATE'); continue; }
             } else {
-              S.cd3 = BAL.cd3; S.lock = 2; shout(e, title(3), col);
+              S.cd3 = BAL.cd3; S.lock = BAL.arena.gcd; shout(e, title(3), col);
               e.triggerAttackAnim(() => { for (const a of getLivingAllies()) a.receiveDamage(pow * mult * 0.85, e, st !== 'MONK', true); }, 'ULTIMATE');
               continue;
             }
@@ -2903,9 +2903,9 @@
             const mult = BAL.sk2Base + (S.lv[2] - 1) * BAL.perLevel;
             if (st === 'SAINT') {
               if (!hurt) { }
-              else { S.cd2 = BAL.cd2; S.lock = 2; shout(e, title(2), col); e.triggerAttackAnim(() => { if (!hurt.isDead) hurt.receiveHeal(pow * mult, 0.25); }, 'SKILL'); continue; }
+              else { S.cd2 = BAL.cd2; S.lock = BAL.arena.gcd; shout(e, title(2), col); e.triggerAttackAnim(() => { if (!hurt.isDead) hurt.receiveHeal(pow * mult, 0.25); }, 'SKILL'); continue; }
             } else {
-              const t = arenaFront(); S.cd2 = BAL.cd2; S.lock = 2; shout(e, title(2), col);
+              const t = arenaFront(); S.cd2 = BAL.cd2; S.lock = BAL.arena.gcd; shout(e, title(2), col);
               const dmg = st === 'MONK' ? (pow + e.getVit() * 0.4) * mult : pow * mult;
               e.triggerAttackAnim(() => { if (!t.isDead) t.receiveDamage(dmg, e, st !== 'MONK', true); }, 'SKILL');
               continue;
@@ -2947,6 +2947,7 @@
       if (!healer || healer.isDead) return false;
       const cd = state.cooldowns[slot];
       if (!cd || cd.rem > 0) return false;
+      if (state.arenaMode && state.arenaSkillLock > 0) return false; // arena: cooldown global de skill (BAL.arena.gcd)
 
       const stance = state.stance;
       const lvl = state.skillLevels[stance][slot];
@@ -2986,6 +2987,7 @@
 
       sfx.play('SKILL');
       cd.rem = cd.total;
+      if (state.arenaMode) state.arenaSkillLock = BAL.arena.gcd;
       return true;
     }
 
@@ -3107,6 +3109,7 @@
         }
       }
 
+      if (state.arenaMode) state.arenaSkillLock = Math.max(0, (state.arenaSkillLock || 0) - dt);
       for (const s of [2, 3]) {
         const cd = state.cooldowns[s];
         if (cd.rem > 0) cd.rem = Math.max(0, cd.rem - dt);
@@ -3116,10 +3119,8 @@
       tickMercUltimates(dt);
       if (state.arenaMode && state.arenaMode.phase === 'fight' && !state.arenaMode.ended) tickArenaRivalSkills(dt);
       if (state.isAutoSkill && !state.isDefeated && !state.isVictory && !state.awaitingAct2Lock) {
-        if (state.arenaMode) state.arenaSkillLock = Math.max(0, (state.arenaSkillLock || 0) - dt);
-        if (state.arenaMode && state.arenaSkillLock > 0) { /* arena: espera entre skills (igual ao rival) */ }
-        else if (state.cooldowns[3].rem <= 0) { if (tryCastHeroSkill(3) && state.arenaMode) state.arenaSkillLock = 2; }
-        else if (state.cooldowns[2].rem <= 0) { if (tryCastHeroSkill(2) && state.arenaMode) state.arenaSkillLock = 2; }
+        if (state.cooldowns[3].rem <= 0) tryCastHeroSkill(3);
+        else if (state.cooldowns[2].rem <= 0) tryCastHeroSkill(2);
       }
 
       // Física & Coleta pelo Cursor do Mouse nos Drops (Moedas, DPE e Itens)
