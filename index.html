@@ -7002,6 +7002,7 @@
     function arenaEnd(win) {
       const A = state.arenaMode; if (!A || A.ended) return;
       A.ended = true;
+      if (A.online || A.practice) return arenaEndOnline(win);
       const d = arenaDB(), me = d.rating || 1000, rv = A.rival;
       const exp = 1 / (1 + Math.pow(10, (rv.rating - me) / 400));
       const delta = Math.round(BAL.arena.k * ((win ? 1 : 0) - exp));
@@ -7029,6 +7030,7 @@
       openArenaMenu();
     }
     function openArenaMenu() {
+      if (!ARENA_NET.local) return openArenaOnline();
       const d = arenaDB(), me = d.teams.find(t => t.id === d.myId);
       document.getElementById('menu-buttons').classList.add('hidden');
       document.getElementById('menu-saves').classList.add('hidden');
@@ -7047,6 +7049,7 @@
         <div style="display:flex;gap:.4em">${saves}</div>
         <button id="arena-fight" class="ar-btn" ${me ? '' : 'disabled'} style="width:100%;margin-top:.6em;padding:.45em;font-size:1.1em">⚔ Procurar luta</button>
         <div class="ar-sub" style="text-align:center;margin-top:.2em">O adversário é sorteado entre os times com pontuação perto da sua.</div>
+        <button id="arena-go-online" class="ar-btn" style="width:100%;margin-top:.4em">🌐 Voltar para a arena online</button>
         <h4>RANKING <span class="ar-sub">(teste local · times "gerados" são para teste)</span></h4>
         ${rank.map((t, i) => `<div class="ar-row" style="${t.id === d.myId ? 'border-color:#fde68a' : ''}">
           <span style="width:1.6em;color:#fde68a">${i + 1}</span>
@@ -7057,6 +7060,167 @@
         ${d.hist.length ? `<h4>ÚLTIMAS LUTAS</h4><div class="ar-sub">${d.hist.slice(0, 5).map(h => `<span style="color:${h.win ? '#86efac' : '#fda4af'}">${h.win ? 'V' : 'D'} ${h.rival} (${h.delta > 0 ? '+' : ''}${h.delta})</span>`).join(' · ')}</div>` : ''}`;
       document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterFromSave(b.dataset.reg));
       document.getElementById('arena-fight').onclick = () => arenaFight();
+      document.getElementById('arena-go-online').onclick = () => { ARENA_NET.local = false; openArenaMenu(); };
+    }
+
+    // =========================================================================
+    // ARENA ONLINE — servidor Cloudflare (Worker + D1, pasta Desktop\HealerHero-cloud) com login Google.
+    // O servidor guarda os times e a pontuação e sorteia o rival; a luta roda aqui e o resultado é enviado no fim.
+    // O save usado nas lutas fica só neste navegador (hh_arena_online_save).
+    // =========================================================================
+    const ARENA_NET = {
+      api: /\.workers\.dev$/.test(location.hostname) ? '' : 'https://healerhero.nhojsilva.workers.dev',
+      local: false, clientId: null, busy: false,
+      get token() { try { return localStorage.getItem('hh_arena_token') || ''; } catch (e) { return ''; } },
+      set token(v) { try { v ? localStorage.setItem('hh_arena_token', v) : localStorage.removeItem('hh_arena_token'); } catch (e) { } },
+    };
+    const ARENA_ONLINE_SAVE = 'hh_arena_online_save';
+    const escH = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    async function arenaApi(path, method = 'GET', data) {
+      const h = { 'content-type': 'application/json' }; if (ARENA_NET.token) h.authorization = 'Bearer ' + ARENA_NET.token;
+      const r = await fetch(ARENA_NET.api + path, { method, headers: h, body: data ? JSON.stringify(data) : undefined });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 401 && ARENA_NET.token) { ARENA_NET.token = ''; }
+      if (!r.ok) throw Object.assign(new Error(j.error || ('erro ' + r.status)), { status: r.status });
+      return j;
+    }
+    const arenaCls = m => m.healer ? ({ SAINT: 'Santo', EXORCIST: 'Exorcista', MONK: 'Monge' }[m.stance] || 'Herói') : ({ TANK: String(m.name).includes('Paladino') ? 'Paladino' : 'Guerreiro', ARCHER: 'Arqueira', MAGE: 'Mago' }[m.rig] || String(m.name).split(' ')[0]);
+    function arenaShowPanel(html, head) {
+      document.getElementById('menu-buttons').classList.add('hidden');
+      document.getElementById('menu-saves').classList.add('hidden');
+      document.getElementById('menu-arena').classList.remove('hidden');
+      document.getElementById('arena-me').textContent = head || '';
+      document.getElementById('arena-body').innerHTML = html;
+    }
+    function loadGsi() {
+      if (window.google && google.accounts && google.accounts.id) return Promise.resolve();
+      if (loadGsi.p) return loadGsi.p;
+      return (loadGsi.p = new Promise((ok, fail) => {
+        const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+        sc.onload = ok; sc.onerror = () => { loadGsi.p = null; fail(new Error('não carregou o login do Google')); };
+        document.head.appendChild(sc);
+      }));
+    }
+    async function openArenaOnline(msg) {
+      const localBtn = '<button id="arena-go-local" class="ar-btn" style="width:100%;margin-top:.6em">Modo local (teste, sem internet)</button>';
+      const bindLocal = () => { const b = document.getElementById('arena-go-local'); if (b) b.onclick = () => { ARENA_NET.local = true; openArenaMenu(); }; };
+      const note = msg ? `<div class="ar-row" style="border-color:#fde68a"><small>${escH(msg)}</small></div>` : '';
+      if (!ARENA_NET.token) {
+        arenaShowPanel(`${note}<h4>ARENA ONLINE</h4>
+          <div class="ar-sub" style="margin-bottom:.5em">Entre com sua conta Google para registrar seu time e lutar contra os times de outros jogadores. No ranking aparece só o nome do seu personagem.</div>
+          <div id="gsi-btn" style="display:flex;justify-content:center;min-height:44px"><small class="ar-sub">Carregando login…</small></div>${localBtn}`, 'não conectado');
+        bindLocal();
+        try {
+          if (ARENA_NET.clientId === null) ARENA_NET.clientId = (await arenaApi('/api/config')).clientId || '';
+          const el = document.getElementById('gsi-btn'); if (!el) return;
+          if (!ARENA_NET.clientId) { el.innerHTML = '<small class="ar-sub">Login Google ainda não configurado no servidor.</small>'; return; }
+          await loadGsi();
+          google.accounts.id.initialize({ client_id: ARENA_NET.clientId, callback: r => arenaLogin(r.credential) });
+          el.innerHTML = ''; google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'pt-BR' });
+        } catch (e) {
+          const el = document.getElementById('gsi-btn'); if (el) el.innerHTML = `<small class="ar-sub">Sem conexão com o servidor da arena (${escH(e.message)}).</small>`;
+        }
+        return;
+      }
+      arenaShowPanel('<div class="ar-sub" style="text-align:center;padding:1em">Carregando arena…</div>', '');
+      let me, rk;
+      try { [me, rk] = await Promise.all([arenaApi('/api/me'), arenaApi('/api/ranking')]); }
+      catch (e) {
+        if (!ARENA_NET.token) return openArenaOnline('Sessão expirada, entre de novo.');
+        arenaShowPanel(`<div class="ar-sub">Sem conexão com o servidor da arena: ${escH(e.message)}</div>${localBtn}`, ''); bindLocal(); return;
+      }
+      if (document.getElementById('menu-arena').classList.contains('hidden') || ARENA_NET.local) return; // saiu enquanto carregava
+      const t = me.team, hasSave = (() => { try { return !!localStorage.getItem(ARENA_ONLINE_SAVE); } catch (e) { return false; } })();
+      const saves = [[SAVE_KEY, 'Save manual'], [AUTOSAVE_KEY, 'Autosave']].map(([k, title]) => {
+        const sm = saveSummary(k);
+        return `<button class="ar-btn" data-reg="${k}" ${sm ? '' : 'disabled'} style="flex:1;text-align:left">${title}<br><span class="ar-sub">${sm ? `Ato ${sm.act} · ${sm.cls} Nv ${sm.lvl}` : 'Vazio'}</span></button>`;
+      }).join('');
+      const others = rk.teams.filter(x => !x.me).length;
+      arenaShowPanel(`${note}
+        <h4>SEU TIME <span class="ar-sub">(online)</span></h4>
+        <div class="ar-row"><div style="flex:1">${t ? `${t.members.map(m => escH(arenaCls(m))).join(' · ')}<br><small>${escH(t.info)} · poder ${t.power.toLocaleString('pt-BR')}</small>` : '<small>Nenhum time registrado. Escolha um save abaixo.</small>'}</div></div>
+        ${t && !hasSave ? '<div class="ar-sub" style="color:#fde68a">Este navegador não tem a cópia do save do time: registre de novo para lutar daqui.</div>' : ''}
+        <h4>REGISTRAR TIME DO SAVE</h4>
+        <div style="display:flex;gap:.4em">${saves}</div>
+        <button id="arena-fight" class="ar-btn" ${t && hasSave ? '' : 'disabled'} style="width:100%;margin-top:.6em;padding:.45em;font-size:1.1em">⚔ Procurar luta</button>
+        <div class="ar-sub" style="text-align:center;margin-top:.2em">${others ? 'O adversário é sorteado entre os jogadores com pontuação perto da sua.' : 'Ainda não há outros jogadores: a luta será um treino contra um time gerado (não vale pontos).'}</div>
+        <h4>RANKING ONLINE</h4>
+        ${rk.teams.map((x, i) => `<div class="ar-row" style="${x.me ? 'border-color:#fde68a' : ''}">
+          <span style="width:1.6em;color:#fde68a">${i + 1}</span>
+          <div style="flex:1;min-width:0">${escH(x.name)}${x.me ? ' <small>(você)</small>' : ''}<br>
+            <small>${x.rating} pts · ${x.w}V ${x.l}D · poder ${x.power.toLocaleString('pt-BR')} · ${x.members.map(m => escH(arenaCls(m))).join(', ')}</small></div>
+        </div>`).join('') || '<div class="ar-sub">Nenhum time registrado ainda.</div>'}
+        ${me.hist.length ? `<h4>ÚLTIMAS LUTAS</h4><div class="ar-sub">${me.hist.slice(0, 8).map(h => `<span style="color:${h.win ? '#86efac' : '#fda4af'}">${h.win ? 'V' : 'D'} ${h.attacked ? '' : '🛡 '}${escH(h.rival)} (${h.delta > 0 ? '+' : ''}${h.delta})</span>`).join(' · ')}</div><div class="ar-sub" style="opacity:.7">🛡 = outro jogador lutou contra o seu time</div>` : ''}
+        <div style="display:flex;gap:.4em;margin-top:.6em"><button id="arena-logout" class="ar-btn" style="flex:1">Sair da conta</button><button id="arena-go-local" class="ar-btn" style="flex:1">Modo local (teste)</button></div>`,
+        t ? `${t.rating} pts · ${t.w}V ${t.l}D` : 'conectado');
+      bindLocal();
+      document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterOnline(b.dataset.reg));
+      document.getElementById('arena-fight').onclick = () => arenaFightOnline(t, others);
+      document.getElementById('arena-logout').onclick = () => { ARENA_NET.token = ''; try { google.accounts.id.disableAutoSelect(); } catch (e) { } openArenaMenu(); };
+    }
+    async function arenaLogin(credential) {
+      try { const r = await arenaApi('/api/auth/google', 'POST', { credential }); ARENA_NET.token = r.token; openArenaOnline(); }
+      catch (e) { openArenaOnline('Não foi possível entrar: ' + e.message); }
+    }
+    async function arenaRegisterOnline(key) {
+      if (ARENA_NET.busy) return;
+      const raw = localStorage.getItem(key); if (!raw || !loadSavedGame(key)) return;
+      activeEnemies = []; arrowShots = []; physicalDrops = [];
+      const mem = arenaSnapshot(); if (!mem.length) return openArenaOnline('Esse save não tem time.');
+      const sm = saveSummary(key);
+      ARENA_NET.busy = true;
+      try {
+        await arenaApi('/api/team', 'PUT', { name: arenaPlayer(), info: sm ? `Ato ${sm.act} · ${sm.cls} Nv ${sm.lvl}` : '', members: mem });
+        try { localStorage.setItem(ARENA_ONLINE_SAVE, raw); } catch (e) { }
+        openArenaOnline('Time registrado!');
+      } catch (e) { openArenaOnline('Erro ao registrar: ' + e.message); }
+      finally { ARENA_NET.busy = false; }
+    }
+    // começa a luta com o save guardado deste navegador (nada é salvo durante a arena)
+    function arenaLaunch(raw, rv) {
+      try { localStorage.setItem(ARENA_TMP, raw); } catch (e) { return false; }
+      const ok = loadSavedGame(ARENA_TMP);
+      try { localStorage.removeItem(ARENA_TMP); } catch (e) { }
+      if (!ok) return false;
+      state.inMainMenu = false;
+      document.getElementById('main-menu').classList.add('hidden');
+      document.getElementById('menu-arena').classList.add('hidden');
+      arenaStart(rv);
+      return true;
+    }
+    async function arenaFightOnline(myTeam, others) {
+      if (ARENA_NET.busy) return;
+      let raw = null; try { raw = localStorage.getItem(ARENA_ONLINE_SAVE); } catch (e) { }
+      if (!raw || !myTeam) return;
+      ARENA_NET.busy = true;
+      try {
+        const r = await arenaApi('/api/match', 'POST');
+        let rv = r.rival, practice = false;
+        if (!rv) { // sem outros jogadores: treino contra um time gerado
+          const mine = Object.assign({}, myTeam, { id: 'me' });
+          const bots = arenaBots({ teams: [mine], myId: 'me' });
+          rv = bots[Math.floor(Math.random() * bots.length)]; practice = true;
+        }
+        if (arenaLaunch(raw, rv)) Object.assign(state.arenaMode, { online: !practice, practice, matchId: r.match });
+      } catch (e) { openArenaOnline('Erro ao procurar luta: ' + e.message); }
+      finally { ARENA_NET.busy = false; }
+    }
+    function arenaResultPanel(win, delta, line) {
+      arenaOverlay(`<div style="display:inline-block;padding:8px 36px 10px;border-radius:14px;background:radial-gradient(ellipse at center,rgba(10,8,16,.82),rgba(10,8,16,.55) 70%,rgba(10,8,16,0))"><div style="font-size:64px;line-height:1;color:${win ? '#fde047' : '#f87171'};-webkit-text-stroke:2px #1b1220;text-shadow:0 0 18px ${win ? '#f59e0b' : '#b91c1c'},0 4px 0 #1b1220">${win ? 'VITÓRIA' : 'DERROTA'}</div>
+        ${delta == null ? '' : `<div style="font-size:16px;margin-top:6px;color:${delta >= 0 ? '#86efac' : '#fda4af'}">${delta >= 0 ? '+' : ''}${delta} pts</div>`}<div style="font-size:10px;color:#e2e8f0">${line}</div></div>`, 0);
+    }
+    // fim de luta online: mostra o resultado na hora e os pontos quando o servidor responder
+    async function arenaEndOnline(win) {
+      const A = state.arenaMode;
+      sfx.play(win ? 'STAGE_CLEAR' : 'DEFEAT');
+      if (A.practice) { arenaResultPanel(win, null, 'treino · não vale pontos'); setTimeout(arenaExit, 3200); return; }
+      arenaResultPanel(win, null, 'enviando resultado…');
+      const t0 = Date.now();
+      try {
+        const r = await arenaApi('/api/match/result', 'POST', { id: A.matchId, win });
+        arenaResultPanel(win, r.delta, `${r.rating} pts · ${r.w}V ${r.l}D`);
+      } catch (e) { arenaResultPanel(win, null, 'erro ao enviar: ' + escH(e.message)); }
+      setTimeout(arenaExit, Math.max(1200, 3200 - (Date.now() - t0)));
     }
 
     function renderDrawer5Craft() {
