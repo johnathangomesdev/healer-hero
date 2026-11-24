@@ -81,6 +81,14 @@
     }
     #menu-note { top: auto; bottom: 6%; text-align: center; }
     #menu-buttons.hidden, #menu-saves.hidden, #menu-arena.hidden { display: none; }
+    html.cloud #menu-corner-tl, html.cloud #dev-panel, html.cloud #sprite-editor, html.cloud #arena-go-local { display: none !important; }
+    #login-gate { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(20, 10, 16, .82), rgba(5, 3, 8, .96)); font-family: 'Lilita One', sans-serif; color: #fff; }
+    #login-gate.hidden { display: none; }
+    #login-gate .lg-box { text-align: center; padding: 28px 36px; border-radius: 18px; border: 2px solid rgba(253, 230, 138, .5); background: rgba(30, 14, 20, .92); max-width: 92vw; box-shadow: 0 10px 40px rgba(0, 0, 0, .6); }
+    #login-gate h1 { font-size: 44px; line-height: 1; color: #86efac; -webkit-text-stroke: 2px #052e16; margin-bottom: 6px; }
+    #login-gate p { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; color: #fecaca; margin: 0 0 16px; }
+    #login-gate .lg-msg { font-family: 'Inter', sans-serif; font-size: 12px; color: #fde68a; margin-top: 12px; min-height: 1em; }
+    #login-gate button { margin-top: 10px; padding: 4px 16px; border-radius: 10px; border: 2px solid rgba(248, 113, 113, .7); background: rgba(127, 29, 29, .7); color: #fff; font-family: 'Lilita One', sans-serif; cursor: pointer; }
     #menu-arena {
       position: absolute; right: 3%; top: 14%; width: clamp(300px, 56%, 700px); max-height: 82%; overflow-y: auto; padding: 1.2cqh 1.4cqw; border-radius: 0.9em;
       background: rgba(18, 8, 10, 0.94); border: 2px solid rgba(248, 113, 113, 0.6); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
@@ -938,6 +946,10 @@
   </div>
 
   <script>
+    // Versão publicada na Cloudflare: o deploy.ps1 (Desktop\HealerHero-cloud) troca para true.
+    // true = sem Modo DEV, sem editor de sprites, sem balanceamento salvo no navegador, sem arena local e com login Google obrigatório.
+    const IS_CLOUD = false;
+    if (IS_CLOUD) document.documentElement.classList.add('cloud');
     // =========================================================================
     // 1. PROCEDURAL AUDIO SYNTHESIZER (WEB AUDIO API)
     // =========================================================================
@@ -1687,7 +1699,7 @@
         combineCost: null, combineUp: null, refineBase: null, pool: null, active: false, drops: DROP_DEF,
         hero: { vit: 16, pow: 18, def: 6, spd: 1.15 }, daughter: { vit: 14, pow: 15, def: 4, spd: 1.25 }, father: { vit: 28, pow: 13, def: 11, spd: 0.90 }, sister: null };
       let P = null;
-      try { P = JSON.parse(localStorage.getItem('hh_balance_game_v1') || 'null'); } catch (e) { }
+      try { P = IS_CLOUD ? null : JSON.parse(localStorage.getItem('hh_balance_game_v1') || 'null'); } catch (e) { }
       // só aceita parâmetros salvos pela versão atual do painel (valores antigos reativavam regras velhas)
       if (!P || typeof P !== 'object' || P.version !== BAL_VERSION) return B;
       const num = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
@@ -7030,6 +7042,7 @@
       openArenaMenu();
     }
     function openArenaMenu() {
+      if (IS_CLOUD) ARENA_NET.local = false;
       if (!ARENA_NET.local) return openArenaOnline();
       const d = arenaDB(), me = d.teams.find(t => t.id === d.myId);
       document.getElementById('menu-buttons').classList.add('hidden');
@@ -7070,7 +7083,7 @@
     // =========================================================================
     const ARENA_NET = {
       api: /\.workers\.dev$/.test(location.hostname) ? '' : 'https://healerhero.nhojsilva.workers.dev',
-      local: false, clientId: null, busy: false,
+      local: false, clientId: null, busy: false, gate: false,
       get token() { try { return localStorage.getItem('hh_arena_token') || ''; } catch (e) { return ''; } },
       set token(v) { try { v ? localStorage.setItem('hh_arena_token', v) : localStorage.removeItem('hh_arena_token'); } catch (e) { } },
     };
@@ -7115,7 +7128,7 @@
           const el = document.getElementById('gsi-btn'); if (!el) return;
           if (!ARENA_NET.clientId) { el.innerHTML = '<small class="ar-sub">Login Google ainda não configurado no servidor.</small>'; return; }
           await loadGsi();
-          google.accounts.id.initialize({ client_id: ARENA_NET.clientId, callback: r => arenaLogin(r.credential) });
+          google.accounts.id.initialize({ client_id: ARENA_NET.clientId, callback: r => (ARENA_NET.gate ? gateLogin : arenaLogin)(r.credential) });
           el.innerHTML = ''; google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'pt-BR' });
         } catch (e) {
           const el = document.getElementById('gsi-btn'); if (el) el.innerHTML = `<small class="ar-sub">Sem conexão com o servidor da arena (${escH(e.message)}).</small>`;
@@ -7156,7 +7169,46 @@
       bindLocal();
       document.querySelectorAll('#arena-body [data-reg]').forEach(b => b.onclick = () => arenaRegisterOnline(b.dataset.reg));
       document.getElementById('arena-fight').onclick = () => arenaFightOnline(t, others);
-      document.getElementById('arena-logout').onclick = () => { ARENA_NET.token = ''; try { google.accounts.id.disableAutoSelect(); } catch (e) { } openArenaMenu(); };
+      document.getElementById('arena-logout').onclick = () => {
+        ARENA_NET.token = ''; try { google.accounts.id.disableAutoSelect(); } catch (e) { }
+        if (IS_CLOUD) { document.getElementById('menu-arena-back').click(); showLoginGate(); } else openArenaMenu();
+      };
+    }
+    // NUVEM: tela de login com Google ao abrir o site (o jogo só aparece depois de entrar)
+    function showLoginGate(msg) {
+      let g = document.getElementById('login-gate');
+      if (!g) {
+        g = document.createElement('div'); g.id = 'login-gate';
+        g.innerHTML = `<div class="lg-box"><h1>Healer Hero</h1><p>Entre com sua conta Google para jogar.<br>No ranking aparece só o nome do seu personagem.</p>
+          <div id="lg-btn" style="display:flex;justify-content:center;min-height:44px"></div><div class="lg-msg" id="lg-msg"></div>
+          <button id="lg-retry" style="display:none">Tentar de novo</button></div>`;
+        document.body.appendChild(g);
+        g.querySelector('#lg-retry').onclick = () => showLoginGate();
+      }
+      g.classList.remove('hidden'); ARENA_NET.gate = true;
+      const msgEl = g.querySelector('#lg-msg'), btn = g.querySelector('#lg-btn'), retry = g.querySelector('#lg-retry');
+      msgEl.textContent = msg || ''; retry.style.display = 'none'; btn.innerHTML = '<span style="font-family:Inter,sans-serif;font-size:12px;color:#fecaca">Carregando login…</span>';
+      (async () => {
+        try {
+          if (!ARENA_NET.clientId) ARENA_NET.clientId = (await arenaApi('/api/config')).clientId || '';
+          if (!ARENA_NET.clientId) { btn.innerHTML = ''; msgEl.textContent = 'Login Google ainda não configurado no servidor.'; return; }
+          await loadGsi();
+          google.accounts.id.initialize({ client_id: ARENA_NET.clientId, callback: r => gateLogin(r.credential) });
+          btn.innerHTML = ''; google.accounts.id.renderButton(btn, { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'pt-BR' });
+        } catch (e) { btn.innerHTML = ''; msgEl.textContent = 'Sem conexão com o servidor (' + e.message + ').'; retry.style.display = ''; }
+      })();
+    }
+    function hideLoginGate() { const g = document.getElementById('login-gate'); if (g) g.classList.add('hidden'); ARENA_NET.gate = false; }
+    async function gateLogin(credential) {
+      try { const r = await arenaApi('/api/auth/google', 'POST', { credential }); ARENA_NET.token = r.token; hideLoginGate(); }
+      catch (e) { showLoginGate('Não foi possível entrar: ' + e.message); }
+    }
+    // ao abrir: sessão salva válida → entra direto; senão pede o login
+    async function cloudGateInit() {
+      if (!ARENA_NET.token) return showLoginGate();
+      showLoginGate(); document.getElementById('lg-msg').textContent = 'Entrando…';
+      try { await arenaApi('/api/me'); hideLoginGate(); }
+      catch (e) { if (ARENA_NET.token) { showLoginGate('Sem conexão com o servidor (' + e.message + ').'); document.getElementById('lg-retry').onclick = () => cloudGateInit(); } else showLoginGate('Sua sessão expirou, entre de novo.'); }
     }
     async function arenaLogin(credential) {
       try { const r = await arenaApi('/api/auth/google', 'POST', { credential }); ARENA_NET.token = r.token; openArenaOnline(); }
@@ -9201,7 +9253,7 @@
     // =========================================================================
     const DEV = { on: false, infGold: false, infDpe: false, timeScale: 1, sub: null, statSlot: null };
     const DEV_SPEEDS = [0.125, 0.25, 0.5, 1, 2, 4, 8];
-    try { DEV.on = localStorage.getItem('healer_hero_dev_mode') === '1'; } catch (_e) {}
+    try { DEV.on = !IS_CLOUD && localStorage.getItem('healer_hero_dev_mode') === '1'; } catch (_e) {}
     function devTimeScale() { return DEV.on ? DEV.timeScale : 1; }
     function devEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
@@ -9336,6 +9388,7 @@
     }
 
     document.getElementById('menu-btn-dev').onclick = () => {
+      if (IS_CLOUD) return;
       DEV.on = !DEV.on;
       try { localStorage.setItem('healer_hero_dev_mode', DEV.on ? '1' : '0'); } catch (_e) {}
       if (!DEV.on) { DEV.timeScale = 1; DEV.infGold = false; DEV.infDpe = false; }
@@ -9750,6 +9803,7 @@
       };
     }
     function seOpen() {
+      if (IS_CLOUD) return;
       SE.open = true;
       document.getElementById('sprite-editor').classList.add('open');
       if (!SE.ent) seMakeEnt();
@@ -10498,6 +10552,9 @@
       window.addEventListener(ev, guideBlock, { capture: true, passive: false });
     }
     window.addEventListener('keydown', e => { if (GUIDE.key) { e.preventDefault(); e.stopPropagation(); } }, { capture: true });
+    // nuvem: bloqueia o teclado do jogo enquanto a tela de login está aberta, e abre a tela
+    window.addEventListener('keydown', e => { if (ARENA_NET.gate) { e.stopPropagation(); } }, { capture: true });
+    if (IS_CLOUD) cloudGateInit();
 
     // Autosave: salva a cada 30s em jogo e sempre que a página vai para segundo plano
     // (bloqueio de tela, troca de app/aba). No iOS a aba pode ser descartada e recarregar no menu.
