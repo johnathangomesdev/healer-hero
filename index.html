@@ -650,6 +650,7 @@
       </button>
       <button data-drawer="2" class="drawer-btn icon-btn w-8 h-8 relative ui-btn" data-tip="<b>Árvore Vertical de Vocação & Skills</b><br>Clique nos ícones para evoluir com DPE.">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="4" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="12" cy="20" r="2.5"/><line x1="12" y1="6.5" x2="6" y2="9.5"/><line x1="12" y1="6.5" x2="18" y2="9.5"/><line x1="6" y1="14.5" x2="12" y2="17.5"/><line x1="18" y1="14.5" x2="12" y2="17.5"/></svg>
+        <span id="notif-tree" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-sky-400 border border-slate-900"></span>
       </button>
       <button data-drawer="3" class="drawer-btn icon-btn w-8 h-8 relative ui-btn" data-tip="<b>Inventário & Equipamentos</b><br>Bolsa à esquerda e 5 slots corporais à direita.">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
@@ -3406,6 +3407,7 @@
       } else if (d.kind === 'DPE') {
         state.dpe += d.amount;
         state.pendingDpe += d.amount;
+        updateSkillNotif();
         state.chapterEarned.dpe += d.amount;
         const tgt = getHudTargetInCanvas('lbl-dpe', 78, 18);
         flyingDrops.push({ kind: 'DPE', amount: d.amount, sx: d.x, sy: d.y - 4, tx: tgt.x, ty: tgt.y, x: d.x, y: d.y - 4, t: 0, dur: 0.42 });
@@ -6568,6 +6570,7 @@
       const hasPts = [0, 1, 2].some(s => partySlots[s] && partySlots[s].unspentPoints > 0);
       document.getElementById('notif-stats').classList.toggle('hidden', !hasPts);
       document.getElementById('notif-inv').classList.toggle('hidden', !state.hasNewItemNotif);
+      updateSkillNotif();
 
       updateSkillBarIcons();
       if (state.activeDrawer === 0) renderDrawer0Team();
@@ -6626,11 +6629,12 @@
     function craftSanitize() {
       const bag = new Set(getBagItems().map(x => x.uid));
       craft.slots = craft.slots.map(u => (bag.has(u) ? u : ''));
-      if (!bag.has(craft.refine)) craft.refine = '';
+      if (!invGet(craft.refine) || !ITEMS_DB[invGet(craft.refine).id]) craft.refine = ''; // refino aceita item equipado
       craft.salvage = craft.salvage.filter(u => bag.has(u));
       if (craft.result && !invGet(craft.result)) craft.result = '';
     }
     function craftPut(uid) {
+      if (craft.mode !== 'refine' && equippedUidSet().has(uid)) { showBanner('Desequipe o item antes de combinar ou quebrar.'); return; }
       if (craft.mode === 'refine') { craft.refine = uid; craft.result = ''; craft.resultMsg = ''; }
       else if (craft.mode === 'salvage') { if (!craft.salvage.includes(uid)) craft.salvage.push(uid); craft.resultMsg = ''; }
       else {
@@ -7231,21 +7235,33 @@
       setTimeout(arenaExit, Math.max(1200, 3200 - (Date.now() - t0)));
     }
 
+    // uid → nome de quem está usando o item (para marcar os equipados no refino)
+    function craftWearers() {
+      const out = {};
+      for (const c of [0, 1, 2]) {
+        const eq = state.equippedSlots[c] || {}, ent = partySlots[c];
+        for (const k of Object.keys(eq)) if (eq[k]) out[eq[k]] = ent ? ent.name : 'Time';
+      }
+      return out;
+    }
     function renderDrawer5Craft() {
       craftSanitize();
       for (const m of ['combine', 'refine', 'salvage']) document.getElementById('craft-mode-' + m).classList.toggle('icon-btn-active', craft.mode === m);
       renderCraftFrags();
-      // bolsa (sem os itens que já estão na bancada)
+      // bolsa (sem os itens que já estão na bancada); no REFINAR entram também os equipados, primeiro
       const used = new Set([...craft.slots, craft.refine, ...craft.salvage].filter(Boolean));
       const bagHost = document.getElementById('craft-bag');
-      const items = getBagItems().filter(x => !used.has(x.uid))
-        .sort((a, b) => ITEM_TIERS[a.tier].order - ITEM_TIERS[b.tier].order || a.id.localeCompare(b.id));
+      const wearer = craftWearers();
+      const pool = craft.mode === 'refine' ? state.inv.filter(x => ITEMS_DB[x.id]) : getBagItems();
+      const items = pool.filter(x => !used.has(x.uid))
+        .sort((a, b) => (wearer[b.uid] ? 1 : 0) - (wearer[a.uid] ? 1 : 0) || ITEM_TIERS[a.tier].order - ITEM_TIERS[b.tier].order || a.id.localeCompare(b.id));
       bagHost.innerHTML = items.length ? items.map(inst => {
-        const v = instView(inst);
+        const v = instView(inst), who = wearer[inst.uid];
         return `<div class="relative aspect-square rounded-md border bg-slate-900 flex items-center justify-center cursor-pointer" draggable="true" data-uid="${inst.uid}" style="${tierFrameStyle(v)}"
-          data-tip="${(itemTipTitle(v) + `<br>${bonusTip(v.bonuses)}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}
-          ${inst.plus ? `<span class="absolute -top-1 -right-1 px-0.5 rounded bg-slate-950 ui-tiny text-amber-300">+${inst.plus}</span>` : ''}</div>`;
-      }).join('') : '<div class="col-span-5 ui-body text-slate-500 text-center py-4">Bolsa vazia</div>';
+          data-tip="${(itemTipTitle(v) + `<br>${bonusTip(v.bonuses)}${who ? `<br><span class='text-sky-300'>Equipado em: ${who}</span>` : ''}<br><span class='text-amber-300'>Clique ou arraste para a bancada</span>`).replace(/"/g, '&quot;')}">${itemIconHtml(v, 'w-[85%] h-[85%]')}
+          ${inst.plus ? `<span class="absolute -top-1 -right-1 px-0.5 rounded bg-slate-950 ui-tiny text-amber-300">+${inst.plus}</span>` : ''}
+          ${who ? '<span class="absolute -bottom-1 -left-1 px-0.5 rounded bg-sky-700 border border-sky-300 ui-tiny text-white leading-none">E</span>' : ''}</div>`;
+      }).join('') : `<div class="col-span-5 ui-body text-slate-500 text-center py-4">${craft.mode === 'refine' ? 'Nenhum item' : 'Bolsa vazia'}</div>`;
       bagHost.querySelectorAll('[data-uid]').forEach(el => {
         el.onclick = () => craftPut(el.dataset.uid);
         el.ondragstart = e => { e.dataTransfer.setData('text/plain', 'craft:' + el.dataset.uid); };
@@ -7326,7 +7342,8 @@
           frags()[inst.tier] -= refineFragCost(inst);
           if (Math.random() < refineChance(inst)) {
             inst.plus = (inst.plus || 0) + 1;
-      coll().refineMax = Math.max(coll().refineMax, inst.plus); checkFeats();
+            for (const c of [0, 1, 2]) if (partySlots[c] && Object.values(state.equippedSlots[c] || {}).includes(inst.uid)) partySlots[c].applyEquipmentBonuses();
+            coll().refineMax = Math.max(coll().refineMax, inst.plus); checkFeats();
             craft.resultMsg = `<b class="text-emerald-300">Sucesso!</b> ${ITEMS_DB[inst.id].name} agora é <b class="text-amber-300">+${inst.plus}</b>.`;
             sfx.play('LEVEL_UP');
           } else {
@@ -7593,6 +7610,16 @@
       refreshAllUI();
     }
 
+    const skillUpCost = (slot, lvl) => Math.round((slot === 1 ? BAL.cost1 : slot === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, lvl - 1));
+    // há DPE para evoluir alguma skill liberada da classe atual?
+    function canUpgradeAnySkill() {
+      const st = state.stance, lv = st && state.skillLevels && state.skillLevels[st];
+      if (!lv) return false;
+      return [1, 2, 3].some(k => isSkillNodeUnlocked(st, k) && state.dpe >= skillUpCost(k, lv[k]));
+    }
+    function updateSkillNotif() {
+      const n = document.getElementById('notif-tree'); if (n) n.classList.toggle('hidden', !canUpgradeAnySkill());
+    }
     function isSkillNodeUnlocked(stance, slot) {
       if (slot <= 1) return true;
       if (slot === 2) return state.skillLevels[stance][1] >= 2;
@@ -7667,7 +7694,7 @@
           const prevY = idx === 0 ? classY + 14 : (84 + (idx - 1) * 34 + 13);
           const unlocked = isAct && isSkillNodeUnlocked(st, slot);
           const lvl = state.skillLevels[st][slot];
-          const cost = Math.round((slot === 1 ? BAL.cost1 : slot === 2 ? BAL.cost2 : BAL.cost3) * Math.pow(BAL.costGrowth, lvl - 1));
+          const cost = skillUpCost(slot, lvl);
           const nodeInfo = stInfo.nodes[slot];
 
           // Conector Vertical
