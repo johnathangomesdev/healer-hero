@@ -203,3 +203,5 @@
 
 - (2026-11-24) **Aviso de skill**: bolinha azul `#notif-tree` no botão da Árvore (gaveta 2) quando `canUpgradeAnySkill()` (DPE ≥ `skillUpCost(slot, nível)` de alguma skill liberada da classe atual). Atualizada em `refreshAllUI` e ao coletar DPE (`collectPhysicalDrop`).
 - (2026-11-24) **Refinar item equipado**: no modo Refinar a lista do Craft mostra também os itens equipados (primeiro, com selo "E" e "Equipado em: nome" no tooltip, `craftWearers`); refina sem desequipar e chama `applyEquipmentBonuses` de quem usa. Combinar/Quebrar continuam só com itens da bolsa (`craftPut` recusa equipado).
+
+- (2026-11-25) **Tela de carregamento Steamboat Studio**: bloco `#sb-splash` (style + div + script inline) logo após `<body>` no `index.html`; logo em `icons/steamboat-logo.png`; barra enche em `MIN_MS` (2,6 s) e só completa após `load`; some com fade e dispara o evento `splashdone`. Mesmo bloco no sky-drift e no mistura-de-cores.
